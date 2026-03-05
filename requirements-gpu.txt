@@ -1,0 +1,236 @@
+# SovereignForge GPU Requirements - Wave 7
+# GPU-accelerated machine learning dependencies
+
+# Core PyTorch with CUDA support
+torch>=2.0.0
+torchvision>=0.15.0
+torchaudio>=2.0.0
+
+# PyTorch CUDA toolkit (install appropriate version for your CUDA)
+# torch==2.0.0+cu118  # For CUDA 11.8
+# torch==2.0.0+cu121  # For CUDA 12.1
+
+# GPU acceleration libraries
+cupy-cuda11x>=12.0.0  # For CUDA 11.x
+# cupy-cuda12x>=12.0.0  # For CUDA 12.x
+
+# NVIDIA management library (optional, for GPU monitoring)
+pynvml>=11.4.1
+
+# GPU-accelerated scientific computing
+scipy>=1.10.0
+scikit-learn>=1.3.0
+
+# GPU-accelerated data processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# GPU memory optimization
+psutil>=5.9.0
+
+# Async GPU operations
+aiofiles>=0.23.0
+
+# GPU training monitoring
+wandb>=0.15.0  # Weights & Biases for experiment tracking
+tensorboard>=2.13.0  # TensorBoard for visualization
+
+# Advanced ML architectures
+transformers>=4.30.0  # For transformer models
+torch-geometric>=2.3.0  # For graph neural networks (optional)
+
+# GPU-accelerated optimization
+optuna>=3.2.0  # Hyperparameter optimization
+ray[tune]>=2.5.0  # Distributed training
+
+# GPU inference optimization
+onnx>=1.14.0
+onnxruntime-gpu>=1.15.0  # GPU-accelerated ONNX runtime
+tensorrt>=8.6.0  # NVIDIA TensorRT for production inference
+
+# GPU development tools
+jupyter>=1.0.0
+ipykernel>=6.23.0
+matplotlib>=3.7.0
+seaborn>=0.12.0
+
+# GPU debugging and profiling
+torch-tb-profiler>=0.4.0
+
+# Memory optimization
+memory-profiler>=0.61.0
+
+# GPU-accelerated time series
+tsfresh>=0.20.0  # Feature extraction
+pyflux>=0.4.15   # Time series modeling
+
+# GPU-accelerated reinforcement learning (optional)
+stable-baselines3>=2.0.0
+gym>=0.26.0
+
+# GPU-accelerated computer vision (for advanced features)
+opencv-python>=4.8.0
+
+# GPU-accelerated NLP (for sentiment analysis)
+nltk>=3.8.0
+spacy>=3.6.0
+
+# GPU-safe async operations
+aiohttp>=3.8.0
+aioredis>=2.0.0
+
+# GPU monitoring and alerting
+prometheus-client>=0.17.0
+
+# Development and testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+black>=23.0.0  # Code formatting
+isort>=5.12.0  # Import sorting
+flake8>=6.0.0  # Linting
+
+# GPU-specific testing
+pytest-benchmark>=4.0.0
+
+# Container GPU support
+# Note: For Docker GPU support, ensure NVIDIA Container Toolkit is installed
+# and use --gpus all flag when running containers
+
+# Production GPU dependencies
+gunicorn>=20.1.0  # WSGI server
+uvloop>=0.17.0    # Fast async event loop
+
+# GPU-accelerated database operations (optional)
+sqlalchemy>=2.0.0
+asyncpg>=0.29.0
+
+# GPU-accelerated caching
+redis>=4.5.0
+aiocache>=0.12.0
+
+# Security and encryption
+cryptography>=41.0.0
+
+# Logging and monitoring
+structlog>=23.1.0
+loguru>=0.7.0
+
+# Configuration management
+python-dotenv>=1.0.0
+hydra-core>=1.3.0
+
+# API development
+fastapi>=0.100.0
+uvicorn>=0.23.0
+
+# GPU-accelerated API serving
+torchserve>=0.8.0  # Model serving (optional)
+
+# Performance monitoring
+py-spy>=0.3.0  # Sampling profiler
+scalene>=1.5.0  # CPU/memory/GPU profiler
+
+# GPU-accelerated data validation
+pydantic>=2.0.0
+pandera>=0.16.0
+
+# Time series databases for GPU training data
+influxdb-client>=1.36.0
+
+# GPU-accelerated visualization
+plotly>=5.15.0
+bokeh>=3.2.0
+
+# Export and deployment
+joblib>=1.3.0
+pickle5>=0.0.11  # For Python 3.8+ compatibility
+
+# GPU training utilities
+tqdm>=4.65.0  # Progress bars
+colorama>=0.4.6  # Colored terminal output
+
+# Error handling and debugging
+sentry-sdk>=1.28.0
+rich>=13.5.0  # Beautiful terminal output
+
+# GPU-accelerated numerical computing
+numba>=0.57.0
+cython>=3.0.0
+
+# Distributed GPU training (optional)
+horovod>=0.28.0
+deepspeed>=0.9.0
+
+# Model compression for GPU inference
+torch-model-archiver>=0.8.0
+
+# GPU-accelerated ETL
+dask>=2023.7.0
+dask-ml>=2023.3.0
+
+# Final GPU optimization
+torch-optimizer>=0.3.0  # Advanced optimizers
+lookahead-pytorch>=0.1.4  # Lookahead optimizer
+
+# GPU memory debugging
+torch-memory>=0.1.0
+
+# Production GPU monitoring
+nvidia-ml-py>=11.525.84
+
+# GPU-accelerated data augmentation (for robustness)
+albumentations>=1.3.0
+imgaug>=0.4.0
+
+# GPU-safe multiprocessing
+torch-multiprocessing>=0.1.0
+
+# Advanced GPU scheduling
+schedule>=1.2.0
+
+# GPU training resumption
+checkpoint>=0.3.2
+
+# Final safety and monitoring
+safety>=2.3.0  # Security vulnerability checking
+bandit>=1.7.0  # Security linting
+
+# GPU-accelerated documentation
+sphinx>=7.0.0
+sphinx-rtd-theme>=1.3.0
+
+# Development GPU tools
+line-profiler>=4.1.0
+snakeviz>=2.2.0
+
+# GPU training cost optimization
+carbontracker>=1.1.6  # Track carbon footprint of GPU training
+
+# Final production GPU stack
+docker>=6.1.0
+kubernetes>=26.1.0
+
+# GPU-accelerated backup and recovery
+boto3>=1.28.0  # AWS S3 for model storage
+google-cloud-storage>=2.10.0  # GCP storage
+azure-storage-blob>=12.17.0  # Azure storage
+
+# GPU training metadata
+mlflow>=2.5.0  # Experiment tracking
+dvc>=3.0.0    # Data version control
+
+# Advanced GPU analytics
+shap>=0.42.0  # Model interpretability
+lime>=0.2.0.1 # Local explanations
+
+# GPU-accelerated A/B testing
+scipy>=1.11.0
+statsmodels>=0.14.0
+
+# Final GPU safety net
+circuitbreaker>=1.3.0  # Circuit breaker pattern
+tenacity>=8.2.0        # Retry mechanisms
+
+# GPU training completion
+# This requirements file provides comprehensive GPU acceleration
+# for SovereignForge's multi-pair arbitrage training system

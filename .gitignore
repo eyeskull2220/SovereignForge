@@ -1,0 +1,70 @@
+# SovereignForge .gitignore
+# Exclude sensitive data, logs, and large model files
+
+# Database files (keep sample data for demo)
+# *.db
+# *.sqlite
+# *.sqlite3
+
+# Log files (keep training logs for demo)
+# *.log
+# logs/
+# tensorboard/
+
+# Model checkpoints (large files - exclude from repo)
+models/*.pth
+models/*.pt
+models/final_*.pth
+models/best_*.pth
+models/checkpoints/
+models/training_results/
+models/secure/
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Jupyter notebooks (if any)
+.ipynb_checkpoints/
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
+
+# Documentation build
+docs/_build/
+
+# Node modules (if any frontend components)
+node_modules/
+
+# Docker volumes
+volumes/

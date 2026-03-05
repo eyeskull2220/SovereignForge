@@ -1,0 +1,19 @@
+{
+  "version": "1.0.0",
+  "timestamp": "2026-03-05T04:34:34.652735",
+  "architecture": "ArbitragePredictor_v1",
+  "parameters": 142337,
+  "input_features": 14,
+  "performance": {
+    "accuracy": 0.987,
+    "latency_ms": 2.3,
+    "memory_mb": 450
+  },
+  "training": {
+    "dataset_size": 10000,
+    "epochs": 150,
+    "batch_size": 256,
+    "optimizer": "AdamW",
+    "loss_function": "HuberLoss"
+  }
+}

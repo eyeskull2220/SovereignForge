@@ -1,0 +1,28 @@
+2026-03-05 05:07:00,268 - INFO - Generating 25000 training samples...
+2026-03-05 05:07:00,269 - INFO - Generated 0/25000 samples...
+2026-03-05 05:07:05,097 - INFO - Generated 10000/25000 samples...
+2026-03-05 05:07:09,808 - INFO - Generated 20000/25000 samples...
+2026-03-05 05:07:12,178 - INFO - Generated dataset: 25000 samples, 22 features
+2026-03-05 05:07:12,257 - INFO -    • Model: AdvancedArbitrageDetector
+2026-03-05 05:07:12,257 - INFO -    • Parameters: 62,146
+2026-03-05 05:07:12,257 - INFO -    • Epochs: 30
+2026-03-05 05:09:09,076 - INFO - Generating 25000 training samples...
+2026-03-05 05:09:09,076 - INFO - Generated 0/25000 samples...
+2026-03-05 05:09:13,758 - INFO - Generated 10000/25000 samples...
+2026-03-05 05:09:18,749 - INFO - Generated 20000/25000 samples...
+2026-03-05 05:09:21,071 - INFO - Generated dataset: 25000 samples, 22 features
+2026-03-05 05:09:21,147 - INFO - Starting ML training on cpu
+2026-03-05 05:09:21,147 - INFO -    - Model: AdvancedArbitrageDetector
+2026-03-05 05:09:21,148 - INFO -    - Parameters: 62,658
+2026-03-05 05:09:21,148 - INFO -    - Epochs: 30
+2026-03-05 05:09:21,980 - INFO - Epoch   0: Train Loss: 0.545028, Val Loss: 0.515822, Val Acc: 0.7872, LR: 0.000976
+2026-03-05 05:09:25,721 - INFO - Epoch   5: Train Loss: 0.523905, Val Loss: 0.515798, Val Acc: 0.7872, LR: 0.000345
+2026-03-05 05:09:29,554 - INFO - Epoch  10: Train Loss: 0.521926, Val Loss: 0.516822, Val Acc: 0.7872, LR: 0.000994
+2026-03-05 05:09:33,358 - INFO - Epoch  15: Train Loss: 0.519527, Val Loss: 0.516746, Val Acc: 0.7872, LR: 0.000794
+2026-03-05 05:09:38,285 - INFO - Epoch  20: Train Loss: 0.518817, Val Loss: 0.515811, Val Acc: 0.7872, LR: 0.000422
+2026-03-05 05:09:39,079 - INFO - Early stopping at epoch 21
+2026-03-05 05:09:39,079 - INFO - Restored best model weights
+2026-03-05 05:09:39,079 - INFO - ML training completed!
+2026-03-05 05:09:39,079 - INFO -    - Training time: 17.9s
+2026-03-05 05:09:39,079 - INFO -    - Best validation loss: 0.515742
+2026-03-05 05:09:39,079 - INFO -    - Final accuracy: 0.7872

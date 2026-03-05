@@ -1,0 +1,87 @@
+2026-03-05 04:59:17,926 - INFO - No trained model found, using untrained model
+2026-03-05 04:59:52,230 - INFO - No trained model found, using untrained model
+2026-03-05 05:10:28,031 - ERROR - Failed to load model: Error(s) in loading state_dict for SimpleArbitrageDetector:
+	Missing key(s) in state_dict: "network.0.weight", "network.0.bias", "network.2.weight", "network.2.bias", "network.4.weight", "network.4.bias". 
+	Unexpected key(s) in state_dict: "lstm.weight_ih_l0", "lstm.weight_hh_l0", "lstm.bias_ih_l0", "lstm.bias_hh_l0", "lstm.weight_ih_l1", "lstm.weight_hh_l1", "lstm.bias_ih_l1", "lstm.bias_hh_l1", "attention.0.weight", "attention.0.bias", "attention.2.weight", "attention.2.bias", "classifier.0.weight", "classifier.0.bias", "classifier.3.weight", "classifier.3.bias", "classifier.6.weight", "classifier.6.bias". 
+2026-03-05 05:26:35,044 - ERROR - Failed to load model: Error(s) in loading state_dict for SimpleArbitrageDetector:
+	Missing key(s) in state_dict: "network.0.weight", "network.0.bias", "network.2.weight", "network.2.bias", "network.4.weight", "network.4.bias". 
+	Unexpected key(s) in state_dict: "lstm.weight_ih_l0", "lstm.weight_hh_l0", "lstm.bias_ih_l0", "lstm.bias_hh_l0", "lstm.weight_ih_l1", "lstm.weight_hh_l1", "lstm.bias_ih_l1", "lstm.bias_hh_l1", "attention.0.weight", "attention.0.bias", "attention.2.weight", "attention.2.bias", "classifier.0.weight", "classifier.0.bias", "classifier.3.weight", "classifier.3.bias", "classifier.6.weight", "classifier.6.bias". 
+2026-03-05 05:27:14,038 - ERROR - Failed to load model: Error(s) in loading state_dict for SimpleArbitrageDetector:
+	Missing key(s) in state_dict: "network.0.weight", "network.0.bias", "network.2.weight", "network.2.bias", "network.4.weight", "network.4.bias". 
+	Unexpected key(s) in state_dict: "lstm.weight_ih_l0", "lstm.weight_hh_l0", "lstm.bias_ih_l0", "lstm.bias_hh_l0", "lstm.weight_ih_l1", "lstm.weight_hh_l1", "lstm.bias_ih_l1", "lstm.bias_hh_l1", "attention.0.weight", "attention.0.bias", "attention.2.weight", "attention.2.bias", "classifier.0.weight", "classifier.0.bias", "classifier.3.weight", "classifier.3.bias", "classifier.6.weight", "classifier.6.bias". 
+2026-03-05 05:27:14,047 - INFO - Risk Manager initialized with $10000.0 capital
+2026-03-05 05:27:17,748 - INFO - Initialized binance exchange
+2026-03-05 05:27:20,370 - INFO - Initialized coinbase exchange
+2026-03-05 05:27:21,493 - INFO - Initialized kraken exchange
+2026-03-05 05:27:21,493 - INFO - Order Executor initialized with 3 exchanges
+2026-03-05 05:27:21,493 - INFO - Paper Trading Executor initialized with $10000.0 per exchange
+2026-03-05 05:27:42,719 - ERROR - Failed to load model: Error(s) in loading state_dict for SimpleArbitrageDetector:
+	Missing key(s) in state_dict: "network.0.weight", "network.0.bias", "network.2.weight", "network.2.bias", "network.4.weight", "network.4.bias". 
+	Unexpected key(s) in state_dict: "lstm.weight_ih_l0", "lstm.weight_hh_l0", "lstm.bias_ih_l0", "lstm.bias_hh_l0", "lstm.weight_ih_l1", "lstm.weight_hh_l1", "lstm.bias_ih_l1", "lstm.bias_hh_l1", "attention.0.weight", "attention.0.bias", "attention.2.weight", "attention.2.bias", "classifier.0.weight", "classifier.0.bias", "classifier.3.weight", "classifier.3.bias", "classifier.6.weight", "classifier.6.bias". 
+2026-03-05 05:27:42,728 - INFO - Risk Manager initialized with $10000.0 capital
+2026-03-05 05:27:45,280 - INFO - Initialized binance exchange
+2026-03-05 05:27:47,963 - INFO - Initialized coinbase exchange
+2026-03-05 05:27:49,103 - INFO - Initialized kraken exchange
+2026-03-05 05:27:49,103 - INFO - Order Executor initialized with 3 exchanges
+2026-03-05 05:27:49,103 - INFO - Paper Trading Executor initialized with $10000.0 per exchange
+2026-03-05 05:28:23,417 - ERROR - Failed to load model: Error(s) in loading state_dict for SimpleArbitrageDetector:
+	Missing key(s) in state_dict: "network.0.weight", "network.0.bias", "network.2.weight", "network.2.bias", "network.4.weight", "network.4.bias". 
+	Unexpected key(s) in state_dict: "lstm.weight_ih_l0", "lstm.weight_hh_l0", "lstm.bias_ih_l0", "lstm.bias_hh_l0", "lstm.weight_ih_l1", "lstm.weight_hh_l1", "lstm.bias_ih_l1", "lstm.bias_hh_l1", "attention.0.weight", "attention.0.bias", "attention.2.weight", "attention.2.bias", "classifier.0.weight", "classifier.0.bias", "classifier.3.weight", "classifier.3.bias", "classifier.6.weight", "classifier.6.bias". 
+2026-03-05 05:28:23,426 - INFO - Risk Manager initialized with $10000.0 capital
+2026-03-05 05:28:25,823 - INFO - Initialized binance exchange
+2026-03-05 05:28:28,443 - INFO - Initialized coinbase exchange
+2026-03-05 05:28:29,554 - INFO - Initialized kraken exchange
+2026-03-05 05:28:29,554 - INFO - Order Executor initialized with 3 exchanges
+2026-03-05 05:28:29,554 - INFO - Paper Trading Executor initialized with $10000.0 per exchange
+2026-03-05 05:28:29,771 - INFO - Generated synthetic data for 7 symbols across 3 exchanges
+2026-03-05 05:28:29,771 - INFO - Arbitrage Backtester initialized
+2026-03-05 05:28:29,772 - INFO - Starting backtest from 2026-02-26 to 2026-03-05
+2026-03-05 05:28:29,827 - INFO - Backtested 100 hours, Portfolio: $10000.00
+2026-03-05 05:28:56,712 - ERROR - Failed to load model: Error(s) in loading state_dict for SimpleArbitrageDetector:
+	Missing key(s) in state_dict: "network.0.weight", "network.0.bias", "network.2.weight", "network.2.bias", "network.4.weight", "network.4.bias". 
+	Unexpected key(s) in state_dict: "lstm.weight_ih_l0", "lstm.weight_hh_l0", "lstm.bias_ih_l0", "lstm.bias_hh_l0", "lstm.weight_ih_l1", "lstm.weight_hh_l1", "lstm.bias_ih_l1", "lstm.bias_hh_l1", "attention.0.weight", "attention.0.bias", "attention.2.weight", "attention.2.bias", "classifier.0.weight", "classifier.0.bias", "classifier.3.weight", "classifier.3.bias", "classifier.6.weight", "classifier.6.bias". 
+2026-03-05 05:28:56,720 - INFO - Risk Manager initialized with $10000.0 capital
+2026-03-05 05:28:59,940 - INFO - Initialized binance exchange
+2026-03-05 05:29:02,533 - INFO - Initialized coinbase exchange
+2026-03-05 05:29:03,642 - INFO - Initialized kraken exchange
+2026-03-05 05:29:03,642 - INFO - Order Executor initialized with 3 exchanges
+2026-03-05 05:29:03,642 - INFO - Paper Trading Executor initialized with $10000.0 per exchange
+2026-03-05 05:29:03,860 - INFO - Generated synthetic data for 7 symbols across 3 exchanges
+2026-03-05 05:29:03,860 - INFO - Arbitrage Backtester initialized
+2026-03-05 05:29:03,861 - INFO - Starting backtest from 2026-02-26 to 2026-03-05
+2026-03-05 05:29:03,918 - INFO - Backtested 100 hours, Portfolio: $10000.00
+2026-03-05 05:29:03,956 - INFO - Backtest completed: $10000.00 final value, 0 trades, Sharpe: 0.000
+2026-03-05 05:29:39,920 - ERROR - Failed to load model: Error(s) in loading state_dict for SimpleArbitrageDetector:
+	Missing key(s) in state_dict: "network.0.weight", "network.0.bias", "network.2.weight", "network.2.bias", "network.4.weight", "network.4.bias". 
+	Unexpected key(s) in state_dict: "lstm.weight_ih_l0", "lstm.weight_hh_l0", "lstm.bias_ih_l0", "lstm.bias_hh_l0", "lstm.weight_ih_l1", "lstm.weight_hh_l1", "lstm.bias_ih_l1", "lstm.bias_hh_l1", "attention.0.weight", "attention.0.bias", "attention.2.weight", "attention.2.bias", "classifier.0.weight", "classifier.0.bias", "classifier.3.weight", "classifier.3.bias", "classifier.6.weight", "classifier.6.bias". 
+2026-03-05 05:29:39,928 - INFO - Risk Manager initialized with $10000.0 capital
+2026-03-05 05:29:43,604 - INFO - Initialized binance exchange
+2026-03-05 05:29:46,366 - INFO - Initialized coinbase exchange
+2026-03-05 05:29:47,473 - INFO - Initialized kraken exchange
+2026-03-05 05:29:47,473 - INFO - Order Executor initialized with 3 exchanges
+2026-03-05 05:29:47,474 - INFO - Paper Trading Executor initialized with $10000.0 per exchange
+2026-03-05 05:29:47,691 - INFO - Generated synthetic data for 7 symbols across 3 exchanges
+2026-03-05 05:29:47,691 - INFO - Arbitrage Backtester initialized
+2026-03-05 05:29:47,691 - INFO - Starting backtest from 2026-02-26 to 2026-03-05
+2026-03-05 05:29:47,750 - INFO - Backtested 100 hours, Portfolio: $10000.00
+2026-03-05 05:29:47,789 - INFO - Backtest completed: $10000.00 final value, 0 trades, Sharpe: 0.000
+2026-03-05 05:40:57,284 - ERROR - Failed to load model: Error(s) in loading state_dict for SimpleArbitrageDetector:
+	Missing key(s) in state_dict: "network.0.weight", "network.0.bias", "network.2.weight", "network.2.bias", "network.4.weight", "network.4.bias". 
+	Unexpected key(s) in state_dict: "lstm.weight_ih_l0", "lstm.weight_hh_l0", "lstm.bias_ih_l0", "lstm.bias_hh_l0", "lstm.weight_ih_l1", "lstm.weight_hh_l1", "lstm.bias_ih_l1", "lstm.bias_hh_l1", "attention.0.weight", "attention.0.bias", "attention.2.weight", "attention.2.bias", "classifier.0.weight", "classifier.0.bias", "classifier.3.weight", "classifier.3.bias", "classifier.6.weight", "classifier.6.bias". 
+2026-03-05 05:40:57,293 - INFO - Risk Manager initialized with $10000.0 capital
+2026-03-05 05:41:00,918 - INFO - Initialized binance exchange
+2026-03-05 05:41:03,959 - INFO - Initialized coinbase exchange
+2026-03-05 05:41:05,064 - INFO - Initialized kraken exchange
+2026-03-05 05:41:05,064 - INFO - Order Executor initialized with 3 exchanges
+2026-03-05 05:41:05,064 - INFO - Paper Trading Executor initialized with $10000.0 per exchange
+2026-03-05 05:41:05,064 - INFO - Performance Analyzer initialized
+2026-03-05 05:41:43,102 - ERROR - Failed to load model: Error(s) in loading state_dict for SimpleArbitrageDetector:
+	Missing key(s) in state_dict: "network.0.weight", "network.0.bias", "network.2.weight", "network.2.bias", "network.4.weight", "network.4.bias". 
+	Unexpected key(s) in state_dict: "lstm.weight_ih_l0", "lstm.weight_hh_l0", "lstm.bias_ih_l0", "lstm.bias_hh_l0", "lstm.weight_ih_l1", "lstm.weight_hh_l1", "lstm.bias_ih_l1", "lstm.bias_hh_l1", "attention.0.weight", "attention.0.bias", "attention.2.weight", "attention.2.bias", "classifier.0.weight", "classifier.0.bias", "classifier.3.weight", "classifier.3.bias", "classifier.6.weight", "classifier.6.bias". 
+2026-03-05 05:41:43,110 - INFO - Risk Manager initialized with $10000.0 capital
+2026-03-05 05:41:45,922 - INFO - Initialized binance exchange
+2026-03-05 05:41:48,265 - INFO - Initialized coinbase exchange
+2026-03-05 05:41:49,370 - INFO - Initialized kraken exchange
+2026-03-05 05:41:49,370 - INFO - Order Executor initialized with 3 exchanges
+2026-03-05 05:41:49,370 - INFO - Paper Trading Executor initialized with $10000.0 per exchange
+2026-03-05 05:41:49,370 - INFO - Performance Analyzer initialized

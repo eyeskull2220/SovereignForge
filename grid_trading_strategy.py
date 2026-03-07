@@ -435,9 +435,48 @@ class GridTradingStrategy:
 
         if self.use_ml_optimization:
             model_path = Path(f"models/strategies/grid_optimizer_{self.symbol.replace('/', '_')}.pth")
-            model_path.parent.mkdir(exist_ok=True)
+            model_path.parent.mkdir(parents=True, exist_ok=True)
             torch.save(self.grid_optimizer.state_dict(), model_path)
             logger.info(f"💾 Saved grid optimizer model to {model_path}")
+
+    def generate_signal(self, current_price: float, prices: List[float]) -> Optional[Dict[str, Any]]:
+        """Generate trading signal for grid strategy (interface for paper trading)"""
+
+        if len(prices) < 50:
+            return None
+
+        # Convert to pandas DataFrame for analysis
+        import pandas as pd
+        market_data = pd.DataFrame({
+            'close': prices[-100:] if len(prices) > 100 else prices,
+            'volume': [1.0] * len(prices[-100:] if len(prices) > 100 else prices)  # Placeholder volumes
+        })
+
+        # Calculate optimal grid
+        portfolio_value = 10000.0  # Assume $10k portfolio
+        grid_params = self.calculate_optimal_grid(market_data, portfolio_value)
+
+        # Generate grid orders
+        orders = self.generate_grid_orders(grid_params, portfolio_value)
+
+        # Find applicable orders for current price
+        for order in orders:
+            if order['type'] == 'buy' and current_price <= order['price'] * 1.001:  # Small tolerance
+                return {
+                    'side': 'buy',
+                    'quantity': order['quantity'],
+                    'price': order['price'],
+                    'reason': 'grid_buy_signal'
+                }
+            elif order['type'] == 'sell' and current_price >= order['price'] * 0.999:  # Small tolerance
+                return {
+                    'side': 'sell',
+                    'quantity': order['quantity'],
+                    'price': order['price'],
+                    'reason': 'grid_sell_signal'
+                }
+
+        return None
 
 # Example usage and testing
 def test_grid_strategy():
@@ -480,7 +519,8 @@ def test_grid_strategy():
     portfolio_value = 10000
     grid_params = strategy.calculate_optimal_grid(market_data, portfolio_value)
 
-    print("📊 Grid Parameters:"    print(f"   Center Price: ${grid_params['grid_center']:.2f}")
+    print("\n📊 Grid Parameters:")
+    print(f"   Center Price: ${grid_params['grid_center']:.2f}")
     print(f"   Grid Spacing: {grid_params['grid_spacing_pct']:.2%}")
     print(f"   Grid Levels: {grid_params['grid_levels']}")
     print(f"   Position Size: {grid_params['position_size_pct']:.2%}")
@@ -495,11 +535,11 @@ def test_grid_strategy():
 
     print(f"   Buy Orders: {len(buy_orders)}")
     for i, order in enumerate(buy_orders[:3]):
-        print(".2f")
+        print(f"     Buy {i+1}: ${order['price']:.2f} ({order['quantity']:.6f} units)")
 
     print(f"   Sell Orders: {len(sell_orders)}")
     for i, order in enumerate(sell_orders[:3]):
-        print(".2f")
+        print(f"     Sell {i+1}: ${order['price']:.2f} ({order['quantity']:.6f} units)")
 
     # Test performance tracking
     strategy.update_performance({
@@ -510,8 +550,8 @@ def test_grid_strategy():
     })
 
     performance = strategy.get_performance_report()
-    print("
-📈 Performance Metrics:"    print(f"   Total Trades: {performance['performance_metrics']['total_trades']}")
+    print("\n📈 Performance Metrics:")
+    print(f"   Total Trades: {performance['performance_metrics']['total_trades']}")
     print(f"   Total P&L: ${performance['performance_metrics']['total_pnl']:.2f}")
 
     print("\n" + "=" * 50)

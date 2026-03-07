@@ -585,26 +585,26 @@ def test_strategy_orchestrator():
 
     # Assess market conditions
     market_condition = orchestrator.assess_market_conditions(market_data)
-    print("
-📊 Market Assessment:"    print(f"   Regime: {market_condition.market_regime}")
+    print("\n📊 Market Assessment:")
+    print(f"   Regime: {market_condition.market_regime}")
     print(f"   Risk Level: {market_condition.risk_level}")
-    print(".1%")
+    print(f"   Volatility: {market_condition.volatility:.1%}")
 
     # Optimize allocations
     optimization = orchestrator.optimize_strategy_allocations(market_condition)
-    print("
-🎯 Allocation Optimization:"    print(f"   Reallocations: {len(optimization['reallocations'])}")
+    print("\n🎯 Allocation Optimization:")
+    print(f"   Reallocations: {len(optimization['reallocations'])}")
     print(f"   Reason: {optimization['reason']}")
 
     # Execute strategy signals
     signals = orchestrator.execute_strategy_signals(market_data)
-    print("
-🚀 Strategy Signals Executed:"    print(f"   Signals: {len(signals)}")
+    print("\n🚀 Strategy Signals Executed:")
+    print(f"   Signals: {len(signals)}")
 
     # Get orchestrator status
     status = orchestrator.get_orchestrator_status()
-    print("
-📈 Orchestrator Status:"    print(f"   Portfolio Value: ${status['portfolio_value']:.2f}")
+    print("\n📈 Orchestrator Status:")
+    print(f"   Portfolio Value: ${status['portfolio_value']:.2f}")
     print(f"   Cash Allocation: ${status['cash_allocation']:.2f}")
     print(f"   Active Strategies: {status['active_strategies']}")
 

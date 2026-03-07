@@ -458,6 +458,33 @@ class FibonacciDCAStrategy:
             'fib_levels': self.fib_levels if hasattr(self, 'fib_levels') else []
         }
 
+    def analyze_market(self, prices: List[float], volumes: List[float]) -> Optional[Dict[str, Any]]:
+        """Analyze market conditions for DCA signals (interface for paper trading)"""
+
+        if len(prices) < 50:
+            return None
+
+        # Convert to pandas DataFrame for analysis
+        import pandas as pd
+        market_data = pd.DataFrame({
+            'close': prices[-100:] if len(prices) > 100 else prices,
+            'high': prices[-100:] if len(prices) > 100 else prices,  # Use close as proxy for high
+            'low': prices[-100:] if len(prices) > 100 else prices,   # Use close as proxy for low
+            'volume': volumes[-100:] if len(volumes) > 100 else volumes
+        })
+
+        # Check DCA conditions
+        dca_decision = self.should_dca(market_data, 10000.0)  # Assume $10k portfolio
+
+        if dca_decision['should_dca']:
+            return {
+                'action': 'buy',
+                'quantity': dca_decision['dca_amount'] / prices[-1],
+                'reason': dca_decision['reason']
+            }
+
+        return None
+
     def save_model(self):
         """Save the DCA optimizer model"""
 
@@ -507,47 +534,48 @@ def test_fib_dca_strategy():
     # Test Fibonacci level calculation
     fib_data = strategy.calculate_fibonacci_levels(market_data)
 
-    print("📊 Fibonacci Levels:"    print(".4f")
-    print(".4f")
-    print(".4f")
+    print("\n📊 Fibonacci Levels:")
+    print(f"   Swing High: ${fib_data['swing_high']:.4f}")
+    print(f"   Swing Low: ${fib_data['swing_low']:.4f}")
+    print(f"   Current Price: ${fib_data['current_price']:.4f}")
     for level_name, level_price in fib_data['fib_levels'].items():
-        print(".4f")
+        print(f"   {level_name}: ${level_price:.4f}")
 
     # Test DCA decision
     portfolio_value = 10000
     dca_decision = strategy.should_dca(market_data, portfolio_value)
 
-    print("
-🎯 DCA Decision:"    print(f"   Should DCA: {dca_decision['should_dca']}")
+    print("\n🎯 DCA Decision:")
+    print(f"   Should DCA: {dca_decision['should_dca']}")
     print(f"   Reason: {dca_decision['reason']}")
 
     if dca_decision['should_dca']:
-        print(".2f")
+        print(f"   DCA Amount: ${dca_decision['dca_amount']:.2f}")
         print(f"   DCA Level: {dca_decision['dca_level']['level_name']}")
 
         # Execute DCA
         current_price = market_data['close'].iloc[-1]
         result = strategy.execute_dca(dca_decision, current_price)
 
-        print("
-💰 DCA Execution:"        print(f"   Success: {result['success']}")
-        print(".2f")
-        print(".4f")
-        print(".6f")
+        print("\n💰 DCA Execution:")
+        print(f"   Success: {result['success']}")
+        print(f"   Total Invested: ${result['total_invested']:.2f}")
+        print(f"   Average Price: ${result['average_price']:.4f}")
+        print(f"   Total Shares: {result['total_shares']:.6f}")
 
     # Test exit conditions
     exit_check = strategy.check_exit_conditions(current_price)
-    print("
-📈 Exit Conditions:"    print(f"   Should Exit: {exit_check['should_exit']}")
+    print("\n📈 Exit Conditions:")
+    print(f"   Should Exit: {exit_check['should_exit']}")
     print(f"   Reason: {exit_check.get('reason', 'N/A')}")
 
     # Get DCA status
     status = strategy.get_dca_status()
-    print("
-📊 DCA Status:"    print(f"   Active Positions: {status['active_positions']}")
-    print(".2f")
-    print(".6f")
-    print(".4f")
+    print("\n📊 DCA Status:")
+    print(f"   Active Positions: {status['active_positions']}")
+    print(f"   Total Invested: ${status['total_invested']:.2f}")
+    print(f"   Total Shares: {status['total_shares']:.6f}")
+    print(f"   Average Price: ${status['average_entry_price']:.4f}")
 
     print("\n" + "=" * 50)
     print("✅ Fibonacci DCA Strategy Test Complete")

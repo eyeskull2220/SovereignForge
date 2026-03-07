@@ -1,0 +1,17 @@
+  
+# Private directories and files  
+Belangrijk/  
+Desktop/  
+logs/  
+training_logs/  
+discord_backup_codes.txt  
+*.url  
+*.lnk  
+smurf.txt  
+temp.txt  
+full_list1.txt  
+relative_list1.txt  
+relative_list2.txt  
+large-output-*.log  
+arbitrage_detector.log  
+desktop.ini 

@@ -29,7 +29,7 @@ class MiCAComplianceEngine:
 
         # MiCA compliant stablecoins (Article 5)
         self.compliant_stablecoins = {
-            'USDC', 'USDT', 'RLUSD'
+            'USDC', 'RLUSD'
         }
 
         # MiCA compliant trading pairs

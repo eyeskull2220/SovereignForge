@@ -17,6 +17,9 @@ import os
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# Setup logging first
+logger = logging.getLogger(__name__)
+
 # Import Phase 2 components
 try:
     from risk_management import get_risk_manager, RiskManager
@@ -25,8 +28,6 @@ try:
 except ImportError as e:
     logger.warning(f"Phase 2 Risk Management not available: {e}. Using fallback.")
     RISK_MANAGER_AVAILABLE = False
-
-logger = logging.getLogger(__name__)
 
 class OrderExecutor:
     """Order execution engine for arbitrage trading"""
@@ -419,6 +420,31 @@ class OrderExecutor:
             logger.error(f"Failed to get open orders for {exchange_name}: {e}")
 
         return []
+
+    async def is_healthy(self) -> bool:
+        """Check if the order executor is healthy"""
+        try:
+            # Check if we have any exchanges configured
+            if len(self.exchanges) == 0:
+                return False
+
+            # Check if at least one exchange is accessible
+            healthy_exchanges = 0
+            for exchange_name, exchange in self.exchanges.items():
+                try:
+                    # Simple health check - try to get server time
+                    if hasattr(exchange, 'fetch_time'):
+                        exchange.fetch_time()
+                        healthy_exchanges += 1
+                except Exception:
+                    continue
+
+            # Consider healthy if at least one exchange is working
+            return healthy_exchanges > 0
+
+        except Exception as e:
+            logger.error(f"Order executor health check error: {e}")
+            return False
 
 class PaperTradingExecutor(OrderExecutor):
     """Paper trading version for testing without real money"""

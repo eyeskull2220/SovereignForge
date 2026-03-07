@@ -292,6 +292,28 @@ class HybridDataIntegrationService:
             'websocket_connections': self.get_connection_health()
         }
 
+    async def is_healthy(self) -> bool:
+        """Check if the data service is healthy"""
+        try:
+            # Check if service is running
+            if not self.is_running:
+                return False
+
+            # Check if we have active callbacks
+            if len(self.data_callbacks) == 0:
+                return False
+
+            # Check connection health
+            health = self.get_connection_health()
+            healthy_connections = sum(1 for conn in health.values() if conn.get('healthy', False))
+
+            # Consider healthy if at least 1 connection is working
+            return healthy_connections > 0
+
+        except Exception as e:
+            logger.error(f"Health check error: {e}")
+            return False
+
 class MockComplianceEngine:
     """Mock compliance engine for when compliance.py is not available"""
 

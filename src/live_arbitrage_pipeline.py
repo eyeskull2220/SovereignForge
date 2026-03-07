@@ -111,7 +111,7 @@ class OpportunityFilter:
     def _check_compliance(self, opportunity: ArbitrageOpportunity) -> bool:
         """Check MiCA compliance (placeholder)"""
         # Check if pair is in whitelist
-        whitelist = ['XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT', 'LINK/USDT', 'IOTA/USDT', 'XDC/USDT', 'ONDO/USDT', 'VET/USDT', 'USDC/USDT', 'RLUSD/USDT']
+        whitelist = ['XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'XDC/USDC', 'ONDO/USDC', 'VET/USDC', 'XRP/RLUSD', 'XLM/RLUSD', 'HBAR/RLUSD', 'ALGO/RLUSD', 'ADA/RLUSD', 'LINK/RLUSD', 'IOTA/RLUSD', 'XDC/RLUSD', 'ONDO/RLUSD', 'VET/RLUSD']
         return opportunity.pair in whitelist
 
     def get_filter_stats(self) -> Dict[str, int]:

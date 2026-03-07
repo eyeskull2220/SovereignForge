@@ -8,6 +8,7 @@ import asyncio
 import logging
 import sys
 import os
+import importlib.util
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 import time
@@ -234,9 +235,10 @@ class LiveArbitrageTrader:
 
             # MiCA compliance check
             mica_whitelist = [
-                'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT',
-                'LINK/USDT', 'IOTA/USDT', 'XDC/USDT', 'ONDO/USDT', 'VET/USDT',
-                'USDC/USDT', 'RLUSD/USDT'
+                'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC',
+                'LINK/USDC', 'IOTA/USDC', 'XDC/USDC', 'ONDO/USDC', 'VET/USDC',
+                'XRP/RLUSD', 'XLM/RLUSD', 'HBAR/RLUSD', 'ALGO/RLUSD', 'ADA/RLUSD',
+                'LINK/RLUSD', 'IOTA/RLUSD', 'XDC/RLUSD', 'ONDO/RLUSD', 'VET/RLUSD'
             ]
 
             if opportunity.pair not in mica_whitelist:
@@ -435,3 +437,192 @@ class LiveArbitrageTrader:
 
                 if not health_status['healthy']:
                     logger.warning("System health check failed")
+                    for issue in health_status['issues']:
+                        logger.warning(f"Health issue: {issue}")
+
+                    # Emergency stop if critical issues
+                    if health_status['critical']:
+                        logger.error("Critical health issues detected - emergency stop")
+                        self.emergency_stop = True
+
+            except Exception as e:
+                logger.error(f"Health monitor error: {e}")
+
+    async def _check_system_health(self) -> Dict[str, Any]:
+        """Check overall system health"""
+        issues = []
+        critical = False
+
+        try:
+            # Check data service
+            if not await self.data_service.is_healthy():
+                issues.append("Data service unhealthy")
+                critical = True
+
+            # Check order executor
+            if not await self.order_executor.is_healthy():
+                issues.append("Order executor unhealthy")
+                critical = True
+
+            # Check inference service
+            if not self.inference_service.is_healthy():
+                issues.append("Inference service unhealthy")
+
+            # Check active positions
+            if len(self.active_positions) > 10:  # Too many positions
+                issues.append("Too many active positions")
+
+            # Check daily drawdown
+            current_drawdown = abs(self.daily_pnl) / max(self.config.get('initial_capital', 1000), 1)
+            if current_drawdown > self.max_daily_drawdown:
+                issues.append(f"Daily drawdown exceeded: {current_drawdown:.3f}")
+                critical = True
+
+        except Exception as e:
+            issues.append(f"Health check error: {e}")
+            critical = True
+
+        return {
+            'healthy': len(issues) == 0,
+            'critical': critical,
+            'issues': issues
+        }
+
+    async def _emergency_shutdown(self):
+        """Emergency shutdown procedure"""
+        logger.critical("Emergency shutdown initiated")
+
+        # Close all positions immediately
+        await self._close_all_positions()
+
+        # Stop all services
+        await self.data_service.stop()
+
+        # Generate emergency report
+        self._generate_emergency_report()
+
+        self.is_running = False
+
+    def _generate_eod_report(self):
+        """Generate end-of-day trading report"""
+        try:
+            report = {
+                'date': datetime.now().date().isoformat(),
+                'total_pnl': self.daily_pnl,
+                'total_trades': self.daily_trade_count,
+                'active_positions': len(self.active_positions),
+                'config': self.config,
+                'timestamp': datetime.now().isoformat()
+            }
+
+            with open(f'eod_report_{datetime.now().date().isoformat()}.json', 'w') as f:
+                json.dump(report, f, indent=2, default=str)
+
+            logger.info(f"EOD Report generated: P&L {self.daily_pnl:.4f}, Trades: {self.daily_trade_count}")
+
+        except Exception as e:
+            logger.error(f"Error generating EOD report: {e}")
+
+    def _generate_emergency_report(self):
+        """Generate emergency shutdown report"""
+        try:
+            report = {
+                'emergency_shutdown': True,
+                'timestamp': datetime.now().isoformat(),
+                'active_positions': list(self.active_positions.keys()),
+                'daily_pnl': self.daily_pnl,
+                'daily_trades': self.daily_trade_count,
+                'config': self.config
+            }
+
+            with open(f'emergency_report_{int(time.time())}.json', 'w') as f:
+                json.dump(report, f, indent=2, default=str)
+
+            logger.critical("Emergency report generated")
+
+        except Exception as e:
+            logger.critical(f"Error generating emergency report: {e}")
+
+    def get_trading_status(self) -> Dict[str, Any]:
+        """Get current trading status"""
+        return {
+            'is_running': self.is_running,
+            'active_positions': len(self.active_positions),
+            'daily_pnl': self.daily_pnl,
+            'daily_trades': self.daily_trade_count,
+            'emergency_stop': self.emergency_stop,
+            'last_health_check': datetime.fromtimestamp(self.last_health_check).isoformat(),
+            'config': self.config
+        }
+
+def create_live_trader(config_path: str = 'live_trading_config.py') -> LiveArbitrageTrader:
+    """Factory function to create live trader with config"""
+    try:
+        # Load configuration
+        spec = importlib.util.spec_from_file_location("config", config_path)
+        config_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(config_module)
+
+        config = config_module.TRADING_CONFIG
+        return LiveArbitrageTrader(config)
+
+    except Exception as e:
+        logger.error(f"Error loading config from {config_path}: {e}")
+        # Default config
+        default_config = {
+            'min_probability': 0.8,
+            'min_spread': 0.002,
+            'max_risk_score': 0.3,
+            'max_daily_trades': 10,
+            'max_daily_drawdown': 0.05,
+            'max_concurrent_positions': 3,
+            'max_position_size': 0.05,
+            'initial_capital': 1000,
+            'exchange_config': {}
+        }
+        return LiveArbitrageTrader(default_config)
+
+async def main():
+    """Main entry point for live trading"""
+    import argparse
+
+    parser = argparse.ArgumentParser(description="SovereignForge Live Arbitrage Trading")
+    parser.add_argument('--config', default='live_trading_config.py', help='Configuration file')
+    parser.add_argument('--paper-trading', action='store_true', help='Enable paper trading mode')
+    parser.add_argument('--max-trades', type=int, default=5, help='Maximum trades for testing')
+
+    args = parser.parse_args()
+
+    # Create trader
+    trader = create_live_trader(args.config)
+
+    # Override for testing
+    if args.paper_trading:
+        trader.config['paper_trading'] = True
+        logger.info("Paper trading mode enabled")
+
+    trader.max_daily_trades = args.max_trades
+
+    # Setup signal handlers
+    def signal_handler(signum, frame):
+        logger.info("Signal received, initiating shutdown...")
+        asyncio.create_task(trader.stop_trading())
+
+    import signal
+    signal.signal(signal.SIGINT, signal_handler)
+    signal.signal(signal.SIGTERM, signal_handler)
+
+    try:
+        # Start trading
+        await trader.start_trading()
+
+    except KeyboardInterrupt:
+        logger.info("Keyboard interrupt received")
+        await trader.stop_trading()
+
+    except Exception as e:
+        logger.error(f"Fatal error: {e}")
+        await trader.stop_trading()
+
+if __name__ == "__main__":
+    asyncio.run(main())

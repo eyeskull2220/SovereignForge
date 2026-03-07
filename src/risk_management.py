@@ -62,15 +62,25 @@ class RiskManager:
 
         logger.info(f"RiskManager initialized with ${initial_capital} capital")
 
-    def validate_opportunity(self, opportunity: Dict[str, Any]) -> bool:
+    def validate_opportunity(self, opportunity) -> bool:
         """
         Validate arbitrage opportunity against risk limits
+        Supports both dict and ArbitrageOpportunity objects
         """
         try:
-            pair = opportunity.get('pair', '')
-            exchanges = opportunity.get('exchanges', [])
-            prices = opportunity.get('prices', {})
-            spread = opportunity.get('spread_prediction', 0)
+            # Handle both dict and object types
+            if hasattr(opportunity, 'pair'):
+                # ArbitrageOpportunity object
+                pair = opportunity.pair
+                exchanges = opportunity.exchanges
+                prices = opportunity.prices
+                spread = opportunity.spread_prediction
+            else:
+                # Dictionary
+                pair = opportunity.get('pair', '')
+                exchanges = opportunity.get('exchanges', [])
+                prices = opportunity.get('prices', {})
+                spread = opportunity.get('spread_prediction', 0)
 
             # Check if we already have position in this pair
             if pair in self.positions:

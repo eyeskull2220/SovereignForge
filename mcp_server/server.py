@@ -255,9 +255,10 @@ async def check_compliance(arguments: Dict[str, Any]) -> List[TextContent]:
 
     # MiCA compliant pairs (only these are allowed)
     mica_whitelist = [
-        'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT',
-        'LINK/USDT', 'IOTA/USDT', 'XDC/USDT', 'ONDO/USDT', 'VET/USDT',
-        'USDC/USDT', 'RLUSD/USDT'
+        'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC',
+        'LINK/USDC', 'IOTA/USDC', 'XDC/USDC', 'ONDO/USDC', 'VET/USDC',
+        'XRP/RLUSD', 'XLM/RLUSD', 'HBAR/RLUSD', 'ALGO/RLUSD', 'ADA/RLUSD',
+        'LINK/RLUSD', 'IOTA/RLUSD', 'XDC/RLUSD', 'ONDO/RLUSD', 'VET/RLUSD'
     ]
 
     compliant = pair in mica_whitelist

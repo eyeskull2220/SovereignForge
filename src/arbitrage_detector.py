@@ -12,7 +12,7 @@ from datetime import datetime
 import logging
 import json
 import os
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import sqlite3
 
 # Import advanced model architecture
@@ -22,6 +22,15 @@ except ImportError:
     # Fallback to simple model if advanced not available
     ArbitrageTransformer = None
     ModelConfig = None
+
+# Import Grok reasoning engine
+try:
+    from grok_reasoning import GrokReasoningWrapper
+except ImportError:
+    GrokReasoningWrapper = None
+
+# Import compliance engine
+from compliance import get_compliance_engine, ComplianceViolationError
 
 # Configure logging
 logging.basicConfig(
@@ -183,7 +192,7 @@ class MarketDataProcessor:
 class ArbitrageDetector:
     """Main arbitrage detection system"""
 
-    def __init__(self, model_path: str = None):
+    def __init__(self, model_path: str = None, enable_grok_reasoning: bool = True):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.processor = MarketDataProcessor()
 
@@ -191,6 +200,20 @@ class ArbitrageDetector:
         self.model = None
         self.model_type = 'none'
         self.model_config = None
+
+        # Initialize Grok reasoning engine
+        self.grok_reasoner = None
+        if enable_grok_reasoning and GrokReasoningWrapper is not None:
+            try:
+                self.grok_reasoner = GrokReasoningWrapper()
+                if self.grok_reasoner.is_operational():
+                    logger.info("🧠 Grok reasoning engine initialized and operational")
+                else:
+                    logger.warning("🧠 Grok reasoning engine initialized but not operational (API key required)")
+            except Exception as e:
+                logger.warning(f"🧠 Failed to initialize Grok reasoning engine: {e}")
+        else:
+            logger.info("🧠 Grok reasoning disabled or not available")
 
         # Try to load models in order of preference
         model_paths = [
@@ -269,6 +292,23 @@ class ArbitrageDetector:
     def detect_opportunity(self, market_data: Dict) -> Dict:
         """Detect arbitrage opportunity"""
         try:
+            # MiCA Compliance Check - Hard enforcement
+            compliance_engine = get_compliance_engine()
+
+            # Check if market data contains compliant pairs
+            pair = market_data.get('pair')
+            if pair:
+                if not compliance_engine.is_pair_compliant(pair):
+                    raise ComplianceViolationError(f"Non-compliant pair: {pair}")
+
+            # Validate all exchanges in market data
+            exchanges = market_data.get('exchanges', {})
+            for exch_name, exch_data in exchanges.items():
+                # Extract pair from exchange data if not in main market_data
+                if not pair and 'pair' in exch_data:
+                    pair = exch_data['pair']
+                    if not compliance_engine.is_pair_compliant(pair):
+                        raise ComplianceViolationError(f"Non-compliant pair in exchange data: {pair}")
             if self.model_type == 'legacy':
                 # Legacy LSTM model expects sequence input
                 features = self._prepare_legacy_features(market_data)
@@ -300,14 +340,42 @@ class ArbitrageDetector:
                 # Calculate confidence (simplified)
                 confidence = min(abs(prediction) * 5, 1.0)
 
+            opportunity_detected = confidence > 0.7
+
             result = {
                 'arbitrage_signal': prediction,
                 'confidence': confidence,
-                'opportunity_detected': confidence > 0.7,
+                'opportunity_detected': opportunity_detected,
                 'timestamp': datetime.now().isoformat(),
                 'exchanges_checked': len(market_data.get('exchanges', {})),
                 'model_type': self.model_type
             }
+
+            # Add Grok reasoning analysis if opportunity detected and Grok is available
+            if opportunity_detected and self.grok_reasoner and self.grok_reasoner.is_operational():
+                try:
+                    logger.info("🧠 Analyzing opportunity with Grok reasoning...")
+
+                    # Prepare opportunity data for Grok analysis
+                    grok_opportunity_data = self._prepare_grok_opportunity_data(market_data, result)
+
+                    # Get Grok analysis
+                    grok_analysis = self.grok_reasoner.analyze_opportunity(grok_opportunity_data)
+
+                    # Add Grok analysis to result
+                    result['grok_analysis'] = grok_analysis
+                    result['grok_reasoning_available'] = True
+
+                    logger.info(f"🧠 Grok analysis complete - Risk: {grok_analysis.get('parsed', {}).get('risk_level', 'Unknown')}")
+
+                except Exception as e:
+                    logger.warning(f"🧠 Grok analysis failed: {e}")
+                    result['grok_analysis'] = {'error': str(e)}
+                    result['grok_reasoning_available'] = False
+            else:
+                result['grok_reasoning_available'] = False
+                if opportunity_detected and self.grok_reasoner:
+                    logger.info("🧠 Opportunity detected but Grok reasoning not operational")
 
             return result
 
@@ -363,6 +431,47 @@ class ArbitrageDetector:
             features.append(0.0)
 
         return torch.tensor(features[:22], dtype=torch.float32)
+
+    def _prepare_grok_opportunity_data(self, market_data: Dict, detection_result: Dict) -> Dict[str, Any]:
+        """Prepare opportunity data for Grok analysis"""
+        exchanges = market_data.get('exchanges', {})
+
+        # Calculate spread and other metrics
+        if len(exchanges) >= 2:
+            exch_list = list(exchanges.values())
+            bid0 = exch_list[0].get('bid')
+            ask1 = exch_list[1].get('ask')
+            if bid0 is not None and ask1 is not None and bid0 > 0:
+                spread = abs(bid0 - ask1) / bid0
+            else:
+                spread = 0.0
+        else:
+            spread = 0.0
+
+        # Extract volumes
+        volumes = {}
+        fees = {}
+        for exch_name, exch_data in exchanges.items():
+            volumes[exch_name] = exch_data.get('volume', 0) or 0
+            # Estimate fees (simplified)
+            if 'binance' in exch_name.lower():
+                fees[exch_name] = 0.001
+            elif 'coinbase' in exch_name.lower():
+                fees[exch_name] = 0.002
+            else:
+                fees[exch_name] = 0.0015
+
+        # Prepare opportunity data for Grok
+        grok_data = {
+            'pair': 'BTC/USDT',  # Default pair
+            'exchanges': list(exchanges.keys()),
+            'spread': spread,
+            'probability': detection_result.get('confidence', 0.0),
+            'volumes': volumes,
+            'fees': fees
+        }
+
+        return grok_data
 
     def _prepare_advanced_model_input(self, market_data: Dict) -> Dict[str, torch.Tensor]:
         """Prepare input data for advanced ArbitrageTransformer model"""

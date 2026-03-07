@@ -1,0 +1,42 @@
+{
+  "XLM/USDT": [
+    {
+      "train_loss": 0.66210220515728,
+      "train_arbitrage_acc": 0.6999499845504761,
+      "val_loss": 0.6555376076698303,
+      "val_arbitrage_acc": 0.6973999834060669
+    }
+  ],
+  "HBAR/USDT": [
+    {
+      "train_loss": 0.6599352526664733,
+      "train_arbitrage_acc": 0.7007999819517136,
+      "val_loss": 0.6589433169364929,
+      "val_arbitrage_acc": 0.697199981212616
+    }
+  ],
+  "metadata": {
+    "timestamp": "20260306_154016",
+    "training_time_seconds": 55.02302384376526,
+    "gpu_available": false,
+    "config": {
+      "pairs": [
+        "XLM/USDT",
+        "HBAR/USDT"
+      ],
+      "all_pairs": false,
+      "epochs": 1,
+      "batch_size": 200,
+      "learning_rate": 0.0001,
+      "gradient_clip": 1.0,
+      "gpu_device": 0,
+      "memory_fraction": 0.8,
+      "mixed_precision": false,
+      "gpu_monitor": true,
+      "tensorboard": false,
+      "wandb": false,
+      "safe_mode": false,
+      "checkpoint_freq": 10
+    }
+  }
+}

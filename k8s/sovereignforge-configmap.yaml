@@ -1,0 +1,43 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sovereignforge-config
+  namespace: trading
+  labels:
+    app: sovereignforge
+data:
+  # Telegram Configuration
+  telegram-chat-ids: "123456789,987654321"
+
+  # Trading Parameters
+  enable-grok-reasoning: "true"
+  min-probability: "0.75"
+  min-spread: "0.001"
+  max-risk-score: "0.25"
+
+  # Trading Pairs
+  trading-pairs: |
+    BTC/USDT,ETH/USDT,XRP/USDT,XLM/USDT,HBAR/USDT,ALGO/USDT,ADA/USDT
+
+  # System Configuration
+  log-level: "INFO"
+  environment: "production"
+
+  # Performance Settings
+  gpu-memory-fraction: "0.8"
+  max-concurrent-requests: "10"
+
+  # Alert Settings
+  alert-on-opportunities: "true"
+  alert-batch-size: "5"
+  alert-cooldown-seconds: "30"
+
+  # Exchange Configuration
+  exchange-timeout: "10"
+  max-retry-attempts: "3"
+  retry-backoff-factor: "2.0"
+
+  # Model Configuration
+  model-batch-size: "32"
+  inference-timeout: "5"
+  confidence-threshold: "0.8"

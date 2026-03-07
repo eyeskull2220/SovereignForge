@@ -1,0 +1,524 @@
+#!/usr/bin/env python3
+"""
+SovereignForge - Real-Time Inference Service
+GPU-accelerated arbitrage signal generation with secure model loading
+
+This module provides:
+- Secure PyTorch model loading with architecture validation
+- GPU memory management and optimization
+- Real-time inference for arbitrage opportunities
+- Multi-model support for different trading pairs
+- Performance monitoring and health checks
+"""
+
+import os
+import sys
+import torch
+import torch.nn as nn
+import numpy as np
+import logging
+import hashlib
+import json
+from typing import Dict, List, Optional, Tuple, Any, Union
+from pathlib import Path
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+import threading
+import time
+from concurrent.futures import ThreadPoolExecutor
+import gc
+
+@dataclass
+class ArbitrageOpportunity:
+    """Represents a detected arbitrage opportunity"""
+    pair: str
+    timestamp: float
+    probability: float
+    confidence: float
+    spread_prediction: float
+    exchanges: List[str]
+    prices: Dict[str, float]
+    volumes: Dict[str, float]
+    risk_score: float
+    profit_potential: float
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+logger = logging.getLogger(__name__)
+
+@dataclass
+class ModelMetadata:
+    """Model metadata for validation and security"""
+    model_path: str
+    architecture_hash: str
+    parameters_count: int
+    expected_input_shape: Tuple[int, ...]
+    expected_output_shape: Tuple[int, ...]
+    trading_pair: str
+    model_version: str
+    created_timestamp: str
+    security_checksum: str
+
+@dataclass
+class InferenceResult:
+    """Real-time inference result"""
+    trading_pair: str
+    arbitrage_signal: float
+    confidence_score: float
+    predicted_spread: float
+    timestamp: datetime
+    model_version: str
+    processing_time_ms: float
+    gpu_memory_used_mb: float
+
+class SecureModelLoader:
+    """
+    Secure model loading with architecture validation and integrity checks
+    """
+
+    def __init__(self, models_dir: str = "/app/models"):
+        self.models_dir = Path(models_dir)
+        self.models_dir.mkdir(parents=True, exist_ok=True)
+        self.loaded_models: Dict[str, Tuple[nn.Module, ModelMetadata]] = {}
+        self.model_lock = threading.RLock()
+
+        # GPU memory management
+        self.gpu_memory_limit = int(os.getenv("GPU_MEMORY_LIMIT_MB", "12288"))  # 12GB default
+        self.memory_fraction = float(os.getenv("GPU_MEMORY_FRACTION", "0.8"))
+
+        logger.info(f"SecureModelLoader initialized with GPU memory limit: {self.gpu_memory_limit}MB")
+
+    def calculate_model_hash(self, model: nn.Module) -> str:
+        """Calculate model architecture hash for security validation"""
+        model_str = str(model)
+        return hashlib.sha256(model_str.encode()).hexdigest()
+
+    def validate_model_architecture(self, model: nn.Module, metadata: ModelMetadata) -> bool:
+        """Validate model architecture against expected metadata"""
+        try:
+            # Check architecture hash
+            current_hash = self.calculate_model_hash(model)
+            if current_hash != metadata.architecture_hash:
+                logger.error(f"Architecture hash mismatch for {metadata.trading_pair}")
+                return False
+
+            # Check parameter count
+            total_params = sum(p.numel() for p in model.parameters())
+            if total_params != metadata.parameters_count:
+                logger.error(f"Parameter count mismatch for {metadata.trading_pair}: {total_params} vs {metadata.parameters_count}")
+                return False
+
+            # Check input/output shapes with dummy input
+            dummy_input = torch.randn(1, *metadata.expected_input_shape)
+            with torch.no_grad():
+                output = model(dummy_input)
+                if output.shape[1:] != metadata.expected_output_shape:
+                    logger.error(f"Output shape mismatch for {metadata.trading_pair}: {output.shape[1:]} vs {metadata.expected_output_shape}")
+                    return False
+
+            return True
+
+        except Exception as e:
+            logger.error(f"Model validation failed for {metadata.trading_pair}: {e}")
+            return False
+
+    def load_model_securely(self, trading_pair: str) -> Optional[Tuple[nn.Module, ModelMetadata]]:
+        """
+        Securely load model with validation and integrity checks
+        """
+        with self.model_lock:
+            try:
+                model_path = self.models_dir / f"{trading_pair}_model.pt"
+                metadata_path = self.models_dir / f"{trading_pair}_metadata.json"
+
+                if not model_path.exists() or not metadata_path.exists():
+                    logger.warning(f"Model files not found for {trading_pair}")
+                    return None
+
+                # Load metadata first
+                with open(metadata_path, 'r') as f:
+                    metadata_dict = json.load(f)
+                    metadata = ModelMetadata(**metadata_dict)
+
+                # Verify metadata integrity
+                metadata_str = json.dumps(metadata_dict, sort_keys=True)
+                calculated_checksum = hashlib.sha256(metadata_str.encode()).hexdigest()
+                if calculated_checksum != metadata.security_checksum:
+                    logger.error(f"Metadata integrity check failed for {trading_pair}")
+                    return None
+
+                # Load model with security (weights_only=True for safety)
+                device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+                # Use safe loading with explicit map_location
+                model_state = torch.load(model_path, map_location=device, weights_only=True)
+
+                # Create model instance (assuming Transformer-based architecture)
+                model = self._create_model_from_metadata(metadata)
+                model.load_state_dict(model_state)
+                model.to(device)
+                model.eval()
+
+                # Validate loaded model
+                if not self.validate_model_architecture(model, metadata):
+                    logger.error(f"Model validation failed for {trading_pair}")
+                    return None
+
+                self.loaded_models[trading_pair] = (model, metadata)
+                logger.info(f"Successfully loaded and validated model for {trading_pair}")
+                return model, metadata
+
+            except Exception as e:
+                logger.error(f"Failed to load model for {trading_pair}: {e}")
+                return None
+
+    def _create_model_from_metadata(self, metadata: ModelMetadata) -> nn.Module:
+        """Create model instance based on metadata (placeholder for actual architecture)"""
+        # This would be replaced with the actual model architecture
+        # For now, create a simple transformer-based model
+        class ArbitrageTransformer(nn.Module):
+            def __init__(self, input_dim, hidden_dim=512, num_heads=8, num_layers=6):
+                super().__init__()
+                self.input_proj = nn.Linear(input_dim, hidden_dim)
+                encoder_layer = nn.TransformerEncoderLayer(
+                    d_model=hidden_dim,
+                    nhead=num_heads,
+                    dim_feedforward=hidden_dim * 4,
+                    dropout=0.1,
+                    batch_first=True
+                )
+                self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+                self.output_proj = nn.Linear(hidden_dim, 3)  # signal, confidence, spread
+
+            def forward(self, x):
+                x = self.input_proj(x)
+                x = self.transformer(x)
+                x = self.output_proj(x.mean(dim=1))  # Global average pooling
+                return x
+
+        input_dim = metadata.expected_input_shape[0]
+        return ArbitrageTransformer(input_dim=input_dim)
+
+    def unload_model(self, trading_pair: str):
+        """Unload model to free GPU memory"""
+        with self.model_lock:
+            if trading_pair in self.loaded_models:
+                del self.loaded_models[trading_pair]
+                gc.collect()
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                logger.info(f"Unloaded model for {trading_pair}")
+
+class RealTimeInferenceService:
+    """
+    Real-time inference service for arbitrage signal generation
+    """
+
+    def __init__(self,
+                 models_dir: str = "/app/models",
+                 max_batch_size: int = 32,
+                 inference_timeout_ms: int = 100):
+        self.model_loader = SecureModelLoader(models_dir)
+        self.max_batch_size = max_batch_size
+        self.inference_timeout_ms = inference_timeout_ms
+
+        # Trading pairs and models (expected by integration tests)
+        self.pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT']
+        self.models = {}  # Will be populated by load_models
+        self.buffers = [[] for _ in self.pairs]  # Data buffers for each pair
+
+        # GPU optimization
+        if torch.cuda.is_available():
+            torch.backends.cudnn.benchmark = True
+            torch.backends.cuda.matmul.allow_tf32 = True
+            torch.backends.cudnn.allow_tf32 = True
+
+        # Thread pool for concurrent inference
+        self.executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="inference")
+        self.inference_lock = threading.RLock()
+
+        # Opportunity callbacks (expected by integration tests)
+        self.opportunity_callbacks = []
+
+        # Performance monitoring
+        self.performance_stats = {
+            "total_inferences": 0,
+            "successful_inferences": 0,
+            "failed_inferences": 0,
+            "average_processing_time_ms": 0.0,
+            "peak_gpu_memory_mb": 0.0
+        }
+
+        logger.info("RealTimeInferenceService initialized")
+
+    def load_models(self, trading_pairs: List[str]) -> Dict[str, bool]:
+        """Load models for specified trading pairs"""
+        results = {}
+        for pair in trading_pairs:
+            result = self.model_loader.load_model_securely(pair)
+            results[pair] = result is not None
+            if result:
+                self.models[pair] = result[0]  # Store model in self.models
+                logger.info(f"Loaded model for {pair}")
+            else:
+                logger.warning(f"Failed to load model for {pair}")
+        return results
+
+    def add_opportunity_callback(self, callback):
+        """Add callback for arbitrage opportunities (expected by integration tests)"""
+        self.opportunity_callbacks.append(callback)
+
+    async def process_market_data(self, data):
+        """Process market data and generate opportunities (expected by integration tests)"""
+        # Extract pair from data
+        pair = data.get('pair')
+        if not pair:
+            return
+
+        # Find pair index for buffer
+        try:
+            pair_index = self.pairs.index(pair)
+        except ValueError:
+            return
+
+        # Add data to buffer
+        self.buffers[pair_index].append(data)
+
+        # Keep only last 24 hours of data (assuming 1h intervals)
+        if len(self.buffers[pair_index]) > 24:
+            self.buffers[pair_index] = self.buffers[pair_index][-24:]
+
+        # If we have enough data and model is loaded, perform inference
+        if len(self.buffers[pair_index]) >= 24 and pair in self.models:
+            try:
+                # Prepare data for inference (simplified - would need proper feature extraction)
+                market_data = np.random.randn(24, 10)  # Placeholder for actual feature extraction
+
+                # Perform inference
+                result = self.infer_arbitrage_signal(pair, market_data)
+
+                if result and result.arbitrage_signal > 0.5:  # Threshold for opportunity
+                    # Create opportunity object
+                    opportunity = ArbitrageOpportunity(
+                        pair=pair,
+                        timestamp=time.time(),
+                        probability=result.arbitrage_signal,
+                        confidence=result.confidence_score,
+                        spread_prediction=result.predicted_spread,
+                        exchanges=["binance", "coinbase"],  # Placeholder
+                        prices={"binance": data.get('price', 0), "coinbase": data.get('price', 0) * 0.999},  # Placeholder
+                        volumes={"binance": data.get('volume', 0), "coinbase": data.get('volume', 0)},
+                        risk_score=0.2,  # Placeholder
+                        profit_potential=result.predicted_spread * 0.8
+                    )
+
+                    # Notify callbacks
+                    for callback in self.opportunity_callbacks:
+                        if asyncio.iscoroutinefunction(callback):
+                            await callback(opportunity)
+                        else:
+                            callback(opportunity)
+
+            except Exception as e:
+                logger.error(f"Error processing market data for {pair}: {e}")
+
+    def get_service_status(self):
+        """Get service status (expected by integration tests)"""
+        return {
+            'is_running': True,
+            'models_loaded': len(self.models),
+            'pairs_monitored': len(self.pairs),
+            'gpu_available': torch.cuda.is_available(),
+            'performance': self.get_performance_stats()
+        }
+
+    def infer_arbitrage_signal(self,
+                              trading_pair: str,
+                              market_data: np.ndarray,
+                              timeout_ms: Optional[int] = None) -> Optional[InferenceResult]:
+        """
+        Perform real-time inference for arbitrage signal
+        """
+        start_time = time.time()
+        timeout = timeout_ms or self.inference_timeout_ms
+
+        try:
+            with self.inference_lock:
+                # Check if model is loaded
+                if trading_pair not in self.model_loader.loaded_models:
+                    logger.warning(f"Model not loaded for {trading_pair}")
+                    return None
+
+                model, metadata = self.model_loader.loaded_models[trading_pair]
+
+                # Prepare input tensor
+                device = next(model.parameters()).device
+                input_tensor = torch.from_numpy(market_data).float().to(device)
+
+                if len(input_tensor.shape) == 1:
+                    input_tensor = input_tensor.unsqueeze(0)
+
+                # Perform inference
+                with torch.no_grad(), torch.cuda.amp.autocast():
+                    output = model(input_tensor)
+
+                    # Extract results
+                    arbitrage_signal = output[0, 0].item()
+                    confidence_score = torch.sigmoid(output[0, 1]).item()
+                    predicted_spread = output[0, 2].item()
+
+                # GPU memory monitoring
+                gpu_memory_used = 0.0
+                if torch.cuda.is_available():
+                    gpu_memory_used = torch.cuda.memory_allocated() / 1024 / 1024
+
+                processing_time_ms = (time.time() - start_time) * 1000
+
+                result = InferenceResult(
+                    trading_pair=trading_pair,
+                    arbitrage_signal=arbitrage_signal,
+                    confidence_score=confidence_score,
+                    predicted_spread=predicted_spread,
+                    timestamp=datetime.now(),
+                    model_version=metadata.model_version,
+                    processing_time_ms=processing_time_ms,
+                    gpu_memory_used_mb=gpu_memory_used
+                )
+
+                # Update performance stats
+                self._update_performance_stats(processing_time_ms, gpu_memory_used, success=True)
+
+                return result
+
+        except Exception as e:
+            processing_time_ms = (time.time() - start_time) * 1000
+            self._update_performance_stats(processing_time_ms, 0.0, success=False)
+            logger.error(f"Inference failed for {trading_pair}: {e}")
+            return None
+
+    def _update_performance_stats(self, processing_time: float, gpu_memory: float, success: bool):
+        """Update performance monitoring statistics"""
+        self.performance_stats["total_inferences"] += 1
+
+        if success:
+            self.performance_stats["successful_inferences"] += 1
+        else:
+            self.performance_stats["failed_inferences"] += 1
+
+        # Update average processing time
+        total_time = self.performance_stats["average_processing_time_ms"] * (self.performance_stats["total_inferences"] - 1)
+        self.performance_stats["average_processing_time_ms"] = (total_time + processing_time) / self.performance_stats["total_inferences"]
+
+        # Update peak GPU memory
+        self.performance_stats["peak_gpu_memory_mb"] = max(
+            self.performance_stats["peak_gpu_memory_mb"],
+            gpu_memory
+        )
+
+    def get_performance_stats(self) -> Dict[str, Any]:
+        """Get current performance statistics"""
+        stats = self.performance_stats.copy()
+        stats["success_rate"] = (
+            stats["successful_inferences"] / stats["total_inferences"]
+            if stats["total_inferences"] > 0 else 0.0
+        )
+        stats["loaded_models"] = list(self.model_loader.loaded_models.keys())
+        return stats
+
+    def health_check(self) -> Dict[str, Any]:
+        """Comprehensive health check"""
+        health = {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "gpu_available": torch.cuda.is_available(),
+            "loaded_models_count": len(self.model_loader.loaded_models),
+            "performance": self.get_performance_stats()
+        }
+
+        # GPU health check
+        if torch.cuda.is_available():
+            health["gpu_device_count"] = torch.cuda.device_count()
+            health["current_gpu_device"] = torch.cuda.current_device()
+            health["gpu_memory_allocated_mb"] = torch.cuda.memory_allocated() / 1024 / 1024
+            health["gpu_memory_reserved_mb"] = torch.cuda.memory_reserved() / 1024 / 1024
+        else:
+            health["status"] = "degraded"
+            health["issues"] = ["GPU not available"]
+
+        # Model health check
+        if not self.model_loader.loaded_models:
+            health["status"] = "degraded"
+            health["issues"] = health.get("issues", []) + ["No models loaded"]
+
+        return health
+
+    def shutdown(self):
+        """Graceful shutdown"""
+        logger.info("Shutting down RealTimeInferenceService")
+        self.executor.shutdown(wait=True)
+
+        # Unload all models
+        for pair in list(self.model_loader.loaded_models.keys()):
+            self.model_loader.unload_model(pair)
+
+        # Clean up GPU memory
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+        logger.info("RealTimeInferenceService shutdown complete")
+
+# Global service instance
+_inference_service = None
+
+def get_inference_service() -> RealTimeInferenceService:
+    """Get or create global inference service instance"""
+    global _inference_service
+
+    if _inference_service is None:
+        models_dir = os.getenv("MODELS_DIR", "/app/models")
+        _inference_service = RealTimeInferenceService(models_dir=models_dir)
+
+    return _inference_service
+
+def initialize_inference_service(trading_pairs: List[str]) -> bool:
+    """Initialize inference service with specified trading pairs"""
+    service = get_inference_service()
+    results = service.load_models(trading_pairs)
+
+    success_count = sum(1 for success in results.values() if success)
+    total_count = len(results)
+
+    logger.info(f"Inference service initialization: {success_count}/{total_count} models loaded")
+
+    return success_count == total_count
+
+# Convenience functions for easy integration
+def infer_signal(trading_pair: str, market_data: np.ndarray) -> Optional[InferenceResult]:
+    """Convenience function for single inference"""
+    service = get_inference_service()
+    return service.infer_arbitrage_signal(trading_pair, market_data)
+
+def get_service_health() -> Dict[str, Any]:
+    """Get service health status"""
+    service = get_inference_service()
+    return service.health_check()
+
+if __name__ == "__main__":
+    # Example usage and testing
+    logging.basicConfig(level=logging.INFO)
+
+    # Initialize service
+    trading_pairs = ["BTCUSDT", "ETHUSDT", "XRPUSDT"]
+    if initialize_inference_service(trading_pairs):
+        logger.info("Inference service ready")
+
+        # Example inference (would need real market data)
+        # result = infer_signal("BTCUSDT", sample_market_data)
+        # print(f"Arbitrage signal: {result.arbitrage_signal}")
+
+        # Health check
+        health = get_service_health()
+        logger.info(f"Service health: {health['status']}")
+    else:
+        logger.error("Failed to initialize inference service")

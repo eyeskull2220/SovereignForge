@@ -5,22 +5,37 @@ Simple exchange API connector for arbitrage detection
 """
 
 import ccxt
+import ccxt.async_support as ccxt_async
+import asyncio
 import time
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Callable, Any
 from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 
-class ExchangeConnector:
-    """Simple exchange API connector"""
+# Import WebSocket components
+try:
+    from source.src.websocket.connection_manager import WebSocketConnectionManager
+    from source.src.websocket.reconnect_handler import get_reconnect_manager
+    WEBSOCKET_AVAILABLE = True
+except ImportError:
+    logger.warning("WebSocket components not available, falling back to REST-only mode")
+    WEBSOCKET_AVAILABLE = False
+    WebSocketConnectionManager = None
+    get_reconnect_manager = None
 
-    def __init__(self, exchange_name: str, api_key: str = None, api_secret: str = None):
+class ExchangeConnector:
+    """Exchange API connector with WebSocket support"""
+
+    def __init__(self, exchange_name: str, api_key: str = None, api_secret: str = None,
+                 enable_websocket: bool = True):
         self.exchange_name = exchange_name
         self.api_key = api_key
         self.api_secret = api_secret
+        self.enable_websocket = enable_websocket and WEBSOCKET_AVAILABLE
 
-        # Initialize exchange
+        # Initialize REST exchange
         try:
             exchange_class = getattr(ccxt, exchange_name)
             self.exchange = exchange_class({
@@ -32,6 +47,216 @@ class ExchangeConnector:
         except Exception as e:
             logger.error(f"Failed to initialize {exchange_name}: {e}")
             self.exchange = None
+
+        # Initialize WebSocket components
+        self.websocket_manager = None
+        self.reconnect_manager = None
+        self.websocket_task = None
+        self.message_handlers: Dict[str, Callable] = {}
+
+        if self.enable_websocket:
+            self._initialize_websocket()
+
+    def _initialize_websocket(self):
+        """Initialize WebSocket connection manager"""
+        try:
+            # Get exchange WebSocket URL
+            ws_url = self._get_websocket_url()
+
+            if ws_url:
+                self.websocket_manager = WebSocketConnectionManager(
+                    self.exchange_name,
+                    ws_url,
+                    self.api_key,
+                    self.api_secret
+                )
+
+                # Add message handlers
+                self.websocket_manager.add_message_handler('ticker', self._handle_ticker_message)
+                self.websocket_manager.add_message_handler('orderbook', self._handle_orderbook_message)
+                self.websocket_manager.add_message_handler('trade', self._handle_trade_message)
+
+                # Add connection handlers
+                self.websocket_manager.add_connection_handler('connected', self._handle_connection_event)
+                self.websocket_manager.add_connection_handler('disconnected', self._handle_connection_event)
+
+                # Register with global reconnect manager
+                if get_reconnect_manager:
+                    self.reconnect_manager = get_reconnect_manager()
+                    self.reconnect_manager.add_connection(
+                        f"{self.exchange_name}_ws",
+                        self.websocket_manager
+                    )
+
+                logger.info(f"WebSocket initialized for {self.exchange_name}")
+            else:
+                logger.warning(f"No WebSocket URL available for {self.exchange_name}")
+                self.enable_websocket = False
+
+        except Exception as e:
+            logger.error(f"Failed to initialize WebSocket for {self.exchange_name}: {e}")
+            self.enable_websocket = False
+
+    def _get_websocket_url(self) -> Optional[str]:
+        """Get WebSocket URL for exchange"""
+        websocket_urls = {
+            'binance': 'wss://stream.binance.com:9443/ws',
+            'coinbase': 'wss://ws-feed.pro.coinbase.com',
+            'kraken': 'wss://ws.kraken.com',
+            'bitfinex': 'wss://api-pub.bitfinex.com/ws/2',
+            'huobi': 'wss://api.huobi.pro/ws',
+            'okex': 'wss://ws.okex.com:8443/ws/v5/public',
+            'ftx': 'wss://ftx.com/ws',
+            'bybit': 'wss://stream.bybit.com/realtime',
+            'kucoin': 'wss://api-sandbox.kucoin.com',
+        }
+        return websocket_urls.get(self.exchange_name.lower())
+
+    async def start_websocket(self):
+        """Start WebSocket connection and auto-reconnect"""
+        if not self.enable_websocket or not self.websocket_manager:
+            logger.warning("WebSocket not available or not enabled")
+            return
+
+        try:
+            # Start WebSocket auto-reconnect
+            self.websocket_task = asyncio.create_task(
+                self.websocket_manager.start_auto_reconnect()
+            )
+            logger.info(f"WebSocket auto-reconnect started for {self.exchange_name}")
+
+        except Exception as e:
+            logger.error(f"Failed to start WebSocket for {self.exchange_name}: {e}")
+
+    async def stop_websocket(self):
+        """Stop WebSocket connection"""
+        if self.websocket_task:
+            self.websocket_manager.stop_auto_reconnect()
+            self.websocket_task.cancel()
+            try:
+                await self.websocket_task
+            except asyncio.CancelledError:
+                pass
+            self.websocket_task = None
+
+        if self.websocket_manager:
+            await self.websocket_manager.disconnect()
+
+    def add_message_handler(self, message_type: str, handler: Callable):
+        """Add custom message handler"""
+        self.message_handlers[message_type] = handler
+
+    def _handle_ticker_message(self, data: Dict[str, Any], exchange_name: str):
+        """Handle ticker WebSocket message"""
+        try:
+            # Process ticker data
+            ticker_data = {
+                'exchange': exchange_name,
+                'symbol': data.get('symbol', data.get('product_id')),
+                'bid': data.get('bestBid'),
+                'ask': data.get('bestAsk'),
+                'last': data.get('price'),
+                'volume': data.get('volume'),
+                'timestamp': datetime.now()
+            }
+
+            # Call custom handler if registered
+            if 'ticker' in self.message_handlers:
+                self.message_handlers['ticker'](ticker_data)
+
+        except Exception as e:
+            logger.error(f"Error handling ticker message: {e}")
+
+    def _handle_orderbook_message(self, data: Dict[str, Any], exchange_name: str):
+        """Handle orderbook WebSocket message"""
+        try:
+            # Process orderbook data
+            orderbook_data = {
+                'exchange': exchange_name,
+                'symbol': data.get('symbol', data.get('product_id')),
+                'bids': data.get('bids', []),
+                'asks': data.get('asks', []),
+                'timestamp': datetime.now()
+            }
+
+            # Call custom handler if registered
+            if 'orderbook' in self.message_handlers:
+                self.message_handlers['orderbook'](orderbook_data)
+
+        except Exception as e:
+            logger.error(f"Error handling orderbook message: {e}")
+
+    def _handle_trade_message(self, data: Dict[str, Any], exchange_name: str):
+        """Handle trade WebSocket message"""
+        try:
+            # Process trade data
+            trade_data = {
+                'exchange': exchange_name,
+                'symbol': data.get('symbol', data.get('product_id')),
+                'price': data.get('price'),
+                'amount': data.get('size', data.get('amount')),
+                'side': data.get('side'),
+                'timestamp': datetime.now()
+            }
+
+            # Call custom handler if registered
+            if 'trade' in self.message_handlers:
+                self.message_handlers['trade'](trade_data)
+
+        except Exception as e:
+            logger.error(f"Error handling trade message: {e}")
+
+    def _handle_connection_event(self, event: str, exchange_name: str):
+        """Handle WebSocket connection events"""
+        logger.info(f"WebSocket {event} for {exchange_name}")
+
+        # Call custom handler if registered
+        if event in self.message_handlers:
+            self.message_handlers[event]({'event': event, 'exchange': exchange_name})
+
+    async def subscribe_to_ticker(self, symbol: str) -> bool:
+        """Subscribe to ticker updates via WebSocket"""
+        if not self.enable_websocket or not self.websocket_manager:
+            return False
+
+        try:
+            return await self.websocket_manager.subscribe_to_ticker(symbol)
+        except Exception as e:
+            logger.error(f"Failed to subscribe to ticker {symbol}: {e}")
+            return False
+
+    async def subscribe_to_orderbook(self, symbol: str, depth: int = 10) -> bool:
+        """Subscribe to orderbook updates via WebSocket"""
+        if not self.enable_websocket or not self.websocket_manager:
+            return False
+
+        try:
+            return await self.websocket_manager.subscribe_to_orderbook(symbol, depth)
+        except Exception as e:
+            logger.error(f"Failed to subscribe to orderbook {symbol}: {e}")
+            return False
+
+    async def subscribe_to_trades(self, symbol: str) -> bool:
+        """Subscribe to trade updates via WebSocket"""
+        if not self.enable_websocket or not self.websocket_manager:
+            return False
+
+        try:
+            return await self.websocket_manager.subscribe_to_trades(symbol)
+        except Exception as e:
+            logger.error(f"Failed to subscribe to trades {symbol}: {e}")
+            return False
+
+    def get_websocket_status(self) -> Dict[str, Any]:
+        """Get WebSocket connection status"""
+        if not self.enable_websocket or not self.websocket_manager:
+            return {'websocket_enabled': False}
+
+        return {
+            'websocket_enabled': True,
+            'connection_status': self.websocket_manager.get_health_status(),
+            'reconnect_manager': self.reconnect_manager.get_connection_status(f"{self.exchange_name}_ws") if self.reconnect_manager else None
+        }
 
     def get_ticker(self, symbol: str = 'BTC/USDT') -> Optional[Dict]:
         """Get ticker data"""
@@ -86,18 +311,96 @@ class ExchangeConnector:
             return None
 
 class MultiExchangeConnector:
-    """Connect to multiple exchanges"""
+    """Connect to multiple exchanges with WebSocket support"""
 
-    def __init__(self, exchanges_config: Dict[str, Dict]):
+    def __init__(self, exchanges_config: Dict[str, Dict], enable_websocket: bool = True):
         self.connectors = {}
         self.exchanges_config = exchanges_config
+        self.enable_websocket = enable_websocket
+        self.websocket_tasks = []
+        self.message_handlers: Dict[str, Callable] = {}
 
         for exchange_name, config in exchanges_config.items():
             self.connectors[exchange_name] = ExchangeConnector(
                 exchange_name,
                 config.get('api_key'),
-                config.get('api_secret')
+                config.get('api_secret'),
+                enable_websocket
             )
+
+    async def start_websockets(self):
+        """Start WebSocket connections for all exchanges"""
+        if not self.enable_websocket:
+            logger.warning("WebSocket support disabled")
+            return
+
+        logger.info("Starting WebSocket connections for all exchanges...")
+
+        for exchange_name, connector in self.connectors.items():
+            if connector.enable_websocket:
+                try:
+                    await connector.start_websocket()
+                    logger.info(f"WebSocket started for {exchange_name}")
+                except Exception as e:
+                    logger.error(f"Failed to start WebSocket for {exchange_name}: {e}")
+
+    async def stop_websockets(self):
+        """Stop all WebSocket connections"""
+        logger.info("Stopping all WebSocket connections...")
+
+        stop_tasks = []
+        for connector in self.connectors.values():
+            if connector.enable_websocket:
+                stop_tasks.append(connector.stop_websocket())
+
+        if stop_tasks:
+            await asyncio.gather(*stop_tasks, return_exceptions=True)
+
+        logger.info("All WebSocket connections stopped")
+
+    async def subscribe_all_to_ticker(self, symbol: str):
+        """Subscribe all exchanges to ticker updates"""
+        subscription_tasks = []
+        for exchange_name, connector in self.connectors.items():
+            if connector.enable_websocket:
+                subscription_tasks.append(connector.subscribe_to_ticker(symbol))
+
+        if subscription_tasks:
+            results = await asyncio.gather(*subscription_tasks, return_exceptions=True)
+            successful = sum(1 for r in results if r is True)
+            logger.info(f"Ticker subscription: {successful}/{len(subscription_tasks)} successful")
+
+    async def subscribe_all_to_orderbook(self, symbol: str, depth: int = 10):
+        """Subscribe all exchanges to orderbook updates"""
+        subscription_tasks = []
+        for exchange_name, connector in self.connectors.items():
+            if connector.enable_websocket:
+                subscription_tasks.append(connector.subscribe_to_orderbook(symbol, depth))
+
+        if subscription_tasks:
+            results = await asyncio.gather(*subscription_tasks, return_exceptions=True)
+            successful = sum(1 for r in results if r is True)
+            logger.info(f"Orderbook subscription: {successful}/{len(subscription_tasks)} successful")
+
+    def add_message_handler(self, message_type: str, handler: Callable):
+        """Add message handler for all connectors"""
+        self.message_handlers[message_type] = handler
+
+        # Add to individual connectors
+        for connector in self.connectors.values():
+            connector.add_message_handler(message_type, handler)
+
+    def get_websocket_status(self) -> Dict[str, Any]:
+        """Get WebSocket status for all exchanges"""
+        status = {
+            'websocket_enabled': self.enable_websocket,
+            'exchanges': {}
+        }
+
+        for exchange_name, connector in self.connectors.items():
+            status['exchanges'][exchange_name] = connector.get_websocket_status()
+
+        return status
 
     def get_market_data(self, symbol: str = 'BTC/USDT') -> Dict:
         """Get market data from all exchanges"""

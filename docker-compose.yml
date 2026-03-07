@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  sovereignforge:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runtime
+    image: sovereignforge:latest
+    container_name: sovereignforge-trading
+    ports:
+      - "8000:8000"  # API server
+      - "9090:9090"  # Metrics/Prometheus
+    environment:
+      - CUDA_VISIBLE_DEVICES=0
+      - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512
+      - GPU_MEMORY_FRACTION=0.8
+      - GPU_MEMORY_LIMIT_MB=12288
+      - PYTHONPATH=/app
+      - LOG_LEVEL=INFO
+      - PRODUCTION=false
+      # MiCA Compliance
+      - MICA_COMPLIANCE_ENABLED=true
+      - ALLOWED_ASSETS=XRP,XLM,HBAR,ALGO,ADA,LINK,IOTA,XDC,ONDO,VET,USDC,RLUSD
+      - RISK_MANAGEMENT_ENABLED=true
+      - MAX_POSITION_SIZE_PCT=0.02
+      - STOP_LOSS_PCT=0.05
+      - TAKE_PROFIT_PCT=0.10
+    volumes:
+      - ./models:/app/models:ro
+      - ./logs:/app/logs
+      - ./data:/app/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+        limits:
+          memory: 16G
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import requests; requests.get('http://localhost:8000/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - sovereignforge-network
+
+  # Development database (optional)
+  redis:
+    image: redis:7-alpine
+    container_name: sovereignforge-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    restart: unless-stopped
+    networks:
+      - sovereignforge-network
+
+  # Monitoring stack (optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: sovereignforge-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
+    networks:
+      - sovereignforge-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: sovereignforge-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=sovereignforge
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    restart: unless-stopped
+    networks:
+      - sovereignforge-network
+    depends_on:
+      - prometheus
+
+volumes:
+  redis_data:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  sovereignforge-network:
+    driver: bridge

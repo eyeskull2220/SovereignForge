@@ -18,6 +18,14 @@ import pandas as pd
 import numpy as np
 from pathlib import Path
 
+# Add tenacity for retry logic
+try:
+    import tenacity
+    TENACITY_AVAILABLE = True
+except ImportError:
+    TENACITY_AVAILABLE = False
+    logger.warning("Tenacity not available, using basic retry")
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -56,32 +64,61 @@ class ExchangeBase:
 
     async def _make_request(self, method: str, url: str, headers: Dict = None,
                           data: Dict = None, auth: bool = False) -> Dict:
-        """Make HTTP request with rate limiting"""
+        """Make HTTP request with rate limiting and retry logic"""
 
-        # Rate limiting
-        current_time = time.time()
-        time_since_last = current_time - self.last_request_time
-        if time_since_last < self.rate_limit_delay:
-            await asyncio.sleep(self.rate_limit_delay - time_since_last)
-        self.last_request_time = time.time()
+        max_retries = 3
+        base_delay = 1.0  # seconds
 
-        if headers is None:
-            headers = {}
+        for attempt in range(max_retries):
+            try:
+                # Rate limiting
+                current_time = time.time()
+                time_since_last = current_time - self.last_request_time
+                if time_since_last < self.rate_limit_delay:
+                    await asyncio.sleep(self.rate_limit_delay - time_since_last)
+                self.last_request_time = time.time()
 
-        if auth and self.api_key:
-            headers.update(self._get_auth_headers(method, url, data))
+                if headers is None:
+                    headers = {}
 
-        try:
-            async with self.session.request(method, url, headers=headers, json=data) as response:
-                if response.status == 200:
-                    return await response.json()
+                if auth and self.api_key:
+                    headers.update(self._get_auth_headers(method, url, data))
+
+                async with self.session.request(method, url, headers=headers, json=data) as response:
+                    if response.status == 200:
+                        return await response.json()
+                    elif response.status >= 500 or response.status in (429, 408, 504):
+                        # Retry on server errors, rate limit, timeout
+                        if attempt < max_retries - 1:
+                            delay = base_delay * (2 ** attempt)  # Exponential backoff
+                            logger.warning(f"{self.name} API error {response.status}, retrying in {delay}s (attempt {attempt+1}/{max_retries})")
+                            await asyncio.sleep(delay)
+                            continue
+                        else:
+                            error_text = await response.text()
+                            logger.error(f"{self.name} API error {response.status}: {error_text}")
+                            return {'error': f'HTTP {response.status}', 'message': error_text}
+                    else:
+                        # Don't retry on client errors
+                        error_text = await response.text()
+                        logger.error(f"{self.name} API error {response.status}: {error_text}")
+                        return {'error': f'HTTP {response.status}', 'message': error_text}
+
+            except (aiohttp.ClientError, asyncio.TimeoutError) as e:
+                if attempt < max_retries - 1:
+                    delay = base_delay * (2 ** attempt)
+                    logger.warning(f"{self.name} request failed: {e}, retrying in {delay}s (attempt {attempt+1}/{max_retries})")
+                    await asyncio.sleep(delay)
+                    continue
                 else:
-                    error_text = await response.text()
-                    logger.error(f"{self.name} API error {response.status}: {error_text}")
-                    return {'error': f'HTTP {response.status}', 'message': error_text}
-        except Exception as e:
-            logger.error(f"{self.name} request failed: {e}")
-            return {'error': 'request_failed', 'message': str(e)}
+                    logger.error(f"{self.name} request failed after {max_retries} attempts: {e}")
+                    return {'error': 'request_failed', 'message': str(e)}
+            except Exception as e:
+                logger.error(f"{self.name} unexpected error: {e}")
+                return {'error': 'unexpected_error', 'message': str(e)}
+
+        # Should not reach here
+        return {'error': 'max_retries_exceeded', 'message': 'Request failed after all retries'}
 
     def _get_auth_headers(self, method: str, url: str, data: Dict = None) -> Dict:
         """Get authentication headers - override in subclasses"""
@@ -577,12 +614,12 @@ async def main():
         for symbol, prices in all_prices.items():
             print(f"💰 {symbol}:")
             for exchange, price in prices.items():
-                print(".2f")
+                print(f"   {exchange}: ${price:.2f}")
             if len(prices) > 1:
                 min_price = min(prices.values())
                 max_price = max(prices.values())
                 spread = (max_price - min_price) / min_price * 100
-                print(".2f"
+                print(f"   Spread: {spread:.2f}%")
         # Scan for arbitrage opportunities
         print("\n🎯 Scanning for arbitrage opportunities...")
         opportunities = await manager.scan_arbitrage_opportunities(symbols)

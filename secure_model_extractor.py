@@ -1,200 +1,329 @@
 #!/usr/bin/env python3
 """
-Secure SovereignForge Model Extractor
-Extracts model weights safely from checkpoints
+Secure Model Extractor for SovereignForge
+Handles secure loading and validation of PyTorch models with integrity checks
 """
 
 import torch
+import hashlib
+import logging
+import os
+from pathlib import Path
+from typing import Dict, Optional, Any, Tuple, List
+import json
 import pickle
-import io
-import sys
-from typing import Dict, Any
+from dataclasses import dataclass
+from gpu_manager import get_gpu_manager, GPUManager
 
-def safe_load_checkpoint(checkpoint_path: str) -> Dict[str, Any]:
-    """
-    Safely load checkpoint by extracting only the state_dict
-    without loading full model objects
-    """
-    try:
-        # Read the file as raw bytes
-        with open(checkpoint_path, 'rb') as f:
-            data = f.read()
+logger = logging.getLogger(__name__)
 
-        # Use pickle to load safely by restricting globals
-        unpickler = pickle.Unpickler(io.BytesIO(data))
+@dataclass
+class ModelMetadata:
+    """Model metadata container"""
+    name: str
+    version: str
+    trading_pair: str
+    created_at: str
+    accuracy: float
+    model_hash: str
+    config_hash: str
+    model_size_mb: float
 
-        # Create a safe find_class function
-        def safe_find_class(module_name, class_name):
-            # Only allow torch-related classes
-            if module_name.startswith('torch'):
-                return unpickler.find_class(module_name, class_name)
-            elif module_name in ['builtins', '__builtin__']:
-                return unpickler.find_class(module_name, class_name)
-            elif module_name == '__main__' and class_name in ['ModelConfig']:
-                # Allow our config class
-                return unpickler.find_class(module_name, class_name)
-            else:
-                # Block everything else
-                raise pickle.UnpicklingError(f"Blocked import: {module_name}.{class_name}")
+@dataclass
+class ModelValidationResult:
+    """Model validation result"""
+    is_valid: bool
+    model_hash_matches: bool
+    config_hash_matches: bool
+    model_loadable: bool
+    errors: List[str]
 
-        unpickler.find_class = safe_find_class
+class SecureModelExtractor:
+    """Secure model loading and validation system"""
 
-        # Load the checkpoint
-        checkpoint = unpickler.load()
+    SUPPORTED_PAIRS = [
+        'btc_usdt', 'eth_usdt', 'xrp_usdt', 'xlm_usdt', 'hbar_usdt', 'algo_usdt', 'ada_usdt'
+    ]
 
-        # Extract state_dict if it exists
-        if isinstance(checkpoint, dict) and 'model_state_dict' in checkpoint:
-            return checkpoint['model_state_dict']
-        elif isinstance(checkpoint, dict):
-            return checkpoint
-        else:
-            raise ValueError("Unexpected checkpoint format")
+    def __init__(self, models_dir: str = "models/strategies", gpu_manager: Optional[GPUManager] = None):
+        self.models_dir = Path(models_dir)
+        self.models_dir.mkdir(exist_ok=True)
+        self.gpu_manager = gpu_manager or get_gpu_manager()
+        self.loaded_models: Dict[str, Tuple[torch.nn.Module, ModelMetadata]] = {}
 
-    except Exception as e:
-        print(f"Failed to load checkpoint safely: {e}")
-        return None
+        # Create metadata directory
+        self.metadata_dir = self.models_dir.parent / "metadata"
+        self.metadata_dir.mkdir(exist_ok=True)
 
-def extract_all_models():
-    """Extract all trained models securely"""
-    print("Secure SovereignForge Model Extraction")
-    print("=" * 50)
+    def _calculate_file_hash(self, file_path: Path) -> str:
+        """Calculate SHA256 hash of file"""
+        hash_sha256 = hashlib.sha256()
+        with open(file_path, "rb") as f:
+            for chunk in iter(lambda: f.read(4096), b""):
+                hash_sha256.update(chunk)
+        return hash_sha256.hexdigest()
 
-    pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT']
-    extracted_models = {}
-
-    for pair in pairs:
-        model_path = f'E:\\Users\\Gino\\Downloads\\SovereignForge\\models\\final_{pair.replace("/", "_")}.pth'
-
-        print(f"\nExtracting {pair}...")
-        print(f"  Path: {model_path}")
-
-        if not torch.cuda.is_available():
-            print("  WARNING: CUDA not available, using CPU")
-
+    def _validate_model_file(self, model_path: Path) -> bool:
+        """Basic validation of model file"""
         try:
-            # Try safe extraction first
-            state_dict = safe_load_checkpoint(model_path)
+            # Check file exists and is readable
+            if not model_path.exists():
+                logger.error(f"Model file does not exist: {model_path}")
+                return False
 
-            if state_dict is None:
-                print(f"  ERROR: Failed to extract {pair}")
-                continue
+            # Check file size (reasonable limits)
+            file_size = model_path.stat().st_size
+            if file_size < 1024:  # Less than 1KB
+                logger.error(f"Model file too small: {file_size} bytes")
+                return False
+            if file_size > 500 * 1024 * 1024:  # More than 500MB
+                logger.error(f"Model file too large: {file_size} bytes")
+                return False
 
-            # Validate the state_dict
-            if isinstance(state_dict, dict) and len(state_dict) > 0:
-                print(f"  SUCCESS: Extracted {len(state_dict)} parameters")
+            # Try to load as PyTorch model (basic check)
+            try:
+                # Just check if it's a valid pickle file
+                with open(model_path, 'rb') as f:
+                    pickle.load(f)
+            except Exception as e:
+                logger.error(f"Model file is not a valid pickle: {e}")
+                return False
 
-                # Show some parameter info
-                param_shapes = {}
-                for key, param in list(state_dict.items())[:3]:
-                    if hasattr(param, 'shape'):
-                        param_shapes[key] = param.shape
-
-                if param_shapes:
-                    print(f"  Sample parameters: {param_shapes}")
-
-                extracted_models[pair] = state_dict
-            else:
-                print(f"  ERROR: Invalid state_dict for {pair}")
+            return True
 
         except Exception as e:
-            print(f"  ERROR: {str(e)[:100]}")
+            logger.error(f"Model validation failed: {e}")
+            return False
 
-    print(f"\nExtraction Summary:")
-    print(f"  Successfully extracted: {len(extracted_models)}/{len(pairs)} models")
+    def _load_model_metadata(self, trading_pair: str) -> Optional[ModelMetadata]:
+        """Load model metadata from JSON file"""
+        metadata_path = self.metadata_dir / f"{trading_pair}_metadata.json"
 
-    if extracted_models:
-        print("\nExtracted models:")
-        for pair in extracted_models:
-            param_count = len(extracted_models[pair])
-            print(f"  ✅ {pair}: {param_count} parameters")
+        if not metadata_path.exists():
+            logger.warning(f"Metadata file not found: {metadata_path}")
+            return None
 
-        # Save extracted models in secure format
-        secure_dir = 'E:\\Users\\Gino\\Downloads\\SovereignForge\\models\\secure'
-        import os
-        os.makedirs(secure_dir, exist_ok=True)
+        try:
+            with open(metadata_path, 'r') as f:
+                data = json.load(f)
 
-        for pair, state_dict in extracted_models.items():
-            secure_path = f"{secure_dir}\\secure_{pair.replace('/', '_')}.pth"
-            torch.save(state_dict, secure_path)
-            print(f"  💾 Saved secure version: {secure_path}")
+            return ModelMetadata(
+                name=data['name'],
+                version=data['version'],
+                trading_pair=data['trading_pair'],
+                created_at=data['created_at'],
+                accuracy=data['accuracy'],
+                model_hash=data['model_hash'],
+                config_hash=data['config_hash'],
+                model_size_mb=data['model_size_mb']
+            )
 
-        return extracted_models
-    else:
-        print("  ❌ No models could be extracted")
-        return {}
+        except Exception as e:
+            logger.error(f"Failed to load metadata: {e}")
+            return None
 
-def test_secure_inference(extracted_models):
-    """Test inference with securely extracted models"""
-    if not extracted_models:
-        print("No models to test")
-        return False
+    def _save_model_metadata(self, metadata: ModelMetadata):
+        """Save model metadata to JSON file"""
+        metadata_path = self.metadata_dir / f"{metadata.trading_pair}_metadata.json"
 
-    print("\nTesting Secure Inference")
-    print("=" * 30)
+        try:
+            data = {
+                'name': metadata.name,
+                'version': metadata.version,
+                'trading_pair': metadata.trading_pair,
+                'created_at': metadata.created_at,
+                'accuracy': metadata.accuracy,
+                'model_hash': metadata.model_hash,
+                'config_hash': metadata.config_hash,
+                'model_size_mb': metadata.model_size_mb
+            }
 
-    # Create a simple model architecture for testing
-    import torch.nn as nn
+            with open(metadata_path, 'w') as f:
+                json.dump(data, f, indent=2)
 
-    class SimpleArbitrageModel(nn.Module):
-        def __init__(self, hidden_size=512, num_layers=12):
-            super().__init__()
-            layers = []
-            in_size = 48  # Input features
+            logger.info(f"Metadata saved: {metadata_path}")
 
-            for i in range(num_layers):
-                out_size = hidden_size if i < num_layers - 1 else 3  # 3 outputs
-                layers.extend([
-                    nn.Linear(in_size, out_size),
-                    nn.ReLU() if i < num_layers - 1 else nn.Identity()
-                ])
-                in_size = out_size
+        except Exception as e:
+            logger.error(f"Failed to save metadata: {e}")
 
-            self.layers = nn.Sequential(*layers)
+    def validate_model(self, trading_pair: str) -> ModelValidationResult:
+        """Comprehensive model validation"""
+        errors = []
+        model_path = self.models_dir / f"arbitrage_{trading_pair}_binance.pth"
 
-        def forward(self, x):
-            return self.layers(x)
+        # Check if model file exists
+        if not model_path.exists():
+            errors.append(f"Model file not found: {model_path}")
+            return ModelValidationResult(False, False, False, False, errors)
 
-    # Test first available model
-    test_pair = list(extracted_models.keys())[0]
-    state_dict = extracted_models[test_pair]
+        # Load metadata
+        metadata = self._load_model_metadata(trading_pair)
+        if not metadata:
+            errors.append("Model metadata not found")
+            return ModelValidationResult(False, False, False, False, errors)
 
-    print(f"Testing inference with {test_pair}...")
+        # Validate file integrity
+        if not self._validate_model_file(model_path):
+            errors.append("Model file validation failed")
+            return ModelValidationResult(False, False, False, False, errors)
 
-    try:
-        # Create model and load state_dict
-        model = SimpleArbitrageModel()
-        model.load_state_dict(state_dict, strict=False)  # Allow missing keys
-        model.eval()
+        # Check model hash
+        actual_hash = self._calculate_file_hash(model_path)
+        model_hash_matches = actual_hash == metadata.model_hash
+        if not model_hash_matches:
+            errors.append(f"Model hash mismatch: expected {metadata.model_hash}, got {actual_hash}")
 
-        # Test inference
-        test_input = torch.randn(1, 48)
-        with torch.no_grad():
-            output = model(test_input)
+        # Try to load model
+        model_loadable = False
+        try:
+            # Load model state dict to check if it's valid
+            state_dict = torch.load(model_path, map_location='cpu', weights_only=True)
+            model_loadable = isinstance(state_dict, dict) and len(state_dict) > 0
+            if not model_loadable:
+                errors.append("Model state dict is invalid")
+        except Exception as e:
+            errors.append(f"Model loading failed: {e}")
 
-        print("  SUCCESS: Secure inference test passed")
-        print(f"  Input shape: {test_input.shape}")
-        print(f"  Output shape: {output.shape}")
-        print(".4f")
+        # Config hash validation (if config file exists)
+        config_path = self.models_dir / f"arbitrage_{trading_pair}_config.json"
+        config_hash_matches = True
+        if config_path.exists():
+            try:
+                actual_config_hash = self._calculate_file_hash(config_path)
+                config_hash_matches = actual_config_hash == metadata.config_hash
+                if not config_hash_matches:
+                    errors.append(f"Config hash mismatch: expected {metadata.config_hash}, got {actual_config_hash}")
+            except Exception as e:
+                errors.append(f"Config validation failed: {e}")
+                config_hash_matches = False
 
-        return True
+        is_valid = model_hash_matches and config_hash_matches and model_loadable
 
-    except Exception as e:
-        print(f"  ERROR: Inference test failed - {e}")
-        return False
+        return ModelValidationResult(
+            is_valid=is_valid,
+            model_hash_matches=model_hash_matches,
+            config_hash_matches=config_hash_matches,
+            model_loadable=model_loadable,
+            errors=errors
+        )
 
-if __name__ == "__main__":
-    # Extract models securely
-    extracted_models = extract_all_models()
+    def load_model(self, trading_pair: str, force_cpu: bool = False) -> Optional[torch.nn.Module]:
+        """Securely load a model with validation"""
+        if trading_pair not in self.SUPPORTED_PAIRS:
+            logger.error(f"Unsupported trading pair: {trading_pair}")
+            return None
 
-    # Test inference
-    inference_success = test_secure_inference(extracted_models)
+        # Check if already loaded
+        if trading_pair in self.loaded_models:
+            model, _ = self.loaded_models[trading_pair]
+            logger.info(f"Model {trading_pair} already loaded")
+            return model
 
-    print("\n" + "=" * 50)
-    if extracted_models and inference_success:
-        print("OVERALL RESULT: SUCCESS")
-        print("Models securely extracted and ready for deployment!")
-    else:
-        print("OVERALL RESULT: ISSUES DETECTED")
-        print("Check model extraction and inference")
+        # Validate model
+        validation = self.validate_model(trading_pair)
+        if not validation.is_valid:
+            logger.error(f"Model validation failed for {trading_pair}: {validation.errors}")
+            return None
 
-    print("=" * 50)
+        model_path = self.models_dir / f"arbitrage_{trading_pair}_binance.pth"
+
+        try:
+            # Determine device
+            device = torch.device('cpu') if force_cpu else self.gpu_manager.device
+
+            # Load model with memory safety
+            model_state = self.gpu_manager.safe_tensor_operation(
+                torch.load, model_path, map_location=device, weights_only=True
+            )
+
+            # Create model architecture (assuming transformer-based model)
+            # This would need to be adjusted based on actual model architecture
+            from gpu_arbitrage_model import GPUArbitrageModel
+
+            # Load config if available
+            config_path = self.models_dir / f"arbitrage_{trading_pair}_config.json"
+            config = {}
+            if config_path.exists():
+                with open(config_path, 'r') as f:
+                    config = json.load(f)
+
+            # Create model with config
+            model = GPUArbitrageModel(**config)
+            model.load_state_dict(model_state)
+            model.to(device)
+            model.eval()
+
+            # Store loaded model
+            metadata = self._load_model_metadata(trading_pair)
+            self.loaded_models[trading_pair] = (model, metadata)
+
+            model_size_mb = model_path.stat().st_size / 1024 / 1024
+            logger.info(f"Model {trading_pair} loaded successfully ({model_size_mb:.1f}MB)")
+
+            return model
+
+        except Exception as e:
+            logger.error(f"Failed to load model {trading_pair}: {e}")
+            return None
+
+    def unload_model(self, trading_pair: str):
+        """Unload a model from memory"""
+        if trading_pair in self.loaded_models:
+            del self.loaded_models[trading_pair]
+            logger.info(f"Model {trading_pair} unloaded")
+
+            # Force garbage collection
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+    def get_loaded_models(self) -> Dict[str, ModelMetadata]:
+        """Get information about currently loaded models"""
+        return {pair: metadata for pair, (_, metadata) in self.loaded_models.items()}
+
+    def preload_models(self, trading_pairs: List[str], force_cpu: bool = False):
+        """Preload multiple models for faster inference"""
+        logger.info(f"Preloading models: {trading_pairs}")
+
+        for pair in trading_pairs:
+            if pair in self.SUPPORTED_PAIRS:
+                self.load_model(pair, force_cpu)
+            else:
+                logger.warning(f"Skipping unsupported pair: {pair}")
+
+    def get_model_info(self, trading_pair: str) -> Optional[Dict[str, Any]]:
+        """Get detailed information about a model"""
+        metadata = self._load_model_metadata(trading_pair)
+        if not metadata:
+            return None
+
+        validation = self.validate_model(trading_pair)
+        model_path = self.models_dir / f"arbitrage_{trading_pair}_binance.pth"
+
+        return {
+            'metadata': metadata,
+            'validation': {
+                'is_valid': validation.is_valid,
+                'model_hash_matches': validation.model_hash_matches,
+                'config_hash_matches': validation.config_hash_matches,
+                'model_loadable': validation.model_loadable,
+                'errors': validation.errors
+            },
+            'file_info': {
+                'path': str(model_path),
+                'exists': model_path.exists(),
+                'size_mb': model_path.stat().st_size / 1024 / 1024 if model_path.exists() else 0
+            },
+            'loaded': trading_pair in self.loaded_models
+        }
+
+# Global instance
+_secure_extractor = None
+
+def get_secure_extractor(models_dir: str = "models/strategies") -> SecureModelExtractor:
+    """Get or create secure model extractor instance"""
+    global _secure_extractor
+
+    if _secure_extractor is None:
+        _secure_extractor = SecureModelExtractor(models_dir)
+
+    return _secure_extractor

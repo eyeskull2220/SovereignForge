@@ -1,0 +1,141 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sovereignforge-inference
+  namespace: sovereignforge
+  labels:
+    app: sovereignforge
+    component: inference
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sovereignforge
+      component: inference
+  template:
+    metadata:
+      labels:
+        app: sovereignforge
+        component: inference
+    spec:
+      serviceAccountName: sovereignforge-service-account
+      containers:
+      - name: inference
+        image: sovereignforge:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8000
+          name: api
+        - containerPort: 9090
+          name: metrics
+        env:
+        - name: CUDA_VISIBLE_DEVICES
+          value: "0"
+        - name: PYTORCH_CUDA_ALLOC_CONF
+          value: "max_split_size_mb:512"
+        - name: GPU_MEMORY_FRACTION
+          value: "0.8"
+        - name: GPU_MEMORY_LIMIT_MB
+          value: "12288"
+        - name: PYTHONPATH
+          value: "/app"
+        - name: LOG_LEVEL
+          value: "INFO"
+        - name: PRODUCTION
+          value: "true"
+        # MiCA Compliance
+        - name: MICA_COMPLIANCE_ENABLED
+          value: "true"
+        - name: ALLOWED_ASSETS
+          value: "XRP,XLM,HBAR,ALGO,ADA,LINK,IOTA,XDC,ONDO,VET,USDC,RLUSD"
+        - name: RISK_MANAGEMENT_ENABLED
+          value: "true"
+        - name: MAX_POSITION_SIZE_PCT
+          value: "0.02"
+        - name: STOP_LOSS_PCT
+          value: "0.05"
+        - name: TAKE_PROFIT_PCT
+          value: "0.10"
+        # Database
+        - name: REDIS_URL
+          valueFrom:
+            secretKeyRef:
+              name: sovereignforge-secrets
+              key: redis-url
+        # API Keys (from secrets)
+        - name: BINANCE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: sovereignforge-secrets
+              key: binance-api-key
+        - name: BINANCE_API_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: sovereignforge-secrets
+              key: binance-api-secret
+        resources:
+          limits:
+            nvidia.com/gpu: 1
+            memory: 16Gi
+            cpu: "4"
+          requests:
+            nvidia.com/gpu: 1
+            memory: 8Gi
+            cpu: "2"
+        volumeMounts:
+        - name: models-storage
+          mountPath: /app/models
+          readOnly: true
+        - name: logs-storage
+          mountPath: /app/logs
+        - name: data-storage
+          mountPath: /app/data
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 1000
+          runAsGroup: 1000
+          capabilities:
+            drop:
+            - ALL
+      volumes:
+      - name: models-storage
+        persistentVolumeClaim:
+          claimName: sovereignforge-models-pvc
+      - name: logs-storage
+        persistentVolumeClaim:
+          claimName: sovereignforge-logs-pvc
+      - name: data-storage
+        persistentVolumeClaim:
+          claimName: sovereignforge-data-pvc
+      nodeSelector:
+        accelerator: nvidia-tesla
+      tolerations:
+      - key: nvidia.com/gpu
+        operator: Exists
+        effect: NoSchedule
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: nvidia.com/gpu.present
+                operator: In
+                values:
+                - "true"

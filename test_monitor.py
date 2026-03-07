@@ -16,22 +16,22 @@ def test_monitor():
 
     from training_monitor import create_training_monitor, display_training_monitor
 
-    print("🎯 Testing SovereignForge GPU Training Monitor")
+    print("Testing SovereignForge GPU Training Monitor")
     print("=" * 50)
 
     # Create monitor for 3 pairs
     pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT']
     monitor = create_training_monitor(pairs, 10)
 
-    print("📊 Created training monitor for pairs:", pairs)
-    print("🚀 Starting display interface...")
+    print("Created training monitor for pairs:", pairs)
+    print("Starting display interface...")
 
     # Start display in background
     display_thread = threading.Thread(target=display_training_monitor, args=(monitor,), daemon=True)
     display_thread.start()
 
     # Simulate some training progress
-    print("\n🔄 Simulating training progress...")
+    print("\nSimulating training progress...")
 
     for epoch in range(1, 6):
         print(f"Epoch {epoch}/10")
@@ -53,7 +53,7 @@ def test_monitor():
         time.sleep(2)  # Show progress for 2 seconds
 
     # Mark pairs as completed
-    print("\n✅ Marking pairs as completed...")
+    print("\nMarking pairs as completed...")
     for pair in pairs:
         monitor.update_pair_progress(
             pair=pair,
@@ -65,14 +65,14 @@ def test_monitor():
         )
 
     # Keep display active for viewing
-    print("📈 Display active - check the monitor interface above!")
+    print("Display active - check the monitor interface above!")
     print("Press Ctrl+C to exit...")
 
     try:
         while True:
             time.sleep(1)
     except KeyboardInterrupt:
-        print("\n⏹️  Test completed!")
+        print("\nTest completed!")
 
     monitor.stop_monitoring()
 

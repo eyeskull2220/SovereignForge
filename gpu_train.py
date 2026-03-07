@@ -91,7 +91,7 @@ class GPUTrainingOrchestrator:
                 memory_fraction=self.args.memory_fraction
             )
 
-            if not self.gpu_manager or not self.gpu_manager.initialize():
+            if not self.gpu_manager:
                 logger.error("Failed to initialize GPU manager")
                 return False
 
@@ -242,19 +242,17 @@ GPU Training Configuration:
 
     def _start_gpu_monitoring(self):
         """Start GPU monitoring thread"""
-        if self.gpu_manager and self.gpu_manager.get_safety_manager():
-            # GPU monitoring is already handled by the safety manager
-            logger.info("GPU monitoring active via safety manager")
+        if self.gpu_manager:
+            # GPU monitoring is already handled by the GPU manager
+            logger.info("GPU monitoring active via GPU manager")
         else:
             logger.warning("GPU monitoring not available")
 
     def _execute_training(self) -> Optional[Dict[str, Any]]:
         """Execute the actual training"""
         try:
-            # Use the GPU training CLI for the actual training
-            cli = GPUTrainingCLI()
-
-            training_results = cli.run_gpu_training(
+            # Run GPU arbitrage training directly
+            training_results = run_gpu_arbitrage_training(
                 pairs=self.args.pairs,
                 exchanges=['binance', 'coinbase', 'kraken'],
                 num_epochs=self.args.epochs,
@@ -418,8 +416,8 @@ Examples:
     # Training parameters
     parser.add_argument('--epochs', type=int, default=50,
                        help='Number of training epochs')
-    parser.add_argument('--batch-size', type=int, default=64,
-                       help='Training batch size (GPU Max: 64 with gradient accumulation)')
+    parser.add_argument('--batch-size', type=int, default=200,
+                       help='Training batch size (GPU Max: 200 with gradient accumulation)')
     parser.add_argument('--learning-rate', type=float, default=1e-4,
                        help='Learning rate')
     parser.add_argument('--gradient-clip', type=float, default=1.0,

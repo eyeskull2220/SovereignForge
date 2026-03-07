@@ -1,571 +1,555 @@
-# SovereignForge Training Monitor - Enhanced GPU Training Progress Display
-# Beautiful real-time monitoring with progress bars and GPU metrics
+#!/usr/bin/env python3
+"""
+SovereignForge - Training Monitor
+Real-time monitoring and visualization for GPU model training
 
-import time
-import threading
-import psutil
-from typing import Dict, List, Any, Optional
-from datetime import datetime, timedelta
-import logging
-from dataclasses import dataclass, field
-from collections import defaultdict
-import json
+This module provides:
+- Real-time training metrics collection
+- GPU utilization monitoring
+- Loss curve visualization
+- Training progress tracking
+- Alert system for training issues
+"""
+
 import os
+import sys
+import logging
+import threading
+import time
+from typing import Dict, List, Optional, Any, Callable
+from dataclasses import dataclass
+from datetime import datetime
+import json
 
-# Rich UI components
-from rich.console import Console
-from rich.live import Live
-from rich.table import Table
-from rich.panel import Panel
-from rich.text import Text
-from rich.progress import (
-    Progress, SpinnerColumn, BarColumn, TextColumn,
-    TimeRemainingColumn, TimeElapsedColumn, MofNCompleteColumn
-)
-from rich.columns import Columns
-from rich.layout import Layout
-from rich.align import Align
-from rich.style import Style
+# Optional imports with fallbacks
+try:
+    import psutil
+    has_psutil = True
+except ImportError:
+    psutil = None  # type: ignore
+    has_psutil = False
 
-# GPU monitoring
 try:
     import GPUtil
-    from pynvml import nvmlInit, nvmlDeviceGetUtilizationRates, nvmlDeviceGetHandleByIndex
-    GPU_MONITORING_AVAILABLE = True
+    has_gputil = True
 except ImportError:
-    GPU_MONITORING_AVAILABLE = False
+    GPUtil = None  # type: ignore
+    has_gputil = False
+
+# Add parent directory to path for imports
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
 
 @dataclass
 class TrainingMetrics:
-    """Real-time training metrics"""
-    epoch: int = 0
-    total_epochs: int = 0
-    batch: int = 0
-    total_batches: int = 0
-    loss: float = 0.0
-    accuracy: float = 0.0
-    learning_rate: float = 0.0
-    gpu_memory_used: int = 0
-    gpu_memory_total: int = 0
-    gpu_utilization: float = 0.0
-    gpu_temperature: float = 0.0
-    epoch_time: float = 0.0
-    eta_seconds: float = 0.0
-    start_time: datetime = field(default_factory=datetime.now)
+    """Training metrics snapshot"""
+    timestamp: datetime
+    epoch: int
+    step: int
+    loss: float
+    learning_rate: float
+    gpu_utilization: float
+    gpu_memory_used: float
+    gpu_memory_total: float
+    cpu_percent: float
+    ram_used_gb: float
+    ram_total_gb: float
 
 @dataclass
-class PairProgress:
-    """Progress tracking for individual trading pairs"""
-    pair: str
-    status: str = "waiting"  # waiting, training, validating, completed, error
-    progress: float = 0.0
-    current_epoch: int = 0
-    total_epochs: int = 0
-    best_accuracy: float = 0.0
-    current_loss: float = 0.0
-    eta: str = "00:00:00"
-    start_time: Optional[datetime] = None
-    last_update: datetime = field(default_factory=datetime.now)
+class TrainingAlert:
+    """Training alert information"""
+    alert_type: str
+    severity: str  # 'info', 'warning', 'error', 'critical'
+    message: str
+    timestamp: datetime
+    metrics: Optional[Dict[str, Any]] = None
 
-class GPUTrainingMonitor:
-    """Beautiful real-time GPU training monitor with progress bars"""
+class TrainingMonitor:
+    """
+    Real-time training monitoring and alerting system
+    """
 
-    def __init__(self, pairs: List[str], total_epochs: int = 50):
-        self.pairs = pairs
-        self.total_epochs = total_epochs
-        self.console = Console()
+    def __init__(self,
+                 log_dir: str = "./training_logs",
+                 alert_callbacks: Optional[List[Callable]] = None,
+                 gpu_monitoring: bool = True):
+        self.log_dir = log_dir
+        self.alert_callbacks = alert_callbacks or []
+        self.gpu_monitoring = gpu_monitoring
 
-        # Initialize progress tracking
-        self.pair_progress = {}
-        for pair in pairs:
-            self.pair_progress[pair] = PairProgress(
-                pair=pair,
-                total_epochs=total_epochs
-            )
+        # Metrics storage
+        self.metrics_history: List[TrainingMetrics] = []
+        self.alerts_history: List[TrainingAlert] = []
 
-        # Global training state
-        self.global_metrics = TrainingMetrics(total_epochs=total_epochs)
-        self.training_active = False
-        self.monitor_thread = None
-        self.display_active = False
+        # Monitoring state
+        self.monitoring_active = False
+        self.monitoring_thread: Optional[threading.Thread] = None
 
-        # Progress bars
-        self.main_progress = None
-        self.pair_progress_bars = {}
+        # Training state
+        self.current_epoch = 0
+        self.current_step = 0
+        self.start_time = None
 
-        # GPU monitoring
-        self.gpu_history = []
-        self.system_history = []
+        # Thresholds for alerts
+        self.alert_thresholds = {
+            'max_loss': 10.0,
+            'min_lr': 1e-8,
+            'max_gpu_memory_percent': 95.0,
+            'max_cpu_percent': 90.0,
+            'max_ram_percent': 90.0
+        }
 
-        # Initialize GPU monitoring if available
-        if GPU_MONITORING_AVAILABLE:
-            try:
-                nvmlInit()
-                self.gpu_available = True
-            except:
-                self.gpu_available = False
-        else:
-            self.gpu_available = False
+        # Setup logging
+        os.makedirs(log_dir, exist_ok=True)
+        self._setup_monitoring_logger()
+
+        logger.info("TrainingMonitor initialized")
+
+    def _setup_monitoring_logger(self):
+        """Setup dedicated monitoring logger"""
+        self.monitor_logger = logging.getLogger('training_monitor')
+        self.monitor_logger.setLevel(logging.INFO)
+
+        # File handler for metrics
+        metrics_handler = logging.FileHandler(os.path.join(self.log_dir, 'training_metrics.log'))
+        metrics_handler.setFormatter(logging.Formatter(
+            '%(asctime)s - METRICS - %(message)s'
+        ))
+        self.monitor_logger.addHandler(metrics_handler)
+
+        # File handler for alerts
+        alerts_handler = logging.FileHandler(os.path.join(self.log_dir, 'training_alerts.log'))
+        alerts_handler.setFormatter(logging.Formatter(
+            '%(asctime)s - ALERT - %(levelname)s - %(message)s'
+        ))
+        self.monitor_logger.addHandler(alerts_handler)
+
+        self.monitor_logger.propagate = False
 
     def start_monitoring(self):
-        """Start the training monitor"""
-        if self.training_active:
+        """Start the monitoring system"""
+        if self.monitoring_thread is not None:
+            logger.warning("Monitoring already active")
             return
 
-        self.training_active = True
-        self.global_metrics.start_time = datetime.now()
+        self.monitoring_active = True
+        self.start_time = datetime.now()
 
-        # Start monitoring thread
-        self.monitor_thread = threading.Thread(target=self._monitoring_loop, daemon=True)
-        self.monitor_thread.start()
+        self.monitoring_thread = threading.Thread(
+            target=self._monitoring_loop,
+            name="training-monitor",
+            daemon=True
+        )
+        self.monitoring_thread.start()
 
-        logger.info("GPU Training Monitor started")
+        logger.info("Training monitoring started")
 
     def stop_monitoring(self):
-        """Stop the training monitor"""
-        self.training_active = False
-        if self.monitor_thread:
-            self.monitor_thread.join(timeout=5.0)
-        logger.info("GPU Training Monitor stopped")
+        """Stop the monitoring system"""
+        self.monitoring_active = False
 
-    def create_display(self) -> Layout:
-        """Create the main monitoring display"""
-        layout = Layout()
+        if self.monitoring_thread:
+            self.monitoring_thread.join(timeout=5)
 
-        # Split into sections
-        layout.split(
-            Layout(name="header", size=3),
-            Layout(name="main", ratio=3),
-            Layout(name="footer", size=4)
+        # Save final metrics
+        self._save_metrics_summary()
+
+        logger.info("Training monitoring stopped")
+
+    def log_metrics(self,
+                   epoch: int,
+                   step: int,
+                   loss: float,
+                   learning_rate: float,
+                   additional_metrics: Optional[Dict[str, Any]] = None):
+        """Log training metrics"""
+        # Get system metrics
+        system_metrics = self._get_system_metrics()
+
+        # Create metrics snapshot
+        metrics = TrainingMetrics(
+            timestamp=datetime.now(),
+            epoch=epoch,
+            step=step,
+            loss=loss,
+            learning_rate=learning_rate,
+            gpu_utilization=system_metrics.get('gpu_utilization', 0.0),
+            gpu_memory_used=system_metrics.get('gpu_memory_used', 0.0),
+            gpu_memory_total=system_metrics.get('gpu_memory_total', 0.0),
+            cpu_percent=system_metrics.get('cpu_percent', 0.0),
+            ram_used_gb=system_metrics.get('ram_used_gb', 0.0),
+            ram_total_gb=system_metrics.get('ram_total_gb', 0.0)
         )
 
-        # Header with title and global stats
-        layout["header"].update(self._create_header_panel())
+        # Add additional metrics
+        if additional_metrics:
+            for key, value in additional_metrics.items():
+                setattr(metrics, key, value)
 
-        # Main content with progress bars and GPU stats
-        layout["main"].split_row(
-            Layout(name="progress", ratio=2),
-            Layout(name="gpu_stats", ratio=1)
-        )
+        # Store metrics
+        self.metrics_history.append(metrics)
+        self.current_epoch = epoch
+        self.current_step = step
 
-        layout["main"]["progress"].update(self._create_progress_panel())
-        layout["main"]["gpu_stats"].update(self._create_gpu_panel())
-
-        # Footer with system info and controls
-        layout["footer"].update(self._create_footer_panel())
-
-        return layout
-
-    def _create_header_panel(self) -> Panel:
-        """Create header panel with training overview"""
-        elapsed = datetime.now() - self.global_metrics.start_time
-        elapsed_str = f"{elapsed.seconds // 3600:02d}:{(elapsed.seconds % 3600) // 60:02d}:{elapsed.seconds % 60:02d}"
-
-        header_text = f"""
-[bold blue]🤖 SovereignForge GPU Training Monitor[/bold blue]
-[green]⏱️  Elapsed: {elapsed_str}[/green] | [yellow]📊 Epoch: {self.global_metrics.epoch}/{self.global_metrics.total_epochs}[/yellow]
-[cyan]🎯 Pairs: {len(self.pairs)}[/cyan] | [magenta]🚀 Active: {sum(1 for p in self.pair_progress.values() if p.status == 'training')}[/magenta]
-        """.strip()
-
-        return Panel(
-            Align.center(header_text),
-            title="[bold]Training Overview[/bold]",
-            border_style="blue"
-        )
-
-    def _create_progress_panel(self) -> Panel:
-        """Create progress bars panel for all pairs"""
-        table = Table(show_header=True, header_style="bold magenta", show_edge=False)
-        table.add_column("Pair", style="cyan", width=12)
-        table.add_column("Status", style="green", width=10)
-        table.add_column("Progress", width=20)
-        table.add_column("Epoch", style="yellow", width=8)
-        table.add_column("Loss", style="red", width=8)
-        table.add_column("Acc", style="green", width=8)
-        table.add_column("ETA", style="blue", width=10)
-
-        for pair, progress in self.pair_progress.items():
-            # Create progress bar
-            progress_bar = self._create_pair_progress_bar(progress)
-
-            # Status with color coding
-            status_text = self._format_status(progress.status)
-
-            # Format metrics
-            loss_text = ".4f" if progress.current_loss > 0 else "--"
-            acc_text = ".1f" if progress.best_accuracy > 0 else "--"
-
-            table.add_row(
-                f"[bold]{pair}[/bold]",
-                status_text,
-                progress_bar,
-                f"{progress.current_epoch}/{progress.total_epochs}",
-                loss_text,
-                acc_text,
-                progress.eta
-            )
-
-        return Panel(
-            table,
-            title="[bold]Pair Training Progress[/bold]",
-            border_style="green"
-        )
-
-    def _create_pair_progress_bar(self, progress: PairProgress) -> str:
-        """Create a mini progress bar for a pair"""
-        if progress.status == "completed":
-            return "[green]██████████[/green]"
-        elif progress.status == "error":
-            return "[red]██████████[/red]"
-        elif progress.status == "training":
-            filled = int(progress.progress * 10)
-            empty = 10 - filled
-            return f"[green]{'█' * filled}[/green][dim]{'█' * empty}[/dim]"
-        else:
-            return "[dim]██████████[/dim]"
-
-    def _format_status(self, status: str) -> str:
-        """Format status with appropriate colors"""
-        status_map = {
-            "waiting": "[dim]⏳ Waiting[/dim]",
-            "training": "[green]🚀 Training[/green]",
-            "validating": "[yellow]🔍 Validating[/yellow]",
-            "completed": "[bold green]✅ Completed[/bold green]",
-            "error": "[bold red]❌ Error[/bold red]"
+        # Log to file
+        metrics_dict = {
+            'epoch': epoch,
+            'step': step,
+            'loss': loss,
+            'learning_rate': learning_rate,
+            **system_metrics
         }
-        return status_map.get(status, f"[dim]{status}[/dim]")
+        if additional_metrics:
+            metrics_dict.update(additional_metrics)
 
-    def _create_gpu_panel(self) -> Panel:
-        """Create GPU monitoring panel"""
-        if not self.gpu_available:
-            return Panel(
-                "[dim]GPU monitoring not available\nInstall pynvml for GPU stats[/dim]",
-                title="[bold]GPU Status[/bold]",
-                border_style="yellow"
-            )
+        self.monitor_logger.info(json.dumps(metrics_dict))
 
-        try:
-            # Get current GPU stats
-            gpu = GPUtil.getGPUs()[0] if GPUtil.getGPUs() else None
-            if not gpu:
-                return Panel("[dim]No GPU detected[/dim]", title="[bold]GPU Status[/bold]")
+        # Check for alerts
+        self._check_alerts(metrics)
 
-            # Memory usage bar
-            mem_percent = (gpu.memoryUsed / gpu.memoryTotal) * 100
-            mem_bar = self._create_memory_bar(mem_percent)
+    def _get_system_metrics(self) -> Dict[str, float]:
+        """Get current system metrics"""
+        metrics = {}
 
-            # Temperature with color coding
-            temp_color = "green"
-            if gpu.temperature > 80:
-                temp_color = "red"
-            elif gpu.temperature > 70:
-                temp_color = "yellow"
+        # CPU metrics
+        if psutil is not None:
+            try:
+                metrics['cpu_percent'] = psutil.cpu_percent(interval=0.1)
 
-            gpu_info = f"""
-[bold]GPU: {gpu.name}[/bold]
-[cyan]Memory:[/cyan] {gpu.memoryUsed:.0f}MB / {gpu.memoryTotal:.0f}MB
-{mem_bar}
-[cyan]Utilization:[/cyan] {gpu.load*100:.1f}%
-[{temp_color}]Temperature:[/{temp_color}] {gpu.temperature}°C
-[cyan]Power:[/cyan] {gpu.powerDraw:.1f}W / {gpu.powerLimit:.1f}W
-            """.strip()
+                # RAM metrics
+                ram = psutil.virtual_memory()
+                metrics['ram_used_gb'] = ram.used / (1024**3)
+                metrics['ram_total_gb'] = ram.total / (1024**3)
+            except Exception as e:
+                logger.warning(f"Failed to get system metrics: {e}")
+                metrics['cpu_percent'] = 0.0
+                metrics['ram_used_gb'] = 0.0
+                metrics['ram_total_gb'] = 0.0
+        else:
+            metrics['cpu_percent'] = 0.0
+            metrics['ram_used_gb'] = 0.0
+            metrics['ram_total_gb'] = 0.0
 
-            return Panel(
-                gpu_info,
-                title="[bold]GPU Status[/bold]",
-                border_style="magenta"
-            )
+        # GPU metrics (if available)
+        if self.gpu_monitoring:
+            try:
+                import GPUtil
+                gpus = GPUtil.getGPUs()
+                if gpus:
+                    gpu = gpus[0]  # Primary GPU
+                    metrics['gpu_utilization'] = gpu.load * 100
+                    metrics['gpu_memory_used'] = gpu.memoryUsed
+                    metrics['gpu_memory_total'] = gpu.memoryTotal
+            except ImportError:
+                # Fallback to basic GPU info
+                try:
+                    import torch
+                    if torch.cuda.is_available():
+                        gpu_id = torch.cuda.current_device()
+                        memory_info = torch.cuda.mem_get_info()
+                        metrics['gpu_memory_used'] = (memory_info[1] - memory_info[0]) / (1024**2)  # MB
+                        metrics['gpu_memory_total'] = memory_info[1] / (1024**2)  # MB
+                        # Utilization not available from PyTorch
+                        metrics['gpu_utilization'] = 0.0
+                except:
+                    metrics['gpu_utilization'] = 0.0
+                    metrics['gpu_memory_used'] = 0.0
+                    metrics['gpu_memory_total'] = 0.0
 
-        except Exception as e:
-            return Panel(
-                f"[red]GPU monitoring error: {str(e)}[/red]",
-                title="[bold]GPU Status[/bold]",
-                border_style="red"
-            )
+        return metrics
 
-    def _create_memory_bar(self, percentage: float) -> str:
-        """Create a memory usage bar"""
-        filled = int(percentage / 10)
-        bar = "█" * filled + "░" * (10 - filled)
+    def _check_alerts(self, metrics: TrainingMetrics):
+        """Check for alert conditions"""
+        alerts = []
 
-        color = "green"
-        if percentage > 90:
-            color = "red"
-        elif percentage > 75:
-            color = "yellow"
+        # Loss alerts
+        if metrics.loss > self.alert_thresholds['max_loss']:
+            alerts.append(TrainingAlert(
+                alert_type="high_loss",
+                severity="warning",
+                message=f"Training loss too high: {metrics.loss:.4f}",
+                timestamp=datetime.now(),
+                metrics={"loss": metrics.loss}
+            ))
 
-        return f"[{color}]{bar}[/{color}] ({percentage:.1f}%)"
+        # Learning rate alerts
+        if metrics.learning_rate < self.alert_thresholds['min_lr']:
+            alerts.append(TrainingAlert(
+                alert_type="low_learning_rate",
+                severity="info",
+                message=f"Learning rate very low: {metrics.learning_rate:.2e}",
+                timestamp=datetime.now(),
+                metrics={"learning_rate": metrics.learning_rate}
+            ))
 
-    def _create_footer_panel(self) -> Panel:
-        """Create footer panel with system info and controls"""
-        # System stats
-        cpu_percent = psutil.cpu_percent()
-        memory = psutil.virtual_memory()
-        memory_percent = memory.percent
+        # GPU memory alerts
+        if metrics.gpu_memory_total > 0:
+            memory_percent = (metrics.gpu_memory_used / metrics.gpu_memory_total) * 100
+            if memory_percent > self.alert_thresholds['max_gpu_memory_percent']:
+                alerts.append(TrainingAlert(
+                    alert_type="high_gpu_memory",
+                    severity="warning",
+                    message=f"GPU memory usage high: {memory_percent:.1f}%",
+                    timestamp=datetime.now(),
+                    metrics={"gpu_memory_percent": memory_percent}
+                ))
 
-        # Training stats
-        active_pairs = sum(1 for p in self.pair_progress.values() if p.status == 'training')
-        completed_pairs = sum(1 for p in self.pair_progress.values() if p.status == 'completed')
-        error_pairs = sum(1 for p in self.pair_progress.values() if p.status == 'error')
+        # CPU alerts
+        if metrics.cpu_percent > self.alert_thresholds['max_cpu_percent']:
+            alerts.append(TrainingAlert(
+                alert_type="high_cpu",
+                severity="warning",
+                message=f"CPU usage high: {metrics.cpu_percent:.1f}%",
+                timestamp=datetime.now(),
+                metrics={"cpu_percent": metrics.cpu_percent}
+            ))
 
-        footer_text = f"""
-[dim]System: CPU {cpu_percent:.1f}% | RAM {memory_percent:.1f}%[/dim]
-[dim]Training: {active_pairs} active | {completed_pairs} completed | {error_pairs} errors[/dim]
-[dim]Press Ctrl+C to stop monitoring | ESC to exit[/dim]
-        """.strip()
+        # RAM alerts
+        if metrics.ram_total_gb > 0:
+            ram_percent = (metrics.ram_used_gb / metrics.ram_total_gb) * 100
+            if ram_percent > self.alert_thresholds['max_ram_percent']:
+                alerts.append(TrainingAlert(
+                    alert_type="high_ram",
+                    severity="warning",
+                    message=f"RAM usage high: {ram_percent:.1f}%",
+                    timestamp=datetime.now(),
+                    metrics={"ram_percent": ram_percent}
+                ))
 
-        return Panel(
-            Align.center(footer_text),
-            title="[bold]System Status[/bold]",
-            border_style="dim"
+        # Process alerts
+        for alert in alerts:
+            self._process_alert(alert)
+
+    def _process_alert(self, alert: TrainingAlert):
+        """Process and distribute alerts"""
+        # Store alert
+        self.alerts_history.append(alert)
+
+        # Log alert
+        self.monitor_logger.log(
+            getattr(logging, alert.severity.upper(), logging.INFO),
+            f"{alert.alert_type}: {alert.message}"
         )
+
+        # Call alert callbacks
+        for callback in self.alert_callbacks:
+            try:
+                callback(alert)
+            except Exception as e:
+                logger.error(f"Alert callback failed: {e}")
 
     def _monitoring_loop(self):
-        """Main monitoring loop"""
-        while self.training_active:
+        """Background monitoring loop"""
+        while self.monitoring_active:
             try:
-                # Update GPU history
-                self._update_gpu_history()
+                # Periodic health check
+                system_metrics = self._get_system_metrics()
 
-                # Update system history
-                self._update_system_history()
-
-                # Update ETAs for active pairs
-                self._update_etas()
-
-                time.sleep(2.0)  # Update every 2 seconds
+                # Log system status every 60 seconds
+                if int(time.time()) % 60 == 0:
+                    self.monitor_logger.info(f"SYSTEM_STATUS: {json.dumps(system_metrics)}")
 
             except Exception as e:
                 logger.error(f"Monitoring loop error: {e}")
-                time.sleep(5.0)
 
-    def _update_gpu_history(self):
-        """Update GPU metrics history"""
-        if not self.gpu_available:
+            time.sleep(10)  # Check every 10 seconds
+
+    def _save_metrics_summary(self):
+        """Save training metrics summary"""
+        if not self.metrics_history:
             return
 
-        try:
-            gpu = GPUtil.getGPUs()[0] if GPUtil.getGPUs() else None
-            if gpu:
-                self.gpu_history.append({
-                    'timestamp': datetime.now(),
-                    'utilization': gpu.load * 100,
-                    'memory_used': gpu.memoryUsed,
-                    'memory_total': gpu.memoryTotal,
-                    'temperature': gpu.temperature,
-                    'power_draw': gpu.powerDraw
-                })
+        summary_path = os.path.join(self.log_dir, 'training_summary.json')
 
-                # Keep last 100 readings
-                if len(self.gpu_history) > 100:
-                    self.gpu_history.pop(0)
+        # Calculate summary statistics
+        losses = [m.loss for m in self.metrics_history]
+        learning_rates = [m.learning_rate for m in self.metrics_history]
 
-        except Exception as e:
-            logger.debug(f"GPU history update error: {e}")
+        summary = {
+            "training_duration_seconds": (datetime.now() - self.start_time).total_seconds() if self.start_time else 0,
+            "total_steps": len(self.metrics_history),
+            "final_epoch": self.current_epoch,
+            "final_step": self.current_step,
+            "loss_stats": {
+                "min": min(losses),
+                "max": max(losses),
+                "mean": sum(losses) / len(losses),
+                "final": losses[-1] if losses else None
+            },
+            "learning_rate_stats": {
+                "min": min(learning_rates),
+                "max": max(learning_rates),
+                "mean": sum(learning_rates) / len(learning_rates),
+                "final": learning_rates[-1] if learning_rates else None
+            },
+            "alerts_count": len(self.alerts_history),
+            "alerts_by_type": {}
+        }
 
-    def _update_system_history(self):
-        """Update system metrics history"""
-        try:
-            memory = psutil.virtual_memory()
-            self.system_history.append({
-                'timestamp': datetime.now(),
-                'cpu_percent': psutil.cpu_percent(),
-                'memory_percent': memory.percent,
-                'memory_used': memory.used / (1024**3),  # GB
-                'memory_total': memory.total / (1024**3)   # GB
-            })
+        # Count alerts by type
+        for alert in self.alerts_history:
+            summary["alerts_by_type"][alert.alert_type] = summary["alerts_by_type"].get(alert.alert_type, 0) + 1
 
-            # Keep last 100 readings
-            if len(self.system_history) > 100:
-                self.system_history.pop(0)
+        # Save summary
+        with open(summary_path, 'w') as f:
+            json.dump(summary, f, indent=2, default=str)
 
-        except Exception as e:
-            logger.debug(f"System history update error: {e}")
+        logger.info(f"Training summary saved to {summary_path}")
 
-    def _update_etas(self):
-        """Update ETA calculations for active pairs"""
-        now = datetime.now()
+    def get_training_stats(self) -> Dict[str, Any]:
+        """Get current training statistics"""
+        if not self.metrics_history:
+            return {"status": "no_metrics"}
 
-        for pair, progress in self.pair_progress.items():
-            if progress.status == 'training' and progress.start_time:
-                elapsed = now - progress.start_time
-                elapsed_seconds = elapsed.total_seconds()
-
-                if progress.current_epoch > 0:
-                    avg_epoch_time = elapsed_seconds / progress.current_epoch
-                    remaining_epochs = progress.total_epochs - progress.current_epoch
-                    eta_seconds = avg_epoch_time * remaining_epochs
-
-                    # Format ETA
-                    eta_td = timedelta(seconds=int(eta_seconds))
-                    progress.eta = f"{eta_td.seconds // 3600:02d}:{(eta_td.seconds % 3600) // 60:02d}:{eta_td.seconds % 60:02d}"
-                else:
-                    progress.eta = "--:--:--"
-
-    def update_pair_progress(self, pair: str, status: str, progress: float = 0.0,
-                           current_epoch: int = 0, loss: float = 0.0, accuracy: float = 0.0):
-        """Update progress for a specific pair"""
-        if pair not in self.pair_progress:
-            return
-
-        progress_obj = self.pair_progress[pair]
-        progress_obj.status = status
-        progress_obj.progress = progress
-        progress_obj.current_epoch = current_epoch
-        progress_obj.current_loss = loss
-        progress_obj.last_update = datetime.now()
-
-        if accuracy > progress_obj.best_accuracy:
-            progress_obj.best_accuracy = accuracy
-
-        if status == 'training' and progress_obj.start_time is None:
-            progress_obj.start_time = datetime.now()
-
-        # Update global metrics
-        self._update_global_metrics()
-
-    def _update_global_metrics(self):
-        """Update global training metrics"""
-        active_pairs = [p for p in self.pair_progress.values() if p.status == 'training']
-        if active_pairs:
-            # Average metrics across active pairs
-            avg_loss = sum(p.current_loss for p in active_pairs) / len(active_pairs)
-            avg_accuracy = sum(p.best_accuracy for p in active_pairs) / len(active_pairs)
-
-            self.global_metrics.loss = avg_loss
-            self.global_metrics.accuracy = avg_accuracy
-
-            # Estimate current epoch (average across pairs)
-            avg_epoch = sum(p.current_epoch for p in active_pairs) / len(active_pairs)
-            self.global_metrics.epoch = int(avg_epoch)
-
-    def display_monitor(self):
-        """Display the live monitoring interface"""
-        if self.display_active:
-            return
-
-        self.display_active = True
-
-        try:
-            with Live(self.create_display(), refresh_per_second=2, screen=True) as live:
-                while self.training_active and self.display_active:
-                    live.update(self.create_display())
-                    time.sleep(1.0)
-
-        except KeyboardInterrupt:
-            self.display_active = False
-        except Exception as e:
-            logger.error(f"Display error: {e}")
-            self.display_active = False
-
-    def get_training_summary(self) -> Dict[str, Any]:
-        """Get comprehensive training summary"""
-        completed_pairs = sum(1 for p in self.pair_progress.values() if p.status == 'completed')
-        error_pairs = sum(1 for p in self.pair_progress.values() if p.status == 'error')
-        active_pairs = sum(1 for p in self.pair_progress.values() if p.status == 'training')
-
-        total_time = datetime.now() - self.global_metrics.start_time
+        latest = self.metrics_history[-1]
 
         return {
-            'total_pairs': len(self.pairs),
-            'completed_pairs': completed_pairs,
-            'error_pairs': error_pairs,
-            'active_pairs': active_pairs,
-            'total_time_seconds': total_time.total_seconds(),
-            'average_accuracy': self.global_metrics.accuracy,
-            'final_loss': self.global_metrics.loss,
-            'gpu_available': self.gpu_available,
-            'pair_details': {
-                pair: {
-                    'status': progress.status,
-                    'best_accuracy': progress.best_accuracy,
-                    'final_loss': progress.current_loss,
-                    'epochs_completed': progress.current_epoch,
-                    'total_time': (progress.last_update - progress.start_time).total_seconds() if progress.start_time else 0
-                }
-                for pair, progress in self.pair_progress.items()
-            }
+            "status": "active" if self.monitoring_active else "stopped",
+            "current_epoch": self.current_epoch,
+            "current_step": self.current_step,
+            "latest_loss": latest.loss,
+            "latest_learning_rate": latest.learning_rate,
+            "gpu_utilization": latest.gpu_utilization,
+            "gpu_memory_percent": (latest.gpu_memory_used / latest.gpu_memory_total * 100) if latest.gpu_memory_total > 0 else 0,
+            "cpu_percent": latest.cpu_percent,
+            "ram_percent": (latest.ram_used_gb / latest.ram_total_gb * 100) if latest.ram_total_gb > 0 else 0,
+            "total_alerts": len(self.alerts_history),
+            "training_duration_seconds": (datetime.now() - self.start_time).total_seconds() if self.start_time else 0
         }
 
-    def save_monitoring_data(self, filename: str = None):
-        """Save monitoring data to file"""
-        if not filename:
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"training_monitor_{timestamp}.json"
+    def get_metrics_history(self, limit: int = 1000) -> List[Dict[str, Any]]:
+        """Get metrics history"""
+        recent_metrics = self.metrics_history[-limit:] if limit > 0 else self.metrics_history
 
-        data = {
-            'summary': self.get_training_summary(),
-            'gpu_history': self.gpu_history,
-            'system_history': self.system_history,
-            'pair_progress': {
-                pair: {
-                    'status': progress.status,
-                    'progress': progress.progress,
-                    'current_epoch': progress.current_epoch,
-                    'best_accuracy': progress.best_accuracy,
-                    'current_loss': progress.current_loss,
-                    'eta': progress.eta,
-                    'start_time': progress.start_time.isoformat() if progress.start_time else None,
-                    'last_update': progress.last_update.isoformat()
-                }
-                for pair, progress in self.pair_progress.items()
-            }
-        }
+        return [{
+            "timestamp": m.timestamp.isoformat(),
+            "epoch": m.epoch,
+            "step": m.step,
+            "loss": m.loss,
+            "learning_rate": m.learning_rate,
+            "gpu_utilization": m.gpu_utilization,
+            "gpu_memory_used": m.gpu_memory_used,
+            "cpu_percent": m.cpu_percent,
+            "ram_used_gb": m.ram_used_gb
+        } for m in recent_metrics]
 
-        with open(filename, 'w') as f:
-            json.dump(data, f, indent=2, default=str)
+    def get_alerts_history(self, limit: int = 100) -> List[Dict[str, Any]]:
+        """Get alerts history"""
+        recent_alerts = self.alerts_history[-limit:] if limit > 0 else self.alerts_history
 
-        logger.info(f"Monitoring data saved to {filename}")
+        return [{
+            "timestamp": a.timestamp.isoformat(),
+            "alert_type": a.alert_type,
+            "severity": a.severity,
+            "message": a.message,
+            "metrics": a.metrics
+        } for a in recent_alerts]
 
-# Utility functions for easy integration
+    def update_pair_progress(self, pair: str, status: str, progress: float,
+                           current_epoch: int, loss: float, accuracy: float):
+        """Update progress for a trading pair (for compatibility)"""
+        # Log as training metrics
+        self.log_metrics(current_epoch, int(progress * 100), loss, 1e-3,
+                        {"pair": pair, "status": status, "accuracy": accuracy})
 
-def create_training_monitor(pairs: List[str], epochs: int = 50) -> GPUTrainingMonitor:
-    """Create and initialize a training monitor"""
-    monitor = GPUTrainingMonitor(pairs, epochs)
+# Global monitor instance
+_monitor = None
+
+def get_training_monitor() -> TrainingMonitor:
+    """Get or create global training monitor instance"""
+    global _monitor
+
+    if _monitor is None:
+        _monitor = TrainingMonitor()
+
+    return _monitor
+
+def log_training_metrics(epoch: int, step: int, loss: float, learning_rate: float):
+    """Convenience function for logging training metrics"""
+    monitor = get_training_monitor()
+    monitor.log_metrics(epoch, step, loss, learning_rate)
+
+def start_training_monitor():
+    """Convenience function to start monitoring"""
+    monitor = get_training_monitor()
     monitor.start_monitoring()
-    return monitor
 
-def display_training_monitor(monitor: GPUTrainingMonitor):
-    """Display the training monitor interface"""
-    monitor.display_monitor()
-
-# Example usage
-if __name__ == "__main__":
-    # Example with 7 pairs
-    pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT']
-    monitor = create_training_monitor(pairs, epochs=50)
-
-    # Simulate training progress
-    import random
-
-    for epoch in range(1, 51):
-        for pair in pairs:
-            # Simulate training progress
-            progress = epoch / 50.0
-            loss = 1.0 - (epoch / 50.0) + random.uniform(-0.1, 0.1)
-            accuracy = 0.5 + (epoch / 50.0) * 0.4 + random.uniform(-0.05, 0.05)
-
-            monitor.update_pair_progress(
-                pair=pair,
-                status='training',
-                progress=progress,
-                current_epoch=epoch,
-                loss=max(0, loss),
-                accuracy=min(1.0, max(0, accuracy))
-            )
-
-        time.sleep(0.5)  # Simulate training time
-
-    # Mark some pairs as completed
-    for pair in pairs[:3]:  # First 3 pairs complete
-        monitor.update_pair_progress(pair, 'completed', 1.0, 50, 0.1, 0.85)
-
-    # Display the monitor
-    display_training_monitor(monitor)
-
-    # Save monitoring data
-    monitor.save_monitoring_data()
-
+def stop_training_monitor():
+    """Convenience function to stop monitoring"""
+    monitor = get_training_monitor()
     monitor.stop_monitoring()
+
+def create_training_monitor(pairs: List[str], epochs: int = 50) -> TrainingMonitor:
+    """Create and initialize a training monitor"""
+    return TrainingMonitor()
+
+def display_training_monitor(monitor: TrainingMonitor):
+    """Display the training monitor interface"""
+    # Simple console display
+    stats = monitor.get_training_stats()
+    print(f"Training Status: {stats.get('status', 'unknown')}")
+    print(f"Current Epoch: {stats.get('current_epoch', 0)}")
+    print(f"Current Step: {stats.get('current_step', 0)}")
+    print(f"Latest Loss: {stats.get('latest_loss', 0):.4f}")
+    print(f"GPU Utilization: {stats.get('gpu_utilization', 0):.1f}%")
+    print(f"Total Alerts: {stats.get('total_alerts', 0)}")
+
+class GPUTrainingMonitor:
+    """GPU-specific training monitor with GPU metrics"""
+
+    def __init__(self, gpu_id: int = 0):
+        self.gpu_id = gpu_id
+        self.base_monitor = TrainingMonitor(gpu_monitoring=True)
+
+    def start_monitoring(self):
+        """Start GPU monitoring"""
+        self.base_monitor.start_monitoring()
+
+    def stop_monitoring(self):
+        """Stop GPU monitoring"""
+        self.base_monitor.stop_monitoring()
+
+    def log_metrics(self, epoch: int, step: int, loss: float, learning_rate: float):
+        """Log training metrics with GPU info"""
+        self.base_monitor.log_metrics(epoch, step, loss, learning_rate)
+
+    def get_gpu_stats(self) -> Dict[str, Any]:
+        """Get GPU-specific statistics"""
+        stats = self.base_monitor.get_training_stats()
+        # Add GPU-specific metrics
+        return stats
+
+if __name__ == "__main__":
+    # Example usage
+    logging.basicConfig(level=logging.INFO)
+
+    # Create monitor
+    monitor = TrainingMonitor()
+
+    # Start monitoring
+    monitor.start_monitoring()
+
+    # Simulate training metrics
+    for epoch in range(2):
+        for step in range(10):
+            loss = 1.0 / (step + 1) + 0.1 * epoch  # Decreasing loss
+            lr = 1e-3 * (0.9 ** epoch)  # Decreasing learning rate
+
+            monitor.log_metrics(epoch, step, loss, lr)
+            time.sleep(0.1)
+
+    # Stop monitoring
+    monitor.stop_monitoring()
+
+    # Show stats
+    stats = monitor.get_training_stats()
+    logger.info(f"Training stats: {stats}")
+
+    # Show recent metrics
+    metrics = monitor.get_metrics_history(5)
+    logger.info(f"Recent metrics: {len(metrics)} entries")
+
+    # Show alerts
+    alerts = monitor.get_alerts_history()
+    logger.info(f"Total alerts: {len(alerts)}")

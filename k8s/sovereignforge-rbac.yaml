@@ -1,0 +1,41 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: sovereignforge-sa
+  namespace: trading
+  labels:
+    app: sovereignforge
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sovereignforge-role
+  labels:
+    app: sovereignforge
+rules:
+- apiGroups: [""]
+  resources: ["pods", "services", "endpoints", "configmaps", "secrets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: ["apps"]
+  resources: ["deployments", "replicasets"]
+  verbs: ["get", "list", "watch"]
+- apiGroups: [""]
+  resources: ["events"]
+  verbs: ["get", "list", "watch", "create", "patch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: sovereignforge-role-binding
+  labels:
+    app: sovereignforge
+subjects:
+- kind: ServiceAccount
+  name: sovereignforge-sa
+  namespace: trading
+roleRef:
+  kind: ClusterRole
+  name: sovereignforge-role
+  apiGroup: rbac.authorization.k8s.io

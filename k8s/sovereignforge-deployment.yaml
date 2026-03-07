@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sovereignforge-arbitrage
+  namespace: trading
+  labels:
+    app: sovereignforge
+    component: arbitrage-engine
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels:
+      app: sovereignforge
+      component: arbitrage-engine
+  template:
+    metadata:
+      labels:
+        app: sovereignforge
+        component: arbitrage-engine
+    spec:
+      serviceAccountName: sovereignforge-sa
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        fsGroup: 2000
+      containers:
+      - name: sovereignforge
+        image: sovereignforge:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+          protocol: TCP
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: LOG_LEVEL
+          value: "INFO"
+        # Telegram Configuration
+        - name: TELEGRAM_BOT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: sovereignforge-secrets
+              key: telegram-bot-token
+        - name: TELEGRAM_CHAT_IDS
+          valueFrom:
+            configMapKeyRef:
+              name: sovereignforge-config
+              key: telegram-chat-ids
+        # xAI/Grok Configuration
+        - name: XAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: sovereignforge-secrets
+              key: xai-api-key
+        # Trading Configuration
+        - name: ENABLE_GROK_REASONING
+          valueFrom:
+            configMapKeyRef:
+              name: sovereignforge-config
+              key: enable-grok-reasoning
+        - name: MIN_PROBABILITY
+          valueFrom:
+            configMapKeyRef:
+              name: sovereignforge-config
+              key: min-probability
+        - name: MAX_RISK_SCORE
+          valueFrom:
+            configMapKeyRef:
+              name: sovereignforge-config
+              key: max-risk-score
+        resources:
+          requests:
+            cpu: 500m
+            memory: 1Gi
+            nvidia.com/gpu: 1  # Request GPU if available
+          limits:
+            cpu: 2000m
+            memory: 4Gi
+            nvidia.com/gpu: 1
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+        volumeMounts:
+        - name: models-storage
+          mountPath: /app/models
+        - name: logs-storage
+          mountPath: /app/logs
+        - name: data-storage
+          mountPath: /app/data
+      volumes:
+      - name: models-storage
+        persistentVolumeClaim:
+          claimName: sovereignforge-models-pvc
+      - name: logs-storage
+        persistentVolumeClaim:
+          claimName: sovereignforge-logs-pvc
+      - name: data-storage
+        persistentVolumeClaim:
+          claimName: sovereignforge-data-pvc
+      affinity:
+        nodeAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            preference:
+              matchExpressions:
+              - key: nvidia.com/gpu.present
+                operator: In
+                values:
+                - "true"
+      tolerations:
+      - key: "nvidia.com/gpu"
+        operator: "Exists"
+        effect: "NoSchedule"

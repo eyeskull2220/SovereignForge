@@ -1,0 +1,27 @@
+{
+  "status": "ACTIVE",
+  "model_trained": true,
+  "features": [
+    "price",
+    "volume",
+    "rsi",
+    "sma",
+    "returns"
+  ],
+  "signals": [
+    "buy",
+    "hold",
+    "sell"
+  ],
+  "created_at": "2026-03-06T12:31:46.517612",
+  "version": "1.0.0",
+  "portfolio": {
+    "balance": 10000.0,
+    "positions": {}
+  },
+  "performance": {
+    "total_trades": 0,
+    "winning_trades": 0,
+    "total_pnl": 0.0
+  }
+}

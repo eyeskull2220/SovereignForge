@@ -25,6 +25,81 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+class TradingLSTM(nn.Module):
+    """LSTM model for trading predictions"""
+    def __init__(self, input_size, hidden_size=128, num_layers=2, output_size=1):
+        super().__init__()
+        self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=0.2)
+        self.fc = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x):
+        out, _ = self.lstm(x)
+        return self.fc(out[:, -1, :])
+
+def create_lstm_model(input_size: int, output_size: int) -> nn.Module:
+    """Create LSTM model for sequential data"""
+    class LSTMModel(nn.Module):
+        def __init__(self, input_size, hidden_size=128, num_layers=2, output_size=output_size):
+            super().__init__()
+            self.lstm = nn.LSTM(input_size, hidden_size, num_layers, batch_first=True, dropout=0.2)
+            self.fc = nn.Linear(hidden_size, output_size)
+
+        def forward(self, x):
+            out, _ = self.lstm(x)
+            return self.fc(out[:, -1, :])
+
+    return LSTMModel(input_size)
+
+def create_gru_model(input_size: int, output_size: int) -> nn.Module:
+    """Create GRU model for temporal patterns"""
+    class GRUModel(nn.Module):
+        def __init__(self, input_size, hidden_size=96, num_layers=3, output_size=output_size):
+            super().__init__()
+            self.gru = nn.GRU(input_size, hidden_size, num_layers, batch_first=True, dropout=0.3)
+            self.fc1 = nn.Linear(hidden_size, hidden_size // 2)
+            self.fc2 = nn.Linear(hidden_size // 2, output_size)
+            self.dropout = nn.Dropout(0.2)
+
+        def forward(self, x):
+            out, _ = self.gru(x)
+            out = self.dropout(torch.relu(self.fc1(out[:, -1, :])))
+            return self.fc2(out)
+
+    return GRUModel(input_size)
+
+def create_transformer_model(input_size: int, output_size: int) -> nn.Module:
+    """Create Transformer model for complex patterns"""
+    class TransformerModel(nn.Module):
+        def __init__(self, input_size, d_model=64, nhead=8, num_layers=3, output_size=output_size):
+            super().__init__()
+            self.input_projection = nn.Linear(input_size, d_model)
+            encoder_layer = nn.TransformerEncoderLayer(d_model=d_model, nhead=nhead, batch_first=True)
+            self.transformer = nn.TransformerEncoder(encoder_layer, num_layers=num_layers)
+            self.output_projection = nn.Linear(d_model, output_size)
+
+        def forward(self, x):
+            x = self.input_projection(x)
+            x = self.transformer(x)
+            return self.output_projection(x.mean(dim=1))
+
+    return TransformerModel(input_size)
+
+def create_attention_model(input_size: int, output_size: int) -> nn.Module:
+    """Create Attention model for arbitrage detection"""
+    class AttentionModel(nn.Module):
+        def __init__(self, input_size, hidden_size=128, output_size=output_size):
+            super().__init__()
+            self.encoder = nn.Linear(input_size, hidden_size)
+            self.attention = nn.MultiheadAttention(hidden_size, num_heads=8, batch_first=True)
+            self.decoder = nn.Linear(hidden_size, output_size)
+
+        def forward(self, x):
+            x = torch.relu(self.encoder(x))
+            attn_output, _ = self.attention(x, x, x)
+            return self.decoder(attn_output.mean(dim=1))
+
+    return AttentionModel(input_size)
+
 @dataclass
 class StrategyConfig:
     """Configuration for each trading strategy"""

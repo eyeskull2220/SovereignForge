@@ -25,7 +25,7 @@ class MarketDataGenerator:
         start_date = datetime.now() - timedelta(days=days)
         periods = days * 24 if interval == '1h' else days  # 24 hours per day
 
-        dates = pd.date_range(start=start_date, periods=periods, freq='H')
+        dates = pd.date_range(start=start_date, periods=periods, freq='h')
 
         # Generate realistic price movements
         base_prices = {
@@ -131,7 +131,7 @@ class MarketDataGenerator:
         df['volume_ratio'] = df['volume'] / df['volume_sma']
 
         # Fill NaN values
-        df = df.fillna(method='bfill').fillna(method='ffill').fillna(0)
+        df = df.bfill().ffill().fillna(0)
 
         return df
 

@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sovereignforge-models-pvc
+  namespace: trading
+  labels:
+    app: sovereignforge
+    component: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 50Gi
+  storageClassName: fast-ssd  # Use SSD storage class for fast model loading
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sovereignforge-logs-pvc
+  namespace: trading
+  labels:
+    app: sovereignforge
+    component: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: sovereignforge-data-pvc
+  namespace: trading
+  labels:
+    app: sovereignforge
+    component: storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 20Gi
+  storageClassName: standard

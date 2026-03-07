@@ -18,12 +18,12 @@ from typing import List
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 
-from training_monitor import create_training_monitor, display_training_monitor, GPUTrainingMonitor
+from training_monitor import create_training_monitor, display_training_monitor
 
 def run_demo_training(pairs: List[str], epochs: int = 10):
     """Run a demo training session with simulated progress"""
 
-    print("🚀 Starting SovereignForge GPU Training Demo")
+    print("Starting SovereignForge GPU Training Demo")
     print("=" * 60)
 
     # Create training monitor
@@ -38,7 +38,7 @@ def run_demo_training(pairs: List[str], epochs: int = 10):
         import random
 
         for epoch in range(1, epochs + 1):
-            print(f"\n📊 Epoch {epoch}/{epochs} - Training Progress:")
+            print(f"\nEpoch {epoch}/{epochs} - Training Progress:")
 
             for pair in pairs:
                 # Simulate realistic training progress
@@ -64,13 +64,13 @@ def run_demo_training(pairs: List[str], epochs: int = 10):
                     accuracy=accuracy
                 )
 
-                print(".4f"
+                print(f"  {pair}: loss={loss:.4f}, acc={accuracy:.4f}")
             # Simulate training time per epoch
             time.sleep(1.5)
 
         # Mark all pairs as completed
-        print("
-✅ Training completed! Marking pairs as finished..."        for pair in pairs:
+        print("\nTraining completed! Marking pairs as finished...")
+        for pair in pairs:
             monitor.update_pair_progress(
                 pair=pair,
                 status='completed',
@@ -84,15 +84,15 @@ def run_demo_training(pairs: List[str], epochs: int = 10):
         time.sleep(3)
 
     except KeyboardInterrupt:
-        print("\n⏹️  Demo interrupted by user")
+        print("\nDemo interrupted by user")
     finally:
         monitor.stop_monitoring()
-        print("\n🎉 Demo completed! Check the training monitor display above.")
+        print("\nDemo completed! Check the training monitor display above.")
 
 def run_real_training(pairs: List[str], epochs: int = 50):
     """Run actual GPU training with monitoring"""
 
-    print("🚀 Starting SovereignForge Real GPU Training")
+    print("Starting SovereignForge Real GPU Training")
     print("=" * 60)
 
     # Create training monitor
@@ -128,13 +128,13 @@ def run_real_training(pairs: List[str], epochs: int = 50):
         results = orchestrator.run_training()
 
         if results:
-            print("
-✅ Real GPU training completed successfully!"            print(f"Trained {len(results)} pairs")
+            print("\nReal GPU training completed successfully!")
+            print(f"Trained {len(results)} pairs")
             print("Check models/ and reports/ directories for results")
         else:
-            print("
-❌ Training failed or was interrupted"    except KeyboardInterrupt:
-        print("\n⏹️  Training interrupted by user")
+            print("\nTraining failed or was interrupted")
+    except KeyboardInterrupt:
+        print("\nTraining interrupted by user")
     finally:
         monitor.stop_monitoring()
 
@@ -178,20 +178,20 @@ Examples:
 
     # Check if we're in the right directory
     if not os.path.exists('src/training_monitor.py'):
-        print("❌ Error: Please run this script from the SovereignForge root directory")
+        print("Error: Please run this script from the SovereignForge root directory")
         print("Expected: E:\\SovereignForge\\")
         sys.exit(1)
 
     # Run selected mode
     if args.demo_mode:
-        print("🎭 Running GPU Training Demo Mode")
+        print("Running GPU Training Demo Mode")
         print("This will show the beautiful progress monitoring interface")
         print("with simulated training data.\n")
 
         run_demo_training(args.pairs, args.epochs)
 
     elif args.real_training:
-        print("🔥 Running Real GPU Training")
+        print("Running Real GPU Training")
         print("This will perform actual GPU-accelerated arbitrage training.")
         print("Make sure you have:")
         print("  - GPU with CUDA support")

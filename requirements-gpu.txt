@@ -79,6 +79,9 @@ spacy>=3.6.0
 aiohttp>=3.8.0
 aioredis>=2.0.0
 
+# WebSocket connections for real-time data
+websockets>=12.0
+
 # GPU monitoring and alerting
 prometheus-client>=0.17.0
 

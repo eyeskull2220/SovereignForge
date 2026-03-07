@@ -19,10 +19,11 @@ import numpy as np
 import logging
 import hashlib
 import json
-from typing import Dict, List, Optional, Tuple, Any, Union
+import asyncio
+from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -46,6 +47,16 @@ class ArbitrageOpportunity:
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
+
+# Import Phase 2 components
+try:
+    from gpu_manager import get_gpu_manager, GPUManager
+    from secure_model_extractor import SecureModelExtractor
+    GPU_MANAGER_AVAILABLE = True
+    logger.info("Phase 2 GPU Manager and Secure Model Extractor loaded successfully")
+except ImportError as e:
+    logger.warning(f"Phase 2 components not available: {e}. Using fallback implementations.")
+    GPU_MANAGER_AVAILABLE = False
 
 @dataclass
 class ModelMetadata:
@@ -71,6 +82,15 @@ class InferenceResult:
     model_version: str
     processing_time_ms: float
     gpu_memory_used_mb: float
+
+@dataclass
+class ModelValidationResult:
+    """Model validation result"""
+    is_valid: bool
+    checksum_match: bool
+    architecture_compatible: bool
+    parameter_count: int
+    expected_params: int
 
 class SecureModelLoader:
     """
@@ -223,6 +243,14 @@ class RealTimeInferenceService:
         self.max_batch_size = max_batch_size
         self.inference_timeout_ms = inference_timeout_ms
 
+        # Initialize GPU Manager (Phase 2 integration)
+        if GPU_MANAGER_AVAILABLE:
+            self.gpu_manager = get_gpu_manager()
+            logger.info("GPU Manager integrated for memory safety")
+        else:
+            self.gpu_manager = None
+            logger.warning("GPU Manager not available, using fallback memory management")
+
         # Trading pairs and models (expected by integration tests)
         self.pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT']
         self.models = {}  # Will be populated by load_models
@@ -250,7 +278,7 @@ class RealTimeInferenceService:
             "peak_gpu_memory_mb": 0.0
         }
 
-        logger.info("RealTimeInferenceService initialized")
+        logger.info("RealTimeInferenceService initialized with Phase 2 GPU Manager")
 
     def load_models(self, trading_pairs: List[str]) -> Dict[str, bool]:
         """Load models for specified trading pairs"""

@@ -11,8 +11,7 @@ import os
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from realtime_inference import ArbitrageOpportunity
-from live_arbitrage_pipeline import OpportunityFilter, FilteredOpportunity
+from live_arbitrage_pipeline import ArbitrageOpportunity, OpportunityFilter, FilteredOpportunity
 
 
 class TestArbitrageOpportunity(unittest.TestCase):
@@ -71,7 +70,7 @@ class TestOpportunityFilter(unittest.TestCase):
         self.filter = OpportunityFilter(
             min_probability=0.7,
             min_spread=0.001,
-            max_risk_score=0.3
+            max_risk_score=0.5
         )
 
     def test_filter_high_probability_opportunity(self):

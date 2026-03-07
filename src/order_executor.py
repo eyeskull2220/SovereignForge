@@ -13,6 +13,19 @@ import asyncio
 import json
 import os
 
+# Add parent directory to path for imports
+import sys
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+# Import Phase 2 components
+try:
+    from risk_management import get_risk_manager, RiskManager
+    RISK_MANAGER_AVAILABLE = True
+    logger.info("Phase 2 Risk Management integrated successfully")
+except ImportError as e:
+    logger.warning(f"Phase 2 Risk Management not available: {e}. Using fallback.")
+    RISK_MANAGER_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 class OrderExecutor:

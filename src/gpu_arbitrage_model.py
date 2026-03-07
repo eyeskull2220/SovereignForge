@@ -22,11 +22,23 @@ import json
 from typing import Dict, List, Optional, Tuple, Any
 from pathlib import Path
 from datetime import datetime
+from dataclasses import dataclass
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
+
+@dataclass
+class ModelConfig:
+    """Configuration for arbitrage model"""
+    input_dim: int = 10
+    d_model: int = 512
+    nhead: int = 8
+    num_layers: int = 6
+    dim_feedforward: int = 2048
+    dropout: float = 0.1
+    max_seq_len: int = 100
 
 class PositionalEncoding(nn.Module):
     """Positional encoding for transformer inputs"""

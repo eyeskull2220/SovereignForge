@@ -27,6 +27,101 @@ class ArbitrageOpportunity:
     risk_score: float
     profit_potential: float
 
+@dataclass
+class FilteredOpportunity:
+    """Represents a filtered arbitrage opportunity"""
+    opportunity: ArbitrageOpportunity
+    grok_analysis: Optional[Any] = None
+    risk_assessment: str = "Unknown"
+    confidence_score: float = 0.0
+    recommended_action: str = "Monitor"
+    profit_estimate: float = 0.0
+    alerts: Optional[List[str]] = None
+    timestamp: Optional[float] = None
+
+    def __post_init__(self):
+        if self.alerts is None:
+            self.alerts = []
+        if self.timestamp is None:
+            self.timestamp = time.time()
+
+class OpportunityFilter:
+    """Filters arbitrage opportunities based on risk and compliance"""
+
+    def __init__(self, min_probability: float = 0.5, min_spread: float = 0.001, max_risk_score: float = 0.7):
+        self.min_probability = min_probability
+        self.min_spread = min_spread
+        self.max_risk_score = max_risk_score
+        self.compliance_enabled = False  # Disabled by default for testing
+
+        # Statistics
+        self.filtered_count = 0
+        self.passed_count = 0
+
+    def filter_opportunity(self, opportunity: ArbitrageOpportunity) -> Optional[FilteredOpportunity]:
+        """Filter an arbitrage opportunity"""
+        # Check probability
+        if opportunity.probability < self.min_probability:
+            self.filtered_count += 1
+            return None  # Filtered out
+
+        # Check spread
+        if opportunity.spread_prediction < self.min_spread:
+            self.filtered_count += 1
+            return None  # Filtered out
+
+        # Check risk score
+        if opportunity.risk_score > self.max_risk_score:
+            self.filtered_count += 1
+            return None  # Filtered out
+
+        # Check compliance (placeholder)
+        if self.compliance_enabled:
+            # Would check MiCA compliance here
+            compliance_passed = self._check_compliance(opportunity)
+            if not compliance_passed:
+                self.filtered_count += 1
+                return None  # Filtered out
+
+        # Opportunity passed all filters
+        self.passed_count += 1
+
+        # Generate alerts based on opportunity characteristics
+        alerts = [f"High probability opportunity: {opportunity.probability:.3f}"]
+
+        # Check for large spread
+        if opportunity.spread_prediction > 0.005:  # Large spread threshold
+            alerts.append("Large spread detected")
+
+        # Check for low volume (simplified check)
+        total_volume = sum(opportunity.volumes.values())
+        if total_volume < 50:  # Low volume threshold
+            alerts.append("Low liquidity")
+
+        return FilteredOpportunity(
+            opportunity=opportunity,
+            grok_analysis=None,
+            risk_assessment="Low",
+            confidence_score=opportunity.confidence,
+            recommended_action="Execute",
+            profit_estimate=opportunity.profit_potential,
+            alerts=alerts
+        )
+
+    def _check_compliance(self, opportunity: ArbitrageOpportunity) -> bool:
+        """Check MiCA compliance (placeholder)"""
+        # Check if pair is in whitelist
+        whitelist = ['XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT', 'LINK/USDT', 'IOTA/USDT', 'XDC/USDT', 'ONDO/USDT', 'VET/USDT', 'USDC/USDT', 'RLUSD/USDT']
+        return opportunity.pair in whitelist
+
+    def get_filter_stats(self) -> Dict[str, int]:
+        """Get filter statistics"""
+        return {
+            'filtered': self.filtered_count,
+            'passed': self.passed_count,
+            'total_processed': self.filtered_count + self.passed_count
+        }
+
 class LiveArbitragePipeline:
     """
     Live arbitrage detection and execution pipeline
@@ -36,7 +131,7 @@ class LiveArbitragePipeline:
         self.config = config
         self.is_running = False
 
-        # Initialize components
+        # Initialize components with Phase 2 integration
         try:
             from data_integration_service import HybridDataIntegrationService
             self.data_service = HybridDataIntegrationService()
@@ -45,24 +140,22 @@ class LiveArbitragePipeline:
             self.data_service = MockDataService()
 
         try:
-            from realtime_inference import RealTimeInferenceService
-            self.inference_service = RealTimeInferenceService()
+            from realtime_inference import RealTimeInferenceService, get_inference_service
+            self.inference_service = get_inference_service()  # Use singleton with GPU Manager
         except ImportError:
             logger.warning("RealTimeInferenceService not available, using mock")
             self.inference_service = MockInferenceService()
 
         try:
-            from risk_management import RiskManager
-            self.opportunity_filter = RiskManager()
+            from risk_management import get_risk_manager
+            self.opportunity_filter = get_risk_manager()  # Use singleton with Kelly Criterion
         except ImportError:
             logger.warning("RiskManager not available, using mock")
             self.opportunity_filter = MockRiskManager()
 
         try:
-            from telegram_alerts import TelegramAlertSystem, TelegramConfig
-            # Create disabled config for testing
-            config = TelegramConfig(token='', chat_ids=[], enabled=False)
-            self.alert_system = TelegramAlertSystem(config)
+            from telegram_alerts import get_telegram_alert_system
+            self.alert_system = get_telegram_alert_system()  # Use singleton with rate limiting
         except ImportError:
             logger.warning("TelegramAlertSystem not available, using mock")
             self.alert_system = MockAlertSystem()

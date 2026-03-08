@@ -1,0 +1,28 @@
+{
+    "pythonVersion": "3.12",
+    "typeCheckingMode": "strict",
+    "reportUnusedImport": "error",
+    "reportUnknownMemberType": "error",
+    "reportUnknownVariableType": "error",
+    "strictListInference": true,
+    "reportUnnecessaryTypeIgnoreComment": "error",
+    "executionEnvironments": [
+        {
+            "root": ".",
+            "extraPaths": ["."]
+        }
+    ],
+    "exclude": [
+        "scrap",
+        "**/__pycache__",
+        "**/.docker"
+    ],
+    "include": [
+        "core",
+        "data",
+        "models",
+        "logs",
+        "memory",
+        "sandbox"
+    ]
+}

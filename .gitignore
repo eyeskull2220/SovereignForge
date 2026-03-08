@@ -38,7 +38,7 @@ ENV/
 .venv/
 
 # IDE files
-.vscode/
+# .vscode/  # Uncommented for workspace settings
 .idea/
 *.swp
 *.swo

@@ -1,0 +1,355 @@
+{
+  "session": {
+    "id": "test_1772921113",
+    "start_time": 1772921113.5023568,
+    "duration_hours": 1,
+    "strategies": [
+      "fib_dca",
+      "grid",
+      "arbitrage"
+    ],
+    "pairs": [
+      "XRP/USDC",
+      "XLM/USDC",
+      "HBAR/USDC",
+      "ALGO/USDC",
+      "ADA/USDC",
+      "LINK/USDC",
+      "IOTA/USDC",
+      "ONDO/USDC",
+      "VET/USDC"
+    ]
+  },
+  "metrics": {
+    "fib_dca": {
+      "XRP/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "XLM/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "HBAR/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "ALGO/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "ADA/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "LINK/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "IOTA/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "ONDO/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "VET/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      }
+    },
+    "grid": {
+      "XRP/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "XLM/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "HBAR/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "ALGO/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "ADA/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "LINK/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "IOTA/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "ONDO/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "VET/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      }
+    },
+    "arbitrage": {
+      "XRP/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "XLM/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "HBAR/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "ALGO/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "ADA/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "LINK/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "IOTA/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "ONDO/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      },
+      "VET/USDC": {
+        "total_trades": 0,
+        "winning_trades": 0,
+        "losing_trades": 0,
+        "total_pnl": 0.0,
+        "win_rate": 0.0,
+        "sharpe_ratio": 0.0,
+        "max_drawdown": 0.0,
+        "avg_trade_pnl": 0.0,
+        "best_trade": 0.0,
+        "worst_trade": 0.0
+      }
+    }
+  }
+}

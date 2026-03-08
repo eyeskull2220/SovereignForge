@@ -10,6 +10,9 @@ from dataclasses import dataclass
 from datetime import datetime
 import math
 
+# Import Telegram alerts for risk event notifications
+from telegram_alerts import send_system_alert
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -280,11 +283,23 @@ class RiskManager:
                     elif current_price >= position.take_profit:
                         positions_to_close.append((pair, current_price, "take_profit"))
 
-            # Execute closures
+            # Execute closures with alerts
             closed_pairs = []
             for pair, exit_price, reason in positions_to_close:
                 if self.close_position(pair, exit_price, reason):
                     closed_pairs.append(pair)
+
+                    # Send alert for automated position closure
+                    alert_title = f"Position Closed: {reason.upper()}"
+                    alert_message = f"Pair: {pair}\nExit Price: ${exit_price:.2f}\nReason: {reason.replace('_', ' ').title()}"
+                    alert_level = "warning" if reason == "stop_loss" else "success" if reason == "take_profit" else "info"
+
+                    try:
+                        # Send alert asynchronously (fire and forget)
+                        import asyncio
+                        asyncio.create_task(send_system_alert(alert_title, alert_message, alert_level))
+                    except Exception as e:
+                        logger.error(f"Failed to send position closure alert: {e}")
 
             return closed_pairs
 
@@ -306,13 +321,38 @@ class RiskManager:
             total_exposure_pct = self.total_exposure / portfolio_value if portfolio_value > 0 else 0
             daily_pnl_pct = self.daily_pnl / self.daily_start_capital if self.daily_start_capital > 0 else 0
 
-            # Check risk limit violations
+            # Check risk limit violations and send alerts
             risk_violations = []
             if total_exposure_pct > self.risk_limits.max_portfolio_risk_pct:
-                risk_violations.append(f"Portfolio exposure ({total_exposure_pct:.1%}) exceeds limit ({self.risk_limits.max_portfolio_risk_pct:.1%})")
+                violation_msg = f"Portfolio exposure ({total_exposure_pct:.1%}) exceeds limit ({self.risk_limits.max_portfolio_risk_pct:.1%})"
+                risk_violations.append(violation_msg)
+
+                # Send alert for risk limit breach
+                try:
+                    import asyncio
+                    asyncio.create_task(send_system_alert(
+                        "Risk Limit Breach: Portfolio Exposure",
+                        f"Current: {total_exposure_pct:.1%}\nLimit: {self.risk_limits.max_portfolio_risk_pct:.1%}\nAction Required: Reduce exposure",
+                        "error"
+                    ))
+                except Exception as e:
+                    logger.error(f"Failed to send portfolio exposure alert: {e}")
 
             if abs(daily_pnl_pct) > self.risk_limits.max_daily_loss_pct:
-                risk_violations.append(f"Daily P&L ({daily_pnl_pct:.1%}) exceeds limit ({self.risk_limits.max_daily_loss_pct:.1%})")
+                violation_msg = f"Daily P&L ({daily_pnl_pct:.1%}) exceeds limit ({self.risk_limits.max_daily_loss_pct:.1%})"
+                risk_violations.append(violation_msg)
+
+                # Send alert for daily loss limit breach
+                try:
+                    import asyncio
+                    alert_level = "error" if daily_pnl_pct < -self.risk_limits.max_daily_loss_pct else "warning"
+                    asyncio.create_task(send_system_alert(
+                        "Risk Limit Breach: Daily Loss",
+                        f"Current: {daily_pnl_pct:.1%}\nLimit: {self.risk_limits.max_daily_loss_pct:.1%}\nDaily P&L: ${self.daily_pnl:.2f}",
+                        alert_level
+                    ))
+                except Exception as e:
+                    logger.error(f"Failed to send daily loss alert: {e}")
 
             return {
                 'portfolio_value': portfolio_value,
@@ -377,6 +417,17 @@ class RiskManager:
                 # Use current price as exit price (simplified)
                 if self.close_position(pair, position.current_price, "emergency_stop"):
                     closed_count += 1
+
+            # Send emergency stop alert
+            try:
+                import asyncio
+                asyncio.create_task(send_system_alert(
+                    "EMERGENCY STOP EXECUTED",
+                    f"Closed {closed_count}/{len(positions_to_close)} positions\nPortfolio protected from further losses\nManual intervention required",
+                    "error"
+                ))
+            except Exception as e:
+                logger.error(f"Failed to send emergency stop alert: {e}")
 
             logger.warning(f"Emergency stop executed: closed {closed_count}/{len(positions_to_close)} positions")
             return closed_count

@@ -16,6 +16,9 @@ from datetime import datetime
 import gzip
 import zlib
 
+# Import core config for whitelist compliance
+from core import config
+
 logger = logging.getLogger(__name__)
 
 @dataclass
@@ -238,13 +241,8 @@ class LiveDataFetcher:
     """
 
     def __init__(self):
-        # MiCA-compliant pairs (USDC first, RLUSD if available)
-        self.mica_pairs = [
-            'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC',
-            'LINK/USDC', 'IOTA/USDC', 'XDC/USDC', 'ONDO/USDC', 'VET/USDC',
-            # RLUSD pairs (limited availability)
-            'XRP/RLUSD', 'XLM/RLUSD', 'ADA/RLUSD'
-        ]
+        # Generate MiCA-compliant pairs from core config whitelist
+        self.mica_pairs = self._generate_whitelist_pairs()
 
         # Exchange connectors
         self.connectors: Dict[str, ExchangeConnector] = {}
@@ -266,18 +264,38 @@ class LiveDataFetcher:
 
         logger.info(f"LiveDataFetcher initialized for {len(self.mica_pairs)} MiCA pairs")
 
+    def _generate_whitelist_pairs(self) -> List[str]:
+        """Generate MiCA-compliant pairs from core config whitelist"""
+        pairs = []
+
+        # Generate crypto/USDC pairs
+        for coin in config.WHITELIST_COINS:
+            if coin != 'USDC' and coin != 'RLUSD':  # Skip stablecoins as base
+                pairs.append(f"{coin}/USDC")
+
+        # Generate crypto/RLUSD pairs (limited availability)
+        for coin in ['XRP', 'XLM', 'ADA']:  # Only these have RLUSD pairs
+            if coin in config.WHITELIST_COINS:
+                pairs.append(f"{coin}/RLUSD")
+
+        return pairs
+
     def _init_connectors(self):
         """Initialize exchange connectors"""
 
-        # Use all available MiCA USDC pairs (verified on Binance)
-        available_usdc_pairs = [
-            'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC',
-            'LINK/USDC', 'IOTA/USDC', 'ONDO/USDC', 'VET/USDC'
+        # Filter pairs available on Binance (most reliable for USDC pairs)
+        binance_available_coins = {
+            'XRP', 'XLM', 'HBAR', 'ALGO', 'ADA', 'LINK', 'IOTA', 'ONDO', 'VET'
             # Note: XDC/USDC not available on Binance
+        }
+
+        # Get USDC pairs that are available on Binance
+        binance_pairs = [
+            pair for pair in self.mica_pairs
+            if pair.endswith('/USDC') and pair.split('/')[0] in binance_available_coins
         ]
 
         # Binance connector (most reliable for USDC pairs)
-        binance_pairs = available_usdc_pairs
         if binance_pairs:
             self.connectors['binance'] = BinanceConnector(binance_pairs)
 

@@ -18,25 +18,39 @@ class ComplianceViolationError(Exception):
 class MiCAComplianceEngine:
     """
     MiCA (Markets in Crypto-Assets) Regulation Compliance Engine
-    Ensures SovereignForge operates within EU regulatory framework
+    Ensures SovereignForge operates within EU regulatory framework for personal deployment
     """
 
-    def __init__(self):
-        # MiCA compliant crypto assets (Article 3)
-        self.compliant_assets = {
-            'BTC', 'ETH', 'XRP', 'ADA', 'XLM', 'HBAR', 'ALGO', 'VECHAIN', 'ONDO', 'XDC', 'DOGE'
-        }
+    def __init__(self, personal_deployment: bool = True):
+        # For personal deployment, allow major assets + MiCA compliant ones
+        if personal_deployment:
+            # Personal trading allows major assets + MiCA compliant
+            self.compliant_assets = {
+                'BTC', 'ETH', 'DOGE',  # Major assets for personal trading
+                'XRP', 'ADA', 'XLM', 'HBAR', 'ALGO', 'VECHAIN', 'ONDO', 'XDC'  # MiCA compliant
+            }
+        else:
+            # Strict MiCA compliance (Article 3)
+            self.compliant_assets = {
+                'XRP', 'ADA', 'XLM', 'HBAR', 'ALGO', 'VECHAIN', 'ONDO', 'XDC'
+            }
 
-        # MiCA compliant stablecoins (Article 5)
-        self.compliant_stablecoins = {
-            'USDC', 'RLUSD'
-        }
+        # For personal deployment, include major stablecoins
+        if personal_deployment:
+            self.compliant_stablecoins = {
+                'USDC', 'RLUSD', 'USDT'  # USDT allowed for personal trading
+            }
+        else:
+            # Strict MiCA compliance (Article 5)
+            self.compliant_stablecoins = {
+                'USDC', 'RLUSD'
+            }
 
         # MiCA compliant trading pairs
         self.compliant_pairs = set()
         self._build_compliant_pairs()
 
-        logger.info(f"MiCA Compliance Engine initialized with {len(self.compliant_pairs)} compliant pairs")
+        logger.info(f"MiCA Compliance Engine initialized with {len(self.compliant_pairs)} compliant pairs (personal_deployment={personal_deployment})")
 
     def _build_compliant_pairs(self):
         """Build set of MiCA compliant trading pairs"""

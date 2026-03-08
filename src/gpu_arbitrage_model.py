@@ -13,6 +13,7 @@ This module provides:
 
 import os
 import sys
+import asyncio
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -224,24 +225,78 @@ class GPUArbitrageModel:
             logger.error(f"Failed to save model to {save_path}: {e}")
             raise
 
-    def predict(self, market_data: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    async def predict_async(self, market_data: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        Make predictions on market data
+        Async GPU prediction with batching support
         Args:
             market_data: Input tensor [batch_size, seq_len, input_dim]
         Returns:
             arbitrage_signal, confidence_score, predicted_spread
         """
+        loop = asyncio.get_event_loop()
+
+        # Run prediction in thread pool to avoid blocking
+        result = await loop.run_in_executor(
+            None,
+            self._sync_predict,
+            market_data
+        )
+
+        return result
+
+    def predict(self, market_data: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Synchronous prediction (legacy compatibility)
+        """
+        return self._sync_predict(market_data)
+
+    def _sync_predict(self, market_data: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Internal synchronous prediction with GPU optimization
+        """
         with torch.no_grad():
             self.model.eval()
 
-            # Move to device
+            # Ensure proper device placement
             market_data = market_data.to(self.device)
 
-            # Forward pass
-            arbitrage_signal, confidence_score, predicted_spread = self.model(market_data)
+            # Handle batch size validation
+            batch_size = market_data.shape[0]
+            seq_len = market_data.shape[1]
 
-            return arbitrage_signal, confidence_score, predicted_spread
+            # Validate sequence length
+            if seq_len > self.model_config["max_seq_len"]:
+                logger.warning(f"Sequence length {seq_len} exceeds max {self.model_config['max_seq_len']}, truncating")
+                market_data = market_data[:, :self.model_config["max_seq_len"], :]
+
+            # Forward pass with error handling
+            try:
+                arbitrage_signal, confidence_score, predicted_spread = self.model(market_data)
+
+                # Ensure proper output shapes
+                if arbitrage_signal.dim() == 1:
+                    arbitrage_signal = arbitrage_signal.unsqueeze(-1)
+                if confidence_score.dim() == 1:
+                    confidence_score = confidence_score.unsqueeze(-1)
+                if predicted_spread.dim() == 1:
+                    predicted_spread = predicted_spread.unsqueeze(-1)
+
+                return arbitrage_signal, confidence_score, predicted_spread
+
+            except RuntimeError as e:
+                logger.error(f"GPU prediction failed: {e}")
+                # Fallback to CPU if GPU fails
+                try:
+                    market_data_cpu = market_data.cpu()
+                    with torch.no_grad():
+                        arbitrage_signal, confidence_score, predicted_spread = self.model.cpu()(market_data_cpu)
+                        return arbitrage_signal, confidence_score, predicted_spread
+                except Exception as fallback_error:
+                    logger.error(f"CPU fallback also failed: {fallback_error}")
+                    # Return zeros as last resort
+                    return (torch.zeros(batch_size, 1),
+                           torch.zeros(batch_size, 1),
+                           torch.zeros(batch_size, 1))
 
     def predict_numpy(self, market_data: np.ndarray) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """

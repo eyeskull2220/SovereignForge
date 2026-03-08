@@ -271,11 +271,19 @@ class LiveDataFetcher:
         # Data callbacks
         self.data_callbacks: List[Callable] = []
 
+        # Performance optimizations
+        self.rate_limiter = asyncio.Semaphore(100)  # Max 100 concurrent data processing
+        self.processing_queue = asyncio.Queue(maxsize=1000)  # Bounded processing queue
+        self.memory_limit_mb = 500  # Max memory usage for data history
+        self.data_history = {}  # Bounded data history with cleanup
+
         # Statistics
         self.stats = {
             'messages_received': 0,
             'tickers_processed': 0,
             'errors': 0,
+            'queue_drops': 0,
+            'memory_cleanups': 0,
             'start_time': time.time()
         }
 
@@ -343,6 +351,10 @@ class LiveDataFetcher:
         heartbeat_task = asyncio.create_task(self._monitor_heartbeats())
         self.tasks.append(heartbeat_task)
 
+        # Start queue processing
+        queue_task = asyncio.create_task(self._process_data_queue())
+        self.tasks.append(queue_task)
+
         logger.info(f"✅ Live data fetcher started with {len(self.connectors)} exchanges")
 
     async def stop(self):
@@ -366,29 +378,26 @@ class LiveDataFetcher:
             try:
                 await connector.connect()
 
-                # Listen for messages
+                # Listen for messages with rate limiting
                 async for message in connector.connection:
                     try:
                         self.stats['messages_received'] += 1
 
-                        # Parse ticker data
-                        ticker = connector.parse_message(message)
-                        if ticker:
-                            self.stats['tickers_processed'] += 1
-
-                            # Notify callbacks
-                            for callback in self.data_callbacks:
-                                try:
-                                    if asyncio.iscoroutinefunction(callback):
-                                        await callback(ticker)
-                                    else:
-                                        callback(ticker)
-                                except Exception as e:
-                                    logger.error(f"Error in data callback: {e}")
+                        # Rate limiting and queue management
+                        async with self.rate_limiter:
+                            # Try to queue message for processing (non-blocking)
+                            try:
+                                await asyncio.wait_for(
+                                    self.processing_queue.put((connector, message)),
+                                    timeout=0.1  # Don't block if queue is full
+                                )
+                            except asyncio.TimeoutError:
+                                self.stats['queue_drops'] += 1
+                                continue  # Drop message if queue is full
 
                     except Exception as e:
                         self.stats['errors'] += 1
-                        logger.error(f"Error processing message from {connector.exchange_name}: {e}")
+                        logger.error(f"Error queuing message from {connector.exchange_name}: {e}")
 
             except websockets.exceptions.ConnectionClosed:
                 logger.warning(f"Connection closed for {connector.exchange_name}")
@@ -397,6 +406,68 @@ class LiveDataFetcher:
             except Exception as e:
                 logger.error(f"Connector error for {connector.exchange_name}: {e}")
                 await asyncio.sleep(5)
+
+    async def _process_data_queue(self):
+        """Process queued data messages with rate limiting"""
+        while True:
+            try:
+                # Get message from queue
+                connector, message = await self.processing_queue.get()
+
+                # Parse ticker data
+                ticker = connector.parse_message(message)
+                if ticker:
+                    self.stats['tickers_processed'] += 1
+
+                    # Store in bounded history with memory management
+                    pair_key = ticker.pair
+                    if pair_key not in self.data_history:
+                        self.data_history[pair_key] = []
+
+                    # Keep only last 1000 data points per pair
+                    self.data_history[pair_key].append(ticker)
+                    if len(self.data_history[pair_key]) > 1000:
+                        self.data_history[pair_key] = self.data_history[pair_key][-1000:]
+
+                    # Memory cleanup check (every 100 messages)
+                    if self.stats['tickers_processed'] % 100 == 0:
+                        await self._cleanup_memory()
+
+                    # Notify callbacks
+                    for callback in self.data_callbacks:
+                        try:
+                            if asyncio.iscoroutinefunction(callback):
+                                await callback(ticker)
+                            else:
+                                callback(ticker)
+                        except Exception as e:
+                            logger.error(f"Error in data callback: {e}")
+
+                self.processing_queue.task_done()
+
+            except Exception as e:
+                logger.error(f"Error processing queued message: {e}")
+                self.processing_queue.task_done()
+
+    async def _cleanup_memory(self):
+        """Cleanup memory usage to stay within limits"""
+        try:
+            # Calculate current memory usage (rough estimate)
+            total_items = sum(len(data_list) for data_list in self.data_history.values())
+            estimated_mb = (total_items * 200) / (1024 * 1024)  # Rough 200 bytes per ticker
+
+            if estimated_mb > self.memory_limit_mb:
+                # Reduce history size by 50% across all pairs
+                for pair_key in self.data_history:
+                    current_len = len(self.data_history[pair_key])
+                    keep_count = max(100, current_len // 2)  # Keep at least 100 items
+                    self.data_history[pair_key] = self.data_history[pair_key][-keep_count:]
+
+                self.stats['memory_cleanups'] += 1
+                logger.info(f"Memory cleanup: reduced to ~{estimated_mb/2:.1f}MB")
+
+        except Exception as e:
+            logger.error(f"Error in memory cleanup: {e}")
 
     async def _monitor_heartbeats(self):
         """Monitor connection heartbeats"""

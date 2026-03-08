@@ -310,10 +310,12 @@ class RealTimeInferenceService:
     def __init__(self,
                  models_dir: str = "/app/models",
                  max_batch_size: int = 32,
-                 inference_timeout_ms: int = 100):
+                 inference_timeout_ms: int = 100,
+                 batch_timeout_ms: int = 50):
         self.model_loader = SecureModelLoader(models_dir)
         self.max_batch_size = max_batch_size
         self.inference_timeout_ms = inference_timeout_ms
+        self.batch_timeout_ms = batch_timeout_ms
 
         # Initialize GPU Manager (Phase 2 integration)
         if GPU_MANAGER_AVAILABLE:
@@ -356,13 +358,20 @@ class RealTimeInferenceService:
         # Opportunity callbacks (expected by integration tests)
         self.opportunity_callbacks = []
 
+        # Batch processing for GPU optimization
+        self.inference_batch: List[Tuple[str, np.ndarray, asyncio.Future]] = []
+        self.batch_lock = asyncio.Lock()
+        self.batch_timer: Optional[asyncio.Task] = None
+
         # Performance monitoring
         self.performance_stats = {
             "total_inferences": 0,
             "successful_inferences": 0,
             "failed_inferences": 0,
             "average_processing_time_ms": 0.0,
-            "peak_gpu_memory_mb": 0.0
+            "peak_gpu_memory_mb": 0.0,
+            "batches_processed": 0,
+            "average_batch_size": 0.0
         }
 
         logger.info("RealTimeInferenceService initialized with Phase 2 GPU Manager")

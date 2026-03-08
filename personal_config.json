@@ -1,0 +1,56 @@
+{
+  "version": "1.0.0",
+  "deployment_type": "personal",
+  "compliance": {
+    "mica_compliant": true,
+    "allowed_pairs": [
+      "XRP/USDC", "XLM/USDC", "HBAR/USDC", "ALGO/USDC", "ADA/USDC",
+      "LINK/USDC", "IOTA/USDC", "XDC/USDC", "ONDO/USDC", "VET/USDC",
+      "XRP/RLUSD", "XLM/RLUSD", "ADA/RLUSD"
+    ],
+    "forbidden_pairs": [
+      "BTC/USDT", "ETH/USDT", "DOGE/USDT", "BTC/USDC", "ETH/USDC"
+    ],
+    "stablecoins": ["USDC", "RLUSD"],
+    "local_only": true,
+    "no_custody": true,
+    "no_public_offering": true
+  },
+  "trading": {
+    "pairs": ["XRP/USDC", "XLM/USDC", "ADA/USDC"],
+    "min_spread": 0.001,
+    "confidence_threshold": 0.7,
+    "max_position_size_pct": 0.05,
+    "stop_loss_pct": 0.02,
+    "take_profit_pct": 0.04
+  },
+  "security": {
+    "local_execution_only": true,
+    "no_external_apis": true,
+    "data_isolation": true,
+    "resource_limits": {
+      "max_memory_mb": 1024,
+      "max_cpu_percent": 50,
+      "max_disk_mb": 100
+    }
+  },
+  "monitoring": {
+    "enable_telegram": false,
+    "enable_email": false,
+    "enable_local_alerts": true,
+    "log_level": "INFO",
+    "performance_tracking": true
+  },
+  "models": {
+    "model_dir": "personal_data/models",
+    "fallback_enabled": true,
+    "gpu_preferred": true,
+    "cpu_fallback": true
+  },
+  "data": {
+    "data_dir": "personal_data",
+    "backup_enabled": true,
+    "backup_interval_hours": 24,
+    "retention_days": 30
+  }
+}

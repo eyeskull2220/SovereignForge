@@ -16,8 +16,8 @@ def main():
     parser = argparse.ArgumentParser(description='SovereignForge Basic CLI')
     parser.add_argument('command', choices=['detect', 'history', 'stats', 'test'],
                        help='Command to run')
-    parser.add_argument('--symbol', default='BTC/USDT',
-                       help='Trading symbol (default: BTC/USDT)')
+    parser.add_argument('--symbol', default='XRP/USDC',
+                       help='Trading symbol (default: XRP/USDC)')
     parser.add_argument('--continuous', action='store_true',
                        help='Run continuous detection')
     parser.add_argument('--interval', type=int, default=60,
@@ -160,7 +160,7 @@ def run_test(detector, database, connector, risk_manager, order_executor, create
 
     # Test exchange connector
     print("Testing exchange connector...")
-    market_data = connector.get_market_data('BTC/USDT')
+    market_data = connector.get_market_data('XRP/USDC')
     if market_data['exchanges']:
         print(f"[OK] Exchange connector working: {len(market_data['exchanges'])} exchanges")
     else:

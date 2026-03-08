@@ -50,6 +50,9 @@ class ExchangeConnector:
         self.reconnect_delay = 5  # seconds
         self.max_reconnect_attempts = 10
         self.reconnect_attempts = 0
+        self.connection_state = "DISCONNECTED"  # DISCONNECTED, CONNECTING, CONNECTED, RECONNECTING, FAILED
+        self.circuit_breaker_until = 0  # timestamp when circuit breaker expires
+        self.circuit_breaker_timeout = 300  # 5 minutes circuit breaker
 
     async def connect(self):
         """Establish WebSocket connection"""
@@ -87,14 +90,31 @@ class ExchangeConnector:
         return {}
 
     async def handle_reconnect(self):
-        """Handle reconnection logic"""
+        """Handle reconnection logic with circuit breaker and jitter"""
+        current_time = time.time()
+
+        # Check circuit breaker
+        if current_time < self.circuit_breaker_until:
+            logger.warning(f"Circuit breaker active for {self.exchange_name} until {self.circuit_breaker_until}")
+            return
+
+        # Check max attempts
         if self.reconnect_attempts >= self.max_reconnect_attempts:
             logger.error(f"Max reconnection attempts reached for {self.exchange_name}")
+            # Activate circuit breaker
+            self.circuit_breaker_until = current_time + self.circuit_breaker_timeout
+            self.connection_state = "FAILED"
             return
 
         self.reconnect_attempts += 1
-        delay = self.reconnect_delay * (2 ** (self.reconnect_attempts - 1))  # Exponential backoff
-        logger.info(f"Reconnecting to {self.exchange_name} in {delay}s (attempt {self.reconnect_attempts})")
+        self.connection_state = "RECONNECTING"
+
+        # Exponential backoff with jitter (±25% randomization)
+        base_delay = self.reconnect_delay * (2 ** (self.reconnect_attempts - 1))
+        jitter = base_delay * 0.25 * (2 * time.time() % 1 - 0.5)  # ±25% jitter
+        delay = max(1, base_delay + jitter)  # Minimum 1 second
+
+        logger.info(f"Reconnecting to {self.exchange_name} in {delay:.1f}s (attempt {self.reconnect_attempts}/{self.max_reconnect_attempts})")
         await asyncio.sleep(delay)
         await self.connect()
 

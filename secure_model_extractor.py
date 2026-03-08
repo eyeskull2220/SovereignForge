@@ -42,7 +42,8 @@ class SecureModelExtractor:
     """Secure model loading and validation system"""
 
     SUPPORTED_PAIRS = [
-        'btc_usdt', 'eth_usdt', 'xrp_usdt', 'xlm_usdt', 'hbar_usdt', 'algo_usdt', 'ada_usdt'
+        'btc_usdt', 'eth_usdt', 'xrp_usdt', 'xlm_usdt', 'hbar_usdt', 'algo_usdt', 'ada_usdt',
+        'link_usdt', 'iota_usdt'  # Added missing pairs for 7-pair requirement
     ]
 
     def __init__(self, models_dir: str = "models/strategies", gpu_manager: Optional[GPUManager] = None):
@@ -149,7 +150,9 @@ class SecureModelExtractor:
     def validate_model(self, trading_pair: str) -> ModelValidationResult:
         """Comprehensive model validation"""
         errors = []
-        model_path = self.models_dir / f"arbitrage_{trading_pair}_binance.pth"
+        # Use actual model file naming convention
+        pair_upper = trading_pair.upper().replace('_', '')
+        model_path = Path("models") / f"final_{pair_upper}.pth"
 
         # Check if model file exists
         if not model_path.exists():
@@ -225,16 +228,17 @@ class SecureModelExtractor:
             logger.error(f"Model validation failed for {trading_pair}: {validation.errors}")
             return None
 
-        model_path = self.models_dir / f"arbitrage_{trading_pair}_binance.pth"
+        # Use actual model file naming convention
+        pair_upper = trading_pair.upper().replace('_', '')
+        model_path = Path("models") / f"final_{pair_upper}.pth"
 
         try:
             # Determine device
             device = torch.device('cpu') if force_cpu else self.gpu_manager.device
 
-            # Load model with memory safety
-            model_state = self.gpu_manager.safe_tensor_operation(
-                torch.load, model_path, map_location=device, weights_only=True
-            )
+            # Load full checkpoint (not just weights_only due to ModelConfig class)
+            checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+            model_state = checkpoint['model_state_dict']
 
             # Create model architecture (assuming transformer-based model)
             # This would need to be adjusted based on actual model architecture
@@ -297,7 +301,9 @@ class SecureModelExtractor:
             return None
 
         validation = self.validate_model(trading_pair)
-        model_path = self.models_dir / f"arbitrage_{trading_pair}_binance.pth"
+        # Use actual model file naming convention
+        pair_upper = trading_pair.upper().replace('_', '')
+        model_path = Path("models") / f"final_{pair_upper}.pth"
 
         return {
             'metadata': metadata,

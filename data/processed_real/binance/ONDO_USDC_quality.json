@@ -1,0 +1,67 @@
+{
+  "exchange": "binance",
+  "pair": "ONDO/USDC",
+  "total_records": 7950,
+  "date_range": {
+    "start": "2025-04-11T18:00:00",
+    "end": "2026-03-08T23:00:00"
+  },
+  "data_quality": {
+    "missing_values": "0",
+    "duplicate_timestamps": "0",
+    "zero_volume_records": "0",
+    "negative_prices": "0"
+  },
+  "statistics": {
+    "price_range": {
+      "min": 0.2245,
+      "max": 1.1433,
+      "mean": 0.7072205283018869,
+      "std": 0.26536725590576254
+    },
+    "volume_stats": {
+      "total_volume": 941699743.5,
+      "avg_volume": 118452.7979245283,
+      "volume_std": 151425.57344199502
+    },
+    "returns": {
+      "daily_returns_mean": -0.00011997964253530735,
+      "daily_returns_std": 0.009480891229584646,
+      "sharpe_ratio": -0.2417713479272456
+    }
+  },
+  "technical_indicators": {
+    "indicators_added": [
+      "sma_20",
+      "sma_50",
+      "sma_200",
+      "ema_12",
+      "ema_26",
+      "ema_50",
+      "rsi",
+      "macd",
+      "macd_signal",
+      "macd_hist",
+      "bb_upper",
+      "bb_middle",
+      "bb_lower",
+      "bb_width",
+      "atr",
+      "volume_sma",
+      "volume_ratio",
+      "roc_1",
+      "roc_5",
+      "momentum",
+      "volatility",
+      "volatility_ratio",
+      "fib_0.236",
+      "fib_0.382",
+      "fib_0.5",
+      "fib_0.618",
+      "fib_0.786",
+      "support_20",
+      "resistance_20"
+    ]
+  },
+  "mica_compliance": true
+}

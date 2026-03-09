@@ -1,0 +1,67 @@
+{
+  "exchange": "coinbase",
+  "pair": "XLM/USDC",
+  "total_records": 17514,
+  "date_range": {
+    "start": "2024-03-09T04:00:00",
+    "end": "2026-03-08T23:00:00"
+  },
+  "data_quality": {
+    "missing_values": "0",
+    "duplicate_timestamps": "0",
+    "zero_volume_records": "0",
+    "negative_prices": "0"
+  },
+  "statistics": {
+    "price_range": {
+      "min": 0.07679,
+      "max": 0.601685,
+      "mean": 0.23893638711887633,
+      "std": 0.12235527857817885
+    },
+    "volume_stats": {
+      "total_volume": 67996536322.98599,
+      "avg_volume": 3882410.4329671115,
+      "volume_std": 6466834.161925096
+    },
+    "returns": {
+      "daily_returns_mean": 5.1831241030073564e-05,
+      "daily_returns_std": 0.010002152984986298,
+      "sharpe_ratio": 0.09900213193791438
+    }
+  },
+  "technical_indicators": {
+    "indicators_added": [
+      "sma_20",
+      "sma_50",
+      "sma_200",
+      "ema_12",
+      "ema_26",
+      "ema_50",
+      "rsi",
+      "macd",
+      "macd_signal",
+      "macd_hist",
+      "bb_upper",
+      "bb_middle",
+      "bb_lower",
+      "bb_width",
+      "atr",
+      "volume_sma",
+      "volume_ratio",
+      "roc_1",
+      "roc_5",
+      "momentum",
+      "volatility",
+      "volatility_ratio",
+      "fib_0.236",
+      "fib_0.382",
+      "fib_0.5",
+      "fib_0.618",
+      "fib_0.786",
+      "support_20",
+      "resistance_20"
+    ]
+  },
+  "mica_compliance": true
+}

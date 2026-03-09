@@ -1,0 +1,141 @@
+{
+  "processing_timestamp": "2026-03-09T00:27:52.573260",
+  "total_pairs_processed": 23,
+  "total_records": 259508,
+  "exchanges": {
+    "binance": {
+      "pairs": [
+        {
+          "pair": "ADA/USDC",
+          "records": 17516,
+          "mica_compliant": true
+        },
+        {
+          "pair": "ALGO/USDC",
+          "records": 16325,
+          "mica_compliant": true
+        },
+        {
+          "pair": "HBAR/USDC",
+          "records": 11316,
+          "mica_compliant": true
+        },
+        {
+          "pair": "IOTA/USDC",
+          "records": 8484,
+          "mica_compliant": true
+        },
+        {
+          "pair": "LINK/USDC",
+          "records": 17516,
+          "mica_compliant": true
+        },
+        {
+          "pair": "ONDO/USDC",
+          "records": 7950,
+          "mica_compliant": true
+        },
+        {
+          "pair": "VET/USDC",
+          "records": 8028,
+          "mica_compliant": true
+        },
+        {
+          "pair": "XLM/USDC",
+          "records": 11028,
+          "mica_compliant": true
+        },
+        {
+          "pair": "XRP/USDC",
+          "records": 17516,
+          "mica_compliant": true
+        }
+      ],
+      "total_records": 115679
+    },
+    "coinbase": {
+      "pairs": [
+        {
+          "pair": "ADA/USDC",
+          "records": 17514,
+          "mica_compliant": true
+        },
+        {
+          "pair": "ALGO/USDC",
+          "records": 17514,
+          "mica_compliant": true
+        },
+        {
+          "pair": "HBAR/USDC",
+          "records": 17514,
+          "mica_compliant": true
+        },
+        {
+          "pair": "LINK/USDC",
+          "records": 17514,
+          "mica_compliant": true
+        },
+        {
+          "pair": "ONDO/USDC",
+          "records": 17514,
+          "mica_compliant": true
+        },
+        {
+          "pair": "VET/USDC",
+          "records": 17513,
+          "mica_compliant": true
+        },
+        {
+          "pair": "XLM/USDC",
+          "records": 17514,
+          "mica_compliant": true
+        },
+        {
+          "pair": "XRP/USDC",
+          "records": 17514,
+          "mica_compliant": true
+        }
+      ],
+      "total_records": 140111
+    },
+    "kraken": {
+      "pairs": [
+        {
+          "pair": "ADA/USDC",
+          "records": 717,
+          "mica_compliant": false
+        },
+        {
+          "pair": "ALGO/USDC",
+          "records": 648,
+          "mica_compliant": false
+        },
+        {
+          "pair": "LINK/USDC",
+          "records": 717,
+          "mica_compliant": false
+        },
+        {
+          "pair": "VET/USDC",
+          "records": 208,
+          "mica_compliant": false
+        },
+        {
+          "pair": "XDC/USDC",
+          "records": 711,
+          "mica_compliant": false
+        },
+        {
+          "pair": "XRP/USDC",
+          "records": 717,
+          "mica_compliant": false
+        }
+      ],
+      "total_records": 3718
+    }
+  },
+  "quality_summary": {
+    "mica_compliant_pairs": 17,
+    "data_quality_issues": 0
+  }
+}

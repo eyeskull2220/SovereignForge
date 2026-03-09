@@ -1,0 +1,67 @@
+{
+  "exchange": "kraken",
+  "pair": "VET/USDC",
+  "total_records": 208,
+  "date_range": {
+    "start": "2026-02-08T02:00:00",
+    "end": "2026-03-08T16:00:00"
+  },
+  "data_quality": {
+    "missing_values": "0",
+    "duplicate_timestamps": "0",
+    "zero_volume_records": "0",
+    "negative_prices": "0"
+  },
+  "statistics": {
+    "price_range": {
+      "min": 0.006804,
+      "max": 0.008871,
+      "mean": 0.007640594173270681,
+      "std": 0.0004539189796958719
+    },
+    "volume_stats": {
+      "total_volume": 29534331.87139291,
+      "avg_volume": 141991.98015092744,
+      "volume_std": 386792.7594265463
+    },
+    "returns": {
+      "daily_returns_mean": -0.000723662407560644,
+      "daily_returns_std": 0.012516847023564901,
+      "sharpe_ratio": -1.1045553930508556
+    }
+  },
+  "technical_indicators": {
+    "indicators_added": [
+      "sma_20",
+      "sma_50",
+      "sma_200",
+      "ema_12",
+      "ema_26",
+      "ema_50",
+      "rsi",
+      "macd",
+      "macd_signal",
+      "macd_hist",
+      "bb_upper",
+      "bb_middle",
+      "bb_lower",
+      "bb_width",
+      "atr",
+      "volume_sma",
+      "volume_ratio",
+      "roc_1",
+      "roc_5",
+      "momentum",
+      "volatility",
+      "volatility_ratio",
+      "fib_0.236",
+      "fib_0.382",
+      "fib_0.5",
+      "fib_0.618",
+      "fib_0.786",
+      "support_20",
+      "resistance_20"
+    ]
+  },
+  "mica_compliance": false
+}

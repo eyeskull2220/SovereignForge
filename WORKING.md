@@ -45,6 +45,11 @@
 - **MiCA Violations**: USDT pairs in personal deployment (must be USDC/RLUSD only)
 - **Context Degradation**: Long sessions lose project context
 
+### **Backtesting Issues**
+- **Pandas Boolean Indexing Error**: "The truth value of a Series is ambiguous" in arbitrage detection
+- **Limited Strategy Coverage**: Only mean reversion strategy implemented, missing momentum and arbitrage logic
+- **Data Quality Filtering**: Some exchanges have insufficient data for certain pairs
+
 ### **Non-Critical Issues**
 - **Pylance Errors**: Type annotations incomplete (non-blocking)
 - **Model Validation**: Skipped for Phase 5 compatibility (expected)

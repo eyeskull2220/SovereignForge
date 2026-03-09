@@ -1,0 +1,208 @@
+{
+  "fetch_timestamp": "2026-03-09T00:27:06.539804",
+  "exchanges": [
+    "binance",
+    "coinbase",
+    "kraken"
+  ],
+  "pairs": [
+    "XRP/USDC",
+    "XLM/USDC",
+    "HBAR/USDC",
+    "ALGO/USDC",
+    "ADA/USDC",
+    "LINK/USDC",
+    "IOTA/USDC",
+    "XDC/USDC",
+    "ONDO/USDC",
+    "VET/USDC"
+  ],
+  "data_files": [
+    {
+      "exchange": "binance",
+      "pair": "ADA/USDC",
+      "records": 17520,
+      "start_date": "2024-03-09 00:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\binance\\ADA_USDC_1h.csv"
+    },
+    {
+      "exchange": "binance",
+      "pair": "ALGO/USDC",
+      "records": 15930,
+      "start_date": "2024-04-26 08:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\binance\\ALGO_USDC_1h.csv"
+    },
+    {
+      "exchange": "binance",
+      "pair": "HBAR/USDC",
+      "records": 11320,
+      "start_date": "2024-11-22 08:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\binance\\HBAR_USDC_1h.csv"
+    },
+    {
+      "exchange": "binance",
+      "pair": "IOTA/USDC",
+      "records": 8460,
+      "start_date": "2025-03-20 08:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\binance\\IOTA_USDC_1h.csv"
+    },
+    {
+      "exchange": "binance",
+      "pair": "LINK/USDC",
+      "records": 17515,
+      "start_date": "2024-03-09 00:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\binance\\LINK_USDC_1h.csv"
+    },
+    {
+      "exchange": "binance",
+      "pair": "ONDO/USDC",
+      "records": 7954,
+      "start_date": "2025-04-11 14:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\binance\\ONDO_USDC_1h.csv"
+    },
+    {
+      "exchange": "binance",
+      "pair": "VET/USDC",
+      "records": 8031,
+      "start_date": "2025-04-08 08:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\binance\\VET_USDC_1h.csv"
+    },
+    {
+      "exchange": "binance",
+      "pair": "XLM/USDC",
+      "records": 11032,
+      "start_date": "2024-12-04 08:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\binance\\XLM_USDC_1h.csv"
+    },
+    {
+      "exchange": "binance",
+      "pair": "XRP/USDC",
+      "records": 17520,
+      "start_date": "2024-03-09 00:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\binance\\XRP_USDC_1h.csv"
+    },
+    {
+      "exchange": "coinbase",
+      "pair": "ADA/USDC",
+      "records": 17515,
+      "start_date": "2024-03-09 00:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\coinbase\\ADA_USDC_1h.csv"
+    },
+    {
+      "exchange": "coinbase",
+      "pair": "ALGO/USDC",
+      "records": 17514,
+      "start_date": "2024-03-09 00:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\coinbase\\ALGO_USDC_1h.csv"
+    },
+    {
+      "exchange": "coinbase",
+      "pair": "HBAR/USDC",
+      "records": 17514,
+      "start_date": "2024-03-09 00:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\coinbase\\HBAR_USDC_1h.csv"
+    },
+    {
+      "exchange": "coinbase",
+      "pair": "LINK/USDC",
+      "records": 17515,
+      "start_date": "2024-03-09 00:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\coinbase\\LINK_USDC_1h.csv"
+    },
+    {
+      "exchange": "coinbase",
+      "pair": "ONDO/USDC",
+      "records": 17515,
+      "start_date": "2024-03-09 00:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\coinbase\\ONDO_USDC_1h.csv"
+    },
+    {
+      "exchange": "coinbase",
+      "pair": "VET/USDC",
+      "records": 17514,
+      "start_date": "2024-03-09 00:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\coinbase\\VET_USDC_1h.csv"
+    },
+    {
+      "exchange": "coinbase",
+      "pair": "XLM/USDC",
+      "records": 17515,
+      "start_date": "2024-03-09 00:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\coinbase\\XLM_USDC_1h.csv"
+    },
+    {
+      "exchange": "coinbase",
+      "pair": "XRP/USDC",
+      "records": 17515,
+      "start_date": "2024-03-09 00:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\coinbase\\XRP_USDC_1h.csv"
+    },
+    {
+      "exchange": "kraken",
+      "pair": "ADA/USDC",
+      "records": 706,
+      "start_date": "2026-02-06 23:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\kraken\\ADA_USDC_1h.csv"
+    },
+    {
+      "exchange": "kraken",
+      "pair": "ALGO/USDC",
+      "records": 376,
+      "start_date": "2026-02-06 23:00:00",
+      "end_date": "2026-03-08 22:00:00",
+      "file_path": "data\\real_historical\\kraken\\ALGO_USDC_1h.csv"
+    },
+    {
+      "exchange": "kraken",
+      "pair": "LINK/USDC",
+      "records": 696,
+      "start_date": "2026-02-06 23:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\kraken\\LINK_USDC_1h.csv"
+    },
+    {
+      "exchange": "kraken",
+      "pair": "VET/USDC",
+      "records": 71,
+      "start_date": "2026-02-06 23:00:00",
+      "end_date": "2026-03-08 16:00:00",
+      "file_path": "data\\real_historical\\kraken\\VET_USDC_1h.csv"
+    },
+    {
+      "exchange": "kraken",
+      "pair": "XDC/USDC",
+      "records": 571,
+      "start_date": "2026-02-06 23:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\kraken\\XDC_USDC_1h.csv"
+    },
+    {
+      "exchange": "kraken",
+      "pair": "XRP/USDC",
+      "records": 721,
+      "start_date": "2026-02-06 23:00:00",
+      "end_date": "2026-03-08 23:00:00",
+      "file_path": "data\\real_historical\\kraken\\XRP_USDC_1h.csv"
+    }
+  ],
+  "total_records": 258540,
+  "total_files": 23
+}

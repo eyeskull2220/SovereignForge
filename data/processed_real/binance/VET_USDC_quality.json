@@ -1,0 +1,67 @@
+{
+  "exchange": "binance",
+  "pair": "VET/USDC",
+  "total_records": 8028,
+  "date_range": {
+    "start": "2025-04-08T12:00:00",
+    "end": "2026-03-08T23:00:00"
+  },
+  "data_quality": {
+    "missing_values": "0",
+    "duplicate_timestamps": "0",
+    "zero_volume_records": "0",
+    "negative_prices": "0"
+  },
+  "statistics": {
+    "price_range": {
+      "min": 0.006782,
+      "max": 0.03298,
+      "mean": 0.018909296088689586,
+      "std": 0.006825109262469646
+    },
+    "volume_stats": {
+      "total_volume": 10164613672.85,
+      "avg_volume": 1266145.2009030893,
+      "volume_std": 2102654.433845883
+    },
+    "returns": {
+      "daily_returns_mean": -9.867689287589277e-05,
+      "daily_returns_std": 0.008990669943701601,
+      "sharpe_ratio": -0.20968619726295837
+    }
+  },
+  "technical_indicators": {
+    "indicators_added": [
+      "sma_20",
+      "sma_50",
+      "sma_200",
+      "ema_12",
+      "ema_26",
+      "ema_50",
+      "rsi",
+      "macd",
+      "macd_signal",
+      "macd_hist",
+      "bb_upper",
+      "bb_middle",
+      "bb_lower",
+      "bb_width",
+      "atr",
+      "volume_sma",
+      "volume_ratio",
+      "roc_1",
+      "roc_5",
+      "momentum",
+      "volatility",
+      "volatility_ratio",
+      "fib_0.236",
+      "fib_0.382",
+      "fib_0.5",
+      "fib_0.618",
+      "fib_0.786",
+      "support_20",
+      "resistance_20"
+    ]
+  },
+  "mica_compliance": true
+}

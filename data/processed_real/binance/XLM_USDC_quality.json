@@ -1,0 +1,67 @@
+{
+  "exchange": "binance",
+  "pair": "XLM/USDC",
+  "total_records": 11028,
+  "date_range": {
+    "start": "2024-12-04T12:00:00",
+    "end": "2026-03-08T23:00:00"
+  },
+  "data_quality": {
+    "missing_values": "0",
+    "duplicate_timestamps": "0",
+    "zero_volume_records": "0",
+    "negative_prices": "0"
+  },
+  "statistics": {
+    "price_range": {
+      "min": 0.145,
+      "max": 0.5186,
+      "mean": 0.30604724338048606,
+      "std": 0.0860300358202094
+    },
+    "volume_stats": {
+      "total_volume": 5825561875.0,
+      "avg_volume": 528251.8929089591,
+      "volume_std": 766971.2544915858
+    },
+    "returns": {
+      "daily_returns_mean": -6.427343373219994e-05,
+      "daily_returns_std": 0.00968162052210403,
+      "sharpe_ratio": -0.12683230296890163
+    }
+  },
+  "technical_indicators": {
+    "indicators_added": [
+      "sma_20",
+      "sma_50",
+      "sma_200",
+      "ema_12",
+      "ema_26",
+      "ema_50",
+      "rsi",
+      "macd",
+      "macd_signal",
+      "macd_hist",
+      "bb_upper",
+      "bb_middle",
+      "bb_lower",
+      "bb_width",
+      "atr",
+      "volume_sma",
+      "volume_ratio",
+      "roc_1",
+      "roc_5",
+      "momentum",
+      "volatility",
+      "volatility_ratio",
+      "fib_0.236",
+      "fib_0.382",
+      "fib_0.5",
+      "fib_0.618",
+      "fib_0.786",
+      "support_20",
+      "resistance_20"
+    ]
+  },
+  "mica_compliance": true
+}

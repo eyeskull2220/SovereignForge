@@ -35,3 +35,9 @@ def test_position_sizing():
             print(f"Expected return: {opp['expected_return']:.2%}")
 
             # Test position sizing for this opportunity
+            max_pos_value = capital * backtester.max_position_size
+            pos_size = max_pos_value / opp['entry_price']
+            print(f"Position size for this trade: {pos_size:.2f} units (${max_pos_value:.2f})")
+
+if __name__ == "__main__":
+    test_position_sizing()

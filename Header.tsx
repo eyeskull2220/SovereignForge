@@ -1,0 +1,1 @@
+import React from 'react'; const Header = () = return ( <header className="bg-gray-800 border-b border-gray-700 p-4"> <h1 className="text-xl font-bold">SovereignForge v2.0</h1> </header> ); }; export default Header; 

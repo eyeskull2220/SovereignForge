@@ -1,5 +1,5 @@
 {
-  "model_path": "models\\final_ADA_USDT.pth",
+  "model_path": "models\\final_ADA_USDC.pth",
   "architecture_hash": "legacy_lstm_model",
   "parameters_count": 1000,
   "expected_input_shape": [
@@ -8,8 +8,8 @@
   "expected_output_shape": [
     1
   ],
-  "trading_pair": "ADAUSDT",
+  "trading_pair": "ADAUSDC",
   "model_version": "1.0",
   "created_timestamp": "2026-03-07T00:00:00Z",
-  "security_checksum": "placeholder_checksum"
+  "security_checksum": "3f4bdc1eb6bffca8db5e1f777029ff6f66b965e4a0e223e5464004cbd5c66a94"
 }

@@ -1,0 +1,293 @@
+#!/bin/bash
+# SovereignForge Personal CLI Wrapper
+# Simple commands for personal use
+
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOCKER_COMPOSE_FILE="$SCRIPT_DIR/docker-compose.yml"
+DASHBOARD_URL="http://localhost:5173"
+API_URL="http://localhost:8000"
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
+# Logging function
+log() {
+    echo -e "${BLUE}[$(date +'%Y-%m-%d %H:%M:%S')]${NC} $1"
+}
+
+error() {
+    echo -e "${RED}[ERROR]${NC} $1" >&2
+}
+
+success() {
+    echo -e "${GREEN}[SUCCESS]${NC} $1"
+}
+
+warning() {
+    echo -e "${YELLOW}[WARNING]${NC} $1"
+}
+
+# Check if Docker is running
+check_docker() {
+    if ! docker info >/dev/null 2>&1; then
+        error "Docker is not running. Please start Docker first."
+        exit 1
+    fi
+}
+
+# Check if docker-compose file exists
+check_compose_file() {
+    if [ ! -f "$DOCKER_COMPOSE_FILE" ]; then
+        error "docker-compose.yml not found in $SCRIPT_DIR"
+        exit 1
+    fi
+}
+
+# Get system status
+get_status() {
+    echo "=== SovereignForge Status ==="
+    echo ""
+
+    # Docker services status
+    echo "Docker Services:"
+    if docker-compose ps >/dev/null 2>&1; then
+        docker-compose ps --format "table {{.Name}}\t{{.Status}}\t{{.Ports}}"
+    else
+        echo "No services running"
+    fi
+    echo ""
+
+    # Memory usage
+    echo "System Resources:"
+    if command -v docker &> /dev/null && docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}" 2>/dev/null | grep -q .; then
+        docker stats --no-stream --format "table {{.Container}}\t{{.CPUPerc}}\t{{.MemUsage}}"
+    else
+        echo "Unable to get container stats"
+    fi
+    echo ""
+
+    # API health check
+    echo "API Health:"
+    if curl -s --max-time 5 "$API_URL/health" >/dev/null 2>&1; then
+        echo -e "${GREEN}✓${NC} API responding"
+    else
+        echo -e "${RED}✗${NC} API not responding"
+    fi
+
+    # Dashboard availability
+    echo "Dashboard:"
+    if curl -s --max-time 5 "$DASHBOARD_URL" >/dev/null 2>&1; then
+        echo -e "${GREEN}✓${NC} Dashboard available at $DASHBOARD_URL"
+    else
+        echo -e "${RED}✗${NC} Dashboard not available"
+    fi
+}
+
+# Health check with diagnostics
+health_check() {
+    echo "=== SovereignForge Health Check ==="
+    echo ""
+
+    local issues_found=0
+
+    # Check Docker
+    if ! docker info >/dev/null 2>&1; then
+        error "Docker is not running"
+        issues_found=$((issues_found + 1))
+    else
+        success "Docker is running"
+    fi
+
+    # Check docker-compose file
+    if [ ! -f "$DOCKER_COMPOSE_FILE" ]; then
+        error "docker-compose.yml not found"
+        issues_found=$((issues_found + 1))
+    else
+        success "docker-compose.yml found"
+    fi
+
+    # Check services
+    if docker-compose ps >/dev/null 2>&1; then
+        local running_services=$(docker-compose ps --filter "status=running" --format "{{.Name}}" | wc -l)
+        if [ "$running_services" -gt 0 ]; then
+            success "$running_services service(s) running"
+        else
+            warning "No services running"
+        fi
+    else
+        warning "Unable to check services"
+    fi
+
+    # Check API
+    if curl -s --max-time 5 "$API_URL/health" >/dev/null 2>&1; then
+        success "API health check passed"
+    else
+        error "API health check failed"
+        issues_found=$((issues_found + 1))
+    fi
+
+    # Check ports
+    local ports_in_use=$(netstat -tln 2>/dev/null | grep -E ":5173|:8000" | wc -l)
+    if [ "$ports_in_use" -gt 0 ]; then
+        success "Required ports available"
+    else
+        warning "Some ports may be in use"
+    fi
+
+    # Memory check
+    local mem_usage=$(free -m 2>/dev/null | awk 'NR==2{printf "%.1f", $3/$2*100}')
+    if [ -n "$mem_usage" ] && [ "${mem_usage%.*}" -gt 90 ]; then
+        warning "High memory usage: ${mem_usage}%"
+    else
+        success "Memory usage normal"
+    fi
+
+    echo ""
+    if [ $issues_found -eq 0 ]; then
+        success "All health checks passed!"
+    else
+        warning "$issues_found issue(s) found. Run 'sovereignforge logs' for details."
+    fi
+}
+
+# Main command handling
+case "${1:-help}" in
+    start)
+        log "Starting SovereignForge..."
+        check_docker
+        check_compose_file
+
+        cd "$SCRIPT_DIR"
+        docker-compose up -d
+
+        # Wait a moment for services to start
+        sleep 3
+
+        success "SovereignForge started!"
+        echo "Dashboard: $DASHBOARD_URL"
+        echo "API: $API_URL"
+        echo "Run 'sovereignforge status' to check services"
+        ;;
+
+    stop)
+        log "Stopping SovereignForge..."
+        check_compose_file
+
+        cd "$SCRIPT_DIR"
+        docker-compose down
+
+        success "SovereignForge stopped!"
+        ;;
+
+    restart)
+        log "Restarting SovereignForge..."
+        check_docker
+        check_compose_file
+
+        cd "$SCRIPT_DIR"
+        docker-compose restart
+
+        success "SovereignForge restarted!"
+        ;;
+
+    status)
+        get_status
+        ;;
+
+    health)
+        health_check
+        ;;
+
+    logs)
+        log "Showing SovereignForge logs..."
+        check_compose_file
+
+        cd "$SCRIPT_DIR"
+        docker-compose logs -f --tail=50
+        ;;
+
+    backup)
+        log "Creating backup..."
+        BACKUP_DIR="$SCRIPT_DIR/backups"
+        mkdir -p "$BACKUP_DIR"
+
+        TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+        BACKUP_FILE="$BACKUP_DIR/sovereignforge_backup_$TIMESTAMP.tar.gz"
+
+        # Backup data directories
+        tar -czf "$BACKUP_FILE" \
+            -C "$SCRIPT_DIR" \
+            data/ \
+            models/ \
+            logs/ \
+            reports/ \
+            2>/dev/null || true
+
+        if [ -f "$BACKUP_FILE" ]; then
+            success "Backup created: $BACKUP_FILE"
+        else
+            error "Backup failed"
+        fi
+        ;;
+
+    dashboard)
+        log "Opening dashboard..."
+        if command -v xdg-open &> /dev/null; then
+            xdg-open "$DASHBOARD_URL"
+        elif command -v open &> /dev/null; then
+            open "$DASHBOARD_URL"
+        elif command -v start &> /dev/null; then
+            start "$DASHBOARD_URL"
+        else
+            echo "Please open: $DASHBOARD_URL"
+        fi
+        ;;
+
+    update)
+        log "Checking for updates..."
+        cd "$SCRIPT_DIR"
+
+        # Pull latest changes
+        if git pull origin main 2>/dev/null; then
+            success "Code updated successfully"
+            warning "Run 'sovereignforge restart' to apply changes"
+        else
+            warning "Unable to update automatically. Check git status."
+        fi
+        ;;
+
+    help|--help|-h)
+        echo "SovereignForge Personal CLI"
+        echo ""
+        echo "Usage: sovereignforge <command>"
+        echo ""
+        echo "Commands:"
+        echo "  start     Start all services"
+        echo "  stop      Stop all services"
+        echo "  restart   Restart all services"
+        echo "  status    Show system status"
+        echo "  health    Run health diagnostics"
+        echo "  logs      Show service logs"
+        echo "  backup    Create data backup"
+        echo "  dashboard Open dashboard in browser"
+        echo "  update    Update from git repository"
+        echo "  help      Show this help"
+        echo ""
+        echo "Examples:"
+        echo "  sovereignforge start"
+        echo "  sovereignforge status"
+        echo "  sovereignforge health"
+        ;;
+
+    *)
+        error "Unknown command: $1"
+        echo "Run 'sovereignforge help' for usage information"
+        exit 1
+        ;;
+esac

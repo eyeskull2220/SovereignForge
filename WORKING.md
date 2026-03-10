@@ -18,6 +18,21 @@
 
 ## ✅ Recently Shipped (Last 24h)
 
+### **Phase 12: Advanced Arbitrage & Smart Money Integration (COMPLETED)**
+- ✅ **Smart Money Concepts Integration**: Full SMC library with FVG, BOS/CHOCH, Order Blocks, Liquidity analysis
+- ✅ **Enhanced Arbitrage Detector**: `enhanced_arbitrage_detector.py` with SMC-enhanced arbitrage detection
+- ✅ **Kraken Exchange Support**: MiCA-compliant pairs (XRP/USDC, XLM/USDC, ADA/USDC, etc.)
+- ✅ **Market Bias Analysis**: Real-time market direction analysis using SMC indicators
+- ✅ **Risk-Adjusted Arbitrage**: SMC confidence scoring for position sizing and execution
+- ✅ **Cross-Exchange Arbitrage**: Multi-exchange price discovery with smart money filters
+
+### **Phase 11: Personal Use Enhancements (COMPLETED)**
+- ✅ **CLI Wrapper**: `sovereignforge.bat` command with start/stop/status/health/logs/backup/dashboard/update
+- ✅ **Personal Mode Config**: Resource optimization flags and personal settings in personal_config.json
+- ✅ **Auto-Recovery System**: Automatic service restart and health monitoring (auto_recovery.py)
+- ✅ **Windows Compatibility**: Batch file wrapper for Windows CMD environment
+- ✅ **One-Command Operations**: Simple CLI for all daily operations (start, stop, status, health, backup)
+
 ### **Phase 10: Production Deployment & Final Integration (COMPLETED)**
 - ✅ **Live Testing Validation**: Micro-position testing system with gradual scaling ($1 → $10 → $100)
 - ✅ **Production Deployment**: Docker Compose with security hardening and secrets management

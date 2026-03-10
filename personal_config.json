@@ -29,10 +29,19 @@
     "no_external_apis": true,
     "data_isolation": true,
     "resource_limits": {
-      "max_memory_mb": 1024,
-      "max_cpu_percent": 50,
+      "max_memory_mb": 2048,
+      "max_cpu_percent": 25,
       "max_disk_mb": 100
     }
+  },
+  "personal_mode": {
+    "enabled": true,
+    "resource_optimization": true,
+    "simple_monitoring": true,
+    "auto_recovery": true,
+    "minimal_logging": false,
+    "startup_timeout_seconds": 30,
+    "health_check_interval_minutes": 5
   },
   "monitoring": {
     "enable_telegram": false,

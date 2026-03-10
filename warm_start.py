@@ -184,19 +184,22 @@ class WarmStart:
 
     def get_project_structure(self) -> Dict[str, Any]:
         """Get key project structure and load-bearing files"""
-        structure = {
+        structure: Dict[str, Any] = {
             "load_bearing_configs": [],
             "model_dirs": [],
             "test_dirs": [],
             "deployment_files": [],
-            "documentation": []
+            "documentation": [],
+            "monitoring_components": [],
+            "production_ready": False
         }
 
         # Load-bearing config files
         config_files = [
             "core/config.py", "config.py", "personal_config.json",
             "pyrightconfig.json", ".vscode/settings.json",
-            "docker-compose.yml", "Dockerfile", "requirements.txt"
+            "docker-compose.yml", "Dockerfile", "requirements.txt",
+            "production_docker_compose.yml", "live_testing_validator.py"
         ]
 
         for config in config_files:
@@ -204,28 +207,41 @@ class WarmStart:
                 structure["load_bearing_configs"].append(config)
 
         # Model directories
-        model_dirs = ["models/", "src/models/", "model_checkpoints/"]
+        model_dirs = ["models/", "src/models/", "model_checkpoints/", "training_logs/"]
         for model_dir in model_dirs:
             if (self.project_root / model_dir).exists():
                 structure["model_dirs"].append(model_dir)
 
         # Test directories
-        test_dirs = ["tests/", "test/", "src/tests/"]
+        test_dirs = ["tests/", "test/", "src/tests/", "integration_test_suite.py"]
         for test_dir in test_dirs:
             if (self.project_root / test_dir).exists():
                 structure["test_dirs"].append(test_dir)
 
         # Deployment files
-        deploy_files = ["deploy.sh", "k8s/", "docker/"]
+        deploy_files = ["deploy.sh", "k8s/", "docker/", "production_docker_compose.yml"]
         for deploy_file in deploy_files:
             if (self.project_root / deploy_file).exists():
                 structure["deployment_files"].append(deploy_file)
 
         # Documentation
-        docs = ["WORKING.md", "AGENTS.md", "README.md", "PRODUCTION_README.md"]
+        docs = ["WORKING.md", "AGENTS.md", "README.md", "PRODUCTION_README.md",
+                "user_manual.md", "troubleshooting_guide.md", "compliance_documentation.md"]
         for doc in docs:
             if (self.project_root / doc).exists():
                 structure["documentation"].append(doc)
+
+        # Monitoring components
+        monitoring_files = ["monitoring/dashboard/", "monitoring/backend/",
+                           "PnlChart.tsx", "RiskGauges.tsx", "PositionsTable.tsx"]
+        for monitor_file in monitoring_files:
+            if (self.project_root / monitor_file).exists():
+                structure["monitoring_components"].append(monitor_file)
+
+        # Production readiness check
+        required_files = ["production_docker_compose.yml", "integration_test_suite.py",
+                         "user_manual.md", "system_readiness_report.json"]
+        structure["production_ready"] = all((self.project_root / f).exists() for f in required_files)
 
         return structure
 

@@ -1,5 +1,5 @@
 {
-  "model_path": "models\\final_BTC_USDT.pth",
+  "model_path": "models\\final_BTC_USDC.pth",
   "architecture_hash": "legacy_lstm_model",
   "parameters_count": 1000,
   "expected_input_shape": [
@@ -8,8 +8,8 @@
   "expected_output_shape": [
     1
   ],
-  "trading_pair": "BTCUSDT",
+  "trading_pair": "BTCUSDC",
   "model_version": "1.0",
   "created_timestamp": "2026-03-07T00:00:00Z",
-  "security_checksum": "placeholder_checksum"
+  "security_checksum": "82af7b8d31616d966515067c3400c567a82f6a9b0ca8366a099a1dfaa1348147"
 }

@@ -1,0 +1,23 @@
+{
+  "portfolio_limits": {
+    "max_total_exposure_percent": 10.0,
+    "max_single_asset_exposure_percent": 5.0,
+    "max_daily_loss_percent": 2.0,
+    "max_drawdown_percent": 5.0
+  },
+  "position_limits": {
+    "min_position_size_usd": 10.0,
+    "max_position_size_usd": 1000.0,
+    "max_leverage": 1.0
+  },
+  "risk_metrics": {
+    "var_confidence_level": 0.95,
+    "var_time_horizon_days": 1,
+    "stress_test_scenarios": ["crypto_crash", "flash_crash", "liquidity_dry_up"]
+  },
+  "circuit_breakers": {
+    "price_deviation_percent": 5.0,
+    "volume_drop_percent": 50.0,
+    "auto_pause_duration_minutes": 15
+  }
+}

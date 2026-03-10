@@ -30,8 +30,8 @@ spec:
         fsGroup: 2000
       containers:
       - name: sovereignforge
-        image: sovereignforge:latest
-        imagePullPolicy: Always
+        image: sovereignforge:v1.0.0
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
           name: http

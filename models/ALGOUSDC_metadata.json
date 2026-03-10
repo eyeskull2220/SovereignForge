@@ -1,5 +1,5 @@
 {
-  "model_path": "models\\final_ALGO_USDT.pth",
+  "model_path": "models\\final_ALGO_USDC.pth",
   "architecture_hash": "legacy_lstm_model",
   "parameters_count": 1000,
   "expected_input_shape": [
@@ -8,8 +8,8 @@
   "expected_output_shape": [
     1
   ],
-  "trading_pair": "ALGOUSDT",
+  "trading_pair": "ALGOUSDC",
   "model_version": "1.0",
   "created_timestamp": "2026-03-07T00:00:00Z",
-  "security_checksum": "placeholder_checksum"
+  "security_checksum": "7c36605c0067edb9b7fa8114bdb8330b33328f08cd84c8d19e090ba996429927"
 }

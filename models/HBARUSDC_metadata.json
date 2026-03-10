@@ -1,5 +1,5 @@
 {
-  "model_path": "models\\final_HBAR_USDT.pth",
+  "model_path": "models\\final_HBAR_USDC.pth",
   "architecture_hash": "legacy_lstm_model",
   "parameters_count": 1000,
   "expected_input_shape": [
@@ -8,8 +8,8 @@
   "expected_output_shape": [
     1
   ],
-  "trading_pair": "HBARUSDT",
+  "trading_pair": "HBARUSDC",
   "model_version": "1.0",
   "created_timestamp": "2026-03-07T00:00:00Z",
-  "security_checksum": "placeholder_checksum"
+  "security_checksum": "92eec38b21dd6f51f700250a51356a10e84a6032134ae19413e7bfacb0a35138"
 }

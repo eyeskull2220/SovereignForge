@@ -1,0 +1,26 @@
+{
+  "exchanges": {
+    "binance": {
+      "api_key": "",
+      "secret_key": "",
+      "testnet": true
+    },
+    "coinbase": {
+      "api_key": "",
+      "secret_key": "",
+      "sandbox": true
+    },
+    "kraken": {
+      "api_key": "",
+      "secret_key": ""
+    }
+  },
+  "telegram": {
+    "bot_token": "",
+    "chat_ids": []
+  },
+  "monitoring": {
+    "health_check_interval": 60,
+    "alert_webhook_url": ""
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "environment": "development",
+  "docker": {
+    "image_tag": "v1.0.0",
+    "registry": "sovereignforge",
+    "gpu_enabled": true,
+    "memory_limit": "4g",
+    "cpu_limit": "2.0"
+  },
+  "kubernetes": {
+    "namespace": "sovereignforge",
+    "replicas": 1,
+    "image_pull_policy": "IfNotPresent",
+    "health_check": {
+      "initial_delay_seconds": 30,
+      "period_seconds": 10,
+      "timeout_seconds": 5,
+      "failure_threshold": 3
+    },
+    "resources": {
+      "requests": {
+        "memory": "2Gi",
+        "cpu": "1"
+      },
+      "limits": {
+        "memory": "4Gi",
+        "cpu": "2"
+      }
+    }
+  },
+  "monitoring": {
+    "enabled": true,
+    "metrics_port": 9090,
+    "health_endpoint": "/health",
+    "metrics_endpoint": "/metrics"
+  },
+  "logging": {
+    "level": "INFO",
+    "format": "json",
+    "max_file_size": "100MB",
+    "retention_days": 30
+  }
+}

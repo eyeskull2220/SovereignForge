@@ -1,5 +1,5 @@
 {
-  "model_path": "models\\final_XLM_USDT.pth",
+  "model_path": "models\\final_XLM_USDC.pth",
   "architecture_hash": "legacy_lstm_model",
   "parameters_count": 1000,
   "expected_input_shape": [
@@ -8,8 +8,8 @@
   "expected_output_shape": [
     1
   ],
-  "trading_pair": "XLMUSDT",
+  "trading_pair": "XLMUSDC",
   "model_version": "1.0",
   "created_timestamp": "2026-03-07T00:00:00Z",
-  "security_checksum": "placeholder_checksum"
+  "security_checksum": "062be6be1da50a70fa453dfa5afd5b06c8403cdf01b5513c3dc8bb14bfc94e37"
 }

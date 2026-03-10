@@ -18,6 +18,62 @@ import ssl
 logger = logging.getLogger(__name__)
 
 @dataclass
+class CircuitBreakerState:
+    CLOSED = "closed"      # Normal operation
+    OPEN = "open"          # Failing, reject requests
+    HALF_OPEN = "half_open"  # Testing if service recovered
+
+class CircuitBreaker:
+    """Circuit breaker for WebSocket connections"""
+
+    def __init__(self, failure_threshold: int = 5, recovery_timeout: float = 60.0, expected_exception: Exception = Exception):
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.expected_exception = expected_exception
+        self.failure_count = 0
+        self.last_failure_time = None
+        self.state = CircuitBreakerState.CLOSED
+
+    def _can_attempt_reset(self) -> bool:
+        """Check if enough time has passed to attempt reset"""
+        if self.last_failure_time is None:
+            return True
+        return time.time() - self.last_failure_time >= self.recovery_timeout
+
+    def _record_success(self):
+        """Record successful operation"""
+        self.failure_count = 0
+        self.state = CircuitBreakerState.CLOSED
+
+    def _record_failure(self):
+        """Record failed operation"""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+
+        if self.failure_count >= self.failure_threshold:
+            self.state = CircuitBreakerState.OPEN
+            logger.warning(f"Circuit breaker opened after {self.failure_count} failures")
+
+    async def call(self, func, *args, **kwargs):
+        """Execute function with circuit breaker protection"""
+        if self.state == CircuitBreakerState.OPEN:
+            if self._can_attempt_reset():
+                self.state = CircuitBreakerState.HALF_OPEN
+                logger.info("Circuit breaker half-open, testing service")
+            else:
+                raise Exception("Circuit breaker is OPEN")
+
+        try:
+            result = await func(*args, **kwargs)
+            if self.state == CircuitBreakerState.HALF_OPEN:
+                self._record_success()
+                logger.info("Circuit breaker reset to CLOSED")
+            return result
+        except self.expected_exception as e:
+            self._record_failure()
+            raise e
+
+@dataclass
 class MarketData:
     """Real-time market data structure"""
     exchange: str

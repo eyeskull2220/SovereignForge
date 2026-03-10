@@ -54,6 +54,7 @@ class TelegramAlertSystem:
         self.alerts_sent = 0
         self.opportunities_alerted = 0
         self.errors_count = 0
+        self.alert_callbacks: List[Callable] = []
 
     async def initialize(self) -> None:
         """Initialize the Telegram bot and application"""
@@ -169,6 +170,10 @@ class TelegramAlertSystem:
 """
 
         return message
+
+    def add_alert_callback(self, callback: Callable) -> None:
+        """Add callback for alert events"""
+        self.alert_callbacks.append(callback)
 
     def get_status(self) -> Dict[str, Any]:
         """Get system status"""

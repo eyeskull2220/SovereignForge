@@ -291,7 +291,9 @@ async def test_end_to_end_data_flow():
         'price': 45000.0,
         'bid_price': 44990.0,
         'ask_price': 45010.0,
-        'volume': 100.0
+        'volume': 100.0,
+        'bid_volume': 50.0,
+        'ask_volume': 50.0
     }
 
     await data_service._handle_market_data(MarketData(**test_data))

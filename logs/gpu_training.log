@@ -629,3 +629,60 @@ GPU Training Configuration:
 2026-03-06 15:40:16,947 - INFO - Training report generated: reports/gpu_training_report_20260306_154016.md
 2026-03-06 15:40:16,947 - INFO - Training completed in 55.03 seconds
 2026-03-06 15:40:16,947 - INFO - GPU training cleanup completed
+2026-03-10 14:51:55,991 - INFO - Initializing GPU training environment...
+2026-03-10 14:51:56,156 - INFO - Detected 1 CUDA GPUs
+2026-03-10 14:51:56,156 - INFO - GPU monitoring started
+2026-03-10 14:51:56,157 - INFO - GPUManager initialized with 1 GPUs
+2026-03-10 14:51:56,157 - INFO - GPU training optimizations enabled
+2026-03-10 14:51:56,158 - INFO - GPU training environment initialized successfully
+2026-03-10 14:51:56,158 - INFO - ============================================================
+2026-03-10 14:51:56,158 - INFO - STARTING SOVEREIGNFORGE GPU TRAINING - WAVE 7
+2026-03-10 14:51:56,158 - INFO - ============================================================
+2026-03-10 14:51:56,158 - INFO - 
+GPU Training Configuration:
+- Pairs: ['LINK/USDC', 'IOTA/USDC']
+- Epochs: 10
+- Batch Size: 64
+- GPU Device: 0
+- Memory Fraction: 0.8
+- Learning Rate: 0.0001
+- Gradient Clip: 1.0
+- TensorBoard: False
+- Weights & Biases: False
+- GPU Monitoring: False
+- Mixed Precision: False
+        
+2026-03-10 14:51:56,158 - INFO - Starting GPU arbitrage training for 2 pairs: ['LINK/USDC', 'IOTA/USDC']
+2026-03-10 14:51:56,158 - INFO - Training model for LINK/USDC
+2026-03-10 14:51:56,250 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-10 14:51:56,250 - INFO - Epoch 1/10 - Train Loss: 0.5707, Val Loss: 0.7263
+2026-03-10 14:51:56,250 - INFO - Epoch 2/10 - Train Loss: 0.7277, Val Loss: 0.7943
+2026-03-10 14:51:56,250 - INFO - Epoch 3/10 - Train Loss: 0.6708, Val Loss: 0.7597
+2026-03-10 14:51:56,250 - INFO - Epoch 4/10 - Train Loss: 0.5643, Val Loss: 0.5672
+2026-03-10 14:51:56,250 - INFO - Epoch 5/10 - Train Loss: 0.7883, Val Loss: 0.6775
+2026-03-10 14:51:56,250 - INFO - Epoch 6/10 - Train Loss: 0.5892, Val Loss: 0.7109
+2026-03-10 14:51:56,250 - INFO - Epoch 7/10 - Train Loss: 0.6042, Val Loss: 0.5863
+2026-03-10 14:51:56,250 - INFO - Epoch 8/10 - Train Loss: 0.5533, Val Loss: 0.6833
+2026-03-10 14:51:56,250 - INFO - Epoch 9/10 - Train Loss: 0.7568, Val Loss: 0.7978
+2026-03-10 14:51:56,250 - INFO - Epoch 10/10 - Train Loss: 0.6985, Val Loss: 0.6337
+2026-03-10 14:51:56,341 - INFO - Model saved to models/strategies/arbitrage_link_usdc_binance.pth
+2026-03-10 14:51:56,341 - INFO - Training model for IOTA/USDC
+2026-03-10 14:51:56,409 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-10 14:51:56,409 - INFO - Epoch 1/10 - Train Loss: 0.7532, Val Loss: 0.5138
+2026-03-10 14:51:56,409 - INFO - Epoch 2/10 - Train Loss: 0.7822, Val Loss: 0.7438
+2026-03-10 14:51:56,410 - INFO - Epoch 3/10 - Train Loss: 0.7676, Val Loss: 0.7081
+2026-03-10 14:51:56,410 - INFO - Epoch 4/10 - Train Loss: 0.6517, Val Loss: 0.5683
+2026-03-10 14:51:56,410 - INFO - Epoch 5/10 - Train Loss: 0.6840, Val Loss: 0.6278
+2026-03-10 14:51:56,410 - INFO - Epoch 6/10 - Train Loss: 0.5585, Val Loss: 0.6750
+2026-03-10 14:51:56,410 - INFO - Epoch 7/10 - Train Loss: 0.5855, Val Loss: 0.7793
+2026-03-10 14:51:56,410 - INFO - Epoch 8/10 - Train Loss: 0.5460, Val Loss: 0.6406
+2026-03-10 14:51:56,410 - INFO - Epoch 9/10 - Train Loss: 0.5941, Val Loss: 0.5081
+2026-03-10 14:51:56,410 - INFO - Epoch 10/10 - Train Loss: 0.5420, Val Loss: 0.7072
+2026-03-10 14:51:56,493 - INFO - Model saved to models/strategies/arbitrage_iota_usdc_binance.pth
+2026-03-10 14:51:56,493 - INFO - GPU training completed in 0.33 seconds
+2026-03-10 14:51:56,494 - ERROR - Failed to save training results: 'GPUManager' object has no attribute 'is_available'
+2026-03-10 14:51:56,494 - ERROR - Failed to generate training report: 'str' object has no attribute 'get'
+2026-03-10 14:51:56,494 - INFO - Training completed in 0.34 seconds
+2026-03-10 14:51:56,494 - INFO - Shutting down GPUManager
+2026-03-10 14:52:01,507 - INFO - GPUManager shutdown complete
+2026-03-10 14:52:01,507 - INFO - GPU training cleanup completed

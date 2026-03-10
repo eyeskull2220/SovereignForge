@@ -77,7 +77,8 @@ class HybridDataIntegrationService:
     async def initialize(self):
         """Initialize the data integration service"""
         logger.info("Initializing HybridDataIntegrationService")
-        self.is_running = True
+        # Note: initialize() prepares the service but does not start it
+        # is_running remains False until start() is called
         logger.info(f"Data integration service initialized with {self.data_sources_count} exchanges")
 
     def add_data_callback(self, callback: Callable):

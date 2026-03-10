@@ -408,10 +408,10 @@ Examples:
 
     # Pair selection
     parser.add_argument('--pairs', nargs='+',
-                       default=['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT'],
-                       help='Trading pairs to train')
+                       default=['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC'],
+                       help='Trading pairs to train (MiCA compliant USDC pairs)')
     parser.add_argument('--all-pairs', action='store_true',
-                       help='Train all 7 default pairs')
+                       help='Train all 10 MiCA compliant pairs')
 
     # Training parameters
     parser.add_argument('--epochs', type=int, default=50,
@@ -449,7 +449,7 @@ Examples:
 
     # Override pairs if --all-pairs is specified
     if args.all_pairs:
-        args.pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT']
+        args.pairs = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC']
 
     # Validate arguments
     if not args.pairs:

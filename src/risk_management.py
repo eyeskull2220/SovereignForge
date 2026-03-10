@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Any, Tuple
 from dataclasses import dataclass
 from datetime import datetime
 import math
+import numpy as np
 
 # Import Telegram alerts for risk event notifications
 from telegram_alerts import send_system_alert
@@ -118,14 +119,15 @@ class RiskManager:
             logger.error(f"Error validating opportunity: {e}")
             return False
 
-    def calculate_position_size(self, opportunity: Dict[str, Any]) -> float:
+    def calculate_position_size(self, opportunity: Dict[str, Any], use_kelly: bool = True) -> float:
         """
-        Calculate optimal position size based on risk limits
+        Calculate optimal position size based on risk limits and Kelly Criterion
         """
         try:
             spread = opportunity.get('spread_prediction', 0)
             prices = opportunity.get('prices', {})
             risk_score = opportunity.get('risk_score', 0.5)
+            confidence = opportunity.get('confidence', 0.5)
 
             if not prices:
                 return 0.0
@@ -133,20 +135,34 @@ class RiskManager:
             # Use average price for position sizing
             avg_price = sum(prices.values()) / len(prices)
 
-            # Base position size on risk limits
-            max_position_value = self.portfolio_value * self.risk_limits.max_position_size_pct
+            if use_kelly:
+                # Use Kelly Criterion for optimal position sizing
+                kelly_size = self._calculate_kelly_position_size(
+                    spread=spread,
+                    confidence=confidence,
+                    risk_score=risk_score,
+                    avg_price=avg_price
+                )
 
-            # Adjust for risk score (higher risk = smaller position)
-            risk_adjustment = 1.0 - (risk_score * 0.5)  # Reduce size by up to 50% for high risk
-            adjusted_position_value = max_position_value * risk_adjustment
+                # Apply traditional risk limits as safety bounds
+                max_position_value = self.portfolio_value * self.risk_limits.max_position_size_pct
+                max_kelly_value = kelly_size * avg_price
+
+                # Take the more conservative of Kelly and traditional limits
+                position_value = min(max_kelly_value, max_position_value)
+            else:
+                # Traditional position sizing
+                max_position_value = self.portfolio_value * self.risk_limits.max_position_size_pct
+                risk_adjustment = 1.0 - (risk_score * 0.5)  # Reduce size by up to 50% for high risk
+                position_value = max_position_value * risk_adjustment
 
             # Calculate position size in base currency
-            position_size = adjusted_position_value / avg_price
+            position_size = position_value / avg_price
 
             # Apply minimum position constraints (0.001 BTC equivalent minimum)
             min_position_value = 0.001 * avg_price
-            if adjusted_position_value < min_position_value:
-                logger.warning(f"Position size too small: ${adjusted_position_value}")
+            if position_value < min_position_value:
+                logger.warning(f"Position size too small: ${position_value}")
                 return 0.0
 
             # Check portfolio risk limits
@@ -158,6 +174,121 @@ class RiskManager:
         except Exception as e:
             logger.error(f"Error calculating position size: {e}")
             return 0.0
+
+    def _calculate_kelly_position_size(self,
+                                     spread: float,
+                                     confidence: float,
+                                     risk_score: float,
+                                     avg_price: float) -> float:
+        """
+        Calculate position size using Kelly Criterion
+        Kelly % = (bp - q) / b
+        Where:
+        - b = odds (potential profit / potential loss)
+        - p = probability of winning
+        - q = probability of losing (1-p)
+        """
+        try:
+            # Estimate win probability from confidence and spread
+            # Higher confidence and larger spread = higher win probability
+            base_win_prob = confidence
+            spread_bonus = min(spread * 10, 0.3)  # Up to 30% bonus for large spreads
+            win_probability = min(base_win_prob + spread_bonus, 0.95)  # Cap at 95%
+
+            # Estimate odds ratio (potential profit / potential loss)
+            # For arbitrage, profit is the spread, loss is transaction costs + slippage
+            estimated_costs = 0.001  # 0.1% estimated costs (fees + slippage)
+            profit_ratio = spread / max(estimated_costs, 0.0001)  # Avoid division by zero
+
+            # Kelly fraction
+            q = 1.0 - win_probability  # Probability of loss
+            b = profit_ratio  # Odds ratio
+
+            if b <= 0:
+                return 0.0  # No positive expectation
+
+            kelly_fraction = (b * win_probability - q) / b
+
+            # Apply risk adjustments
+            # Reduce Kelly fraction based on risk score and portfolio constraints
+            risk_multiplier = 1.0 - (risk_score * 0.7)  # Reduce by up to 70% for high risk
+            kelly_fraction *= risk_multiplier
+
+            # Half-Kelly for safety (more conservative)
+            kelly_fraction *= 0.5
+
+            # Ensure positive and reasonable bounds
+            kelly_fraction = max(0.0, min(kelly_fraction, 0.25))  # Max 25% of capital
+
+            # Calculate position value
+            position_value = self.portfolio_value * kelly_fraction
+
+            # Additional safety checks
+            if win_probability < 0.55:
+                # Too low win probability, reduce position
+                position_value *= 0.5
+
+            if spread < 0.001:
+                # Spread too small for profitable arbitrage
+                position_value *= 0.3
+
+            logger.info(f"Kelly position sizing: win_prob={win_probability:.3f}, "
+                       f"odds={b:.3f}, kelly_fraction={kelly_fraction:.4f}, "
+                       f"position_value=${position_value:.2f}")
+
+            return position_value
+
+        except Exception as e:
+            logger.error(f"Error in Kelly calculation: {e}")
+            return 0.0
+
+    def calculate_kelly_metrics(self, opportunity: Dict[str, Any]) -> Dict[str, float]:
+        """
+        Calculate Kelly Criterion metrics for analysis
+        """
+        try:
+            spread = opportunity.get('spread_prediction', 0)
+            confidence = opportunity.get('confidence', 0.5)
+            risk_score = opportunity.get('risk_score', 0.5)
+            prices = opportunity.get('prices', {})
+
+            if not prices:
+                return {}
+
+            avg_price = sum(prices.values()) / len(prices)
+
+            # Calculate Kelly components
+            base_win_prob = confidence
+            spread_bonus = min(spread * 10, 0.3)
+            win_probability = min(base_win_prob + spread_bonus, 0.95)
+
+            estimated_costs = 0.001
+            profit_ratio = spread / max(estimated_costs, 0.0001)
+
+            q = 1.0 - win_probability
+            b = profit_ratio
+
+            kelly_fraction = (b * win_probability - q) / b if b > 0 else 0.0
+            risk_multiplier = 1.0 - (risk_score * 0.7)
+            adjusted_kelly = kelly_fraction * risk_multiplier * 0.5  # Half-Kelly
+
+            # Expected value calculation
+            expected_value = win_probability * spread - (1 - win_probability) * estimated_costs
+
+            return {
+                'win_probability': win_probability,
+                'odds_ratio': b,
+                'kelly_fraction': kelly_fraction,
+                'adjusted_kelly_fraction': adjusted_kelly,
+                'expected_value_per_trade': expected_value,
+                'expected_value_pct': expected_value / avg_price if avg_price > 0 else 0,
+                'risk_adjustment': risk_multiplier,
+                'spread_bonus': spread_bonus
+            }
+
+        except Exception as e:
+            logger.error(f"Error calculating Kelly metrics: {e}")
+            return {}
 
     def open_position(self, opportunity: Dict[str, Any]) -> Optional[Position]:
         """

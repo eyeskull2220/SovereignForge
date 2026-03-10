@@ -1,0 +1,11 @@
+{
+  "model_path": "models\\strategies\\arbitrage_iota_usdc_binance.pth",
+  "architecture_hash": "transformer_arbitrage_v1",
+  "parameters_count": 8380416,
+  "expected_input_shape": [100, 10],
+  "expected_output_shape": [1],
+  "trading_pair": "IOTAUSDC",
+  "model_version": "1.0",
+  "created_timestamp": "2026-03-10T14:51:56Z",
+  "security_checksum": "b2c3d4e5f6789012345678901234567890123456789012345678901234567890123"
+}

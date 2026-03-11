@@ -371,6 +371,7 @@ def run_gpu_arbitrage_training(pairs: List[str],
                               monitor_training: bool = False) -> Dict[str, Any]:
     """
     Run GPU training for arbitrage models with real training data and optimization
+    FIXED: Extended epochs, early stopping, learning rate scheduling per diagnostic report
     """
     logger.info(f"Starting GPU arbitrage training for {len(pairs)} pairs: {pairs}")
 
@@ -380,10 +381,19 @@ def run_gpu_arbitrage_training(pairs: List[str],
     for pair in pairs:
         logger.info(f"Training model for {pair}")
 
-        # Create model and optimizer
+        # Create model and optimizer with improved settings
         model = create_arbitrage_model()
-        optimizer = torch.optim.Adam(model.model.parameters(), lr=1e-4)
+        optimizer = torch.optim.Adam(model.model.parameters(), lr=1e-4, weight_decay=1e-5)  # Added L2 regularization
         criterion = nn.BCELoss()  # Binary cross entropy for arbitrage signal
+
+        # Add learning rate scheduler (cosine annealing)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)
+
+        # Early stopping parameters
+        patience = 20  # Stop if no improvement for 20 epochs
+        best_val_loss = float('inf')
+        patience_counter = 0
+        best_model_state = None
 
         # Generate synthetic training data (in real implementation, this would be real market data)
         train_samples = 10000
@@ -428,7 +438,7 @@ def run_gpu_arbitrage_training(pairs: List[str],
         val_data = torch.stack(val_data)
         val_labels = torch.tensor(val_labels, dtype=torch.float32).to(model.device)  # Move to GPU
 
-        # Training loop
+        # Training loop with early stopping and learning rate scheduling
         epoch_results = []
         best_val_acc = 0.0
 
@@ -492,9 +502,24 @@ def run_gpu_arbitrage_training(pairs: List[str],
             }
             epoch_results.append(epoch_result)
 
-            logger.info(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}")
+            logger.info(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}, LR: {optimizer.param_groups[0]['lr']:.6f}")
 
-            # Save best model
+            # Early stopping check
+            if val_loss < best_val_loss:
+                best_val_loss = val_loss
+                patience_counter = 0
+                best_model_state = model.model.state_dict().copy()
+            else:
+                patience_counter += 1
+
+            if patience_counter >= patience:
+                logger.info(f"Early stopping triggered after {epoch+1} epochs (no improvement for {patience} epochs)")
+                break
+
+            # Learning rate scheduling
+            scheduler.step()
+
+            # Save best model based on validation accuracy
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
                 if save_models:

@@ -86,14 +86,17 @@ class GPUTrainingOrchestrator:
             logger.info("Initializing GPU training environment...")
 
             # Initialize GPU manager
-            self.gpu_manager = get_gpu_manager(
-                device_id=self.args.gpu_device,
-                memory_fraction=self.args.memory_fraction
-            )
+            try:
+                self.gpu_manager = get_gpu_manager(
+                    device_id=self.args.gpu_device,
+                    memory_fraction=self.args.memory_fraction
+                )
+            except Exception as e:
+                logger.warning(f"GPUtil failed, using basic info: {e}")
+                self.gpu_manager = GPUManager(device_id=self.args.gpu_device)
 
-            if not self.gpu_manager:
-                logger.error("Failed to initialize GPU manager")
-                return False
+            if not hasattr(self.gpu_manager, 'get_gpu_info'):
+                logger.warning("GPU manager lacks full functionality, using basic mode")
 
             # Setup GPU training optimizations
             if not setup_gpu_training():
@@ -414,8 +417,8 @@ Examples:
                        help='Train all 10 MiCA compliant pairs')
 
     # Training parameters
-    parser.add_argument('--epochs', type=int, default=50,
-                       help='Number of training epochs')
+    parser.add_argument('--epochs', type=int, default=200,
+                       help='Number of training epochs (diagnostic report: need 100-300 for convergence)')
     parser.add_argument('--batch-size', type=int, default=200,
                        help='Training batch size (GPU Max: 200 with gradient accumulation)')
     parser.add_argument('--learning-rate', type=float, default=1e-4,

@@ -62,11 +62,16 @@ def validate_model_performance(model_path: str, pair: str) -> dict:
         test_labels = []
 
         for i in range(test_samples):
-            # Create realistic market data
+            # Create realistic market data with same patterns as training
             data = torch.randn(seq_len, input_dim)
 
-            # Simulate arbitrage signals (20% positive cases)
-            arbitrage_signal = 1.0 if np.random.random() < 0.2 else 0.0
+            # Simulate arbitrage signals with same pattern as training (20% positive cases)
+            if np.random.random() < 0.2:
+                # Arbitrage opportunity pattern - same as training
+                data[seq_len//2:, :3] += torch.randn(seq_len//2, 3) * 0.5  # Price anomalies
+                arbitrage_signal = 1.0
+            else:
+                arbitrage_signal = 0.0
 
             test_data.append(data)
             test_labels.append(arbitrage_signal)

@@ -16,7 +16,8 @@ class MarketDataGenerator:
 
     def __init__(self):
         self.exchanges = ['binance', 'coinbase', 'kraken']
-        self.pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'ADA/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT']
+        # MiCA-compliant pairs with USDC only
+        self.pairs = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'ADA/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC']
 
     def generate_ohlcv_data(self, pair: str, days: int = 365, interval: str = '1h') -> pd.DataFrame:
         """Generate OHLCV (Open, High, Low, Close, Volume) data"""
@@ -27,15 +28,18 @@ class MarketDataGenerator:
 
         dates = pd.date_range(start=start_date, periods=periods, freq='h')
 
-        # Generate realistic price movements
+        # Generate realistic price movements for MiCA-compliant pairs
         base_prices = {
-            'BTC/USDT': 45000,
-            'ETH/USDT': 3000,
-            'XRP/USDT': 0.8,
-            'ADA/USDT': 1.2,
-            'XLM/USDT': 0.3,
-            'HBAR/USDT': 0.15,
-            'ALGO/USDT': 1.5
+            'BTC/USDC': 45000,
+            'ETH/USDC': 3000,
+            'XRP/USDC': 0.8,
+            'ADA/USDC': 1.2,
+            'XLM/USDC': 0.3,
+            'HBAR/USDC': 0.15,
+            'ALGO/USDC': 1.5,
+            'LINK/USDC': 15.0,
+            'IOTA/USDC': 0.4,
+            'VET/USDC': 0.03
         }
 
         base_price = base_prices.get(pair, 100)
@@ -178,12 +182,12 @@ class MarketDataGenerator:
 
         # Save to CSV
         df.to_csv(filepath, index=False)
-        print(f"💾 Saved {len(df)} records to {filepath}")
+        print(f"Saved {len(df)} records to {filepath}")
 
     def generate_all_data(self):
         """Generate data for all exchanges and pairs"""
 
-        print("🎯 SovereignForge Training Data Generator")
+        print("SovereignForge Training Data Generator")
         print("=" * 50)
 
         total_files = len(self.exchanges) * len(self.pairs)
@@ -191,7 +195,7 @@ class MarketDataGenerator:
 
         for exchange in self.exchanges:
             for pair in self.pairs:
-                print(f"📊 Generating data for {exchange}/{pair}...")
+                print(f"Generating data for {exchange}/{pair}...")
 
                 # Generate base OHLCV data
                 df = self.generate_ohlcv_data(pair, days=365)
@@ -210,7 +214,7 @@ class MarketDataGenerator:
                 self.save_data(df, exchange, pair)
                 generated += 1
 
-                print(f"✅ Completed {generated}/{total_files}")
+                print(f"Completed {generated}/{total_files}")
 
         print("\n" + "=" * 50)
         print("🎉 DATA GENERATION COMPLETE")

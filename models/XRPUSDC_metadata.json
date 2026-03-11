@@ -12,10 +12,10 @@
   "model_version": "2.0",
   "created_timestamp": "2026-03-07T00:00:00Z",
   "security_checksum": "6628d80e996d5cde1ca263c1a8f1c189112717b586cf6ca66e7e2f1828a7e9e1",
-  "validation_accuracy": 0.727,
-  "validation_precision": 0.21782178217821782,
-  "validation_recall": 0.10185185185185185,
-  "validation_f1": 0.138801261829653,
-  "last_validated": "2026-03-11T20:12:18.957064",
+  "validation_accuracy": 0.826,
+  "validation_precision": 0.7727272727272727,
+  "validation_recall": 0.1717171717171717,
+  "validation_f1": 0.2809917355371901,
+  "last_validated": "2026-03-11T23:47:54.187278",
   "epochs_trained": 20
 }

@@ -1,34 +1,37 @@
 
 ## 📋 Structured Enhancement Waves (Subagent-Ready)
 
-### Wave 1: Critical Fixes & Infrastructure (Priority: HIGH)
-*Focus: Fix blocking issues, ensure stability*
+### Wave 1: Critical Fixes & Infrastructure (Priority: CRITICAL)
+*Focus: Fix blocking issues, ensure stability - UPDATED POST-AUDIT*
 
-#### Category 1: Test Suite Integrity (Subagent: Tester)
-- [x] Fix 5 failing tests (async warnings, mock complexity, GPU memory, network restrictions) - Converted unittest to pytest, fixed syntax errors, fixed GPU test
-- [x] Resolve test collection errors (missing dependencies, syntax errors in test_all_models.py) - Fixed test_all_models.py corruption, ignoring ai-engineering-hub
-- [x] Enhance Telegram test mocks for reliable CI/CD - Tests now 13/15 passing (2 appropriately skipped for personal deployment)
-- [x] Convert unittest async tests to proper pytest format - Converted tests/test_integration.py to pytest functions with @pytest.mark.asyncio
-- [x] Fix 3 critical failing integration tests preventing CI/CD - Fixed test_data_integration_service_initialization (is_running state), test_live_arbitrage_pipeline_opportunity_processing (added add_alert_callback method), test_end_to_end_data_flow (added bid_volume/ask_volume fields) - All 15 integration tests now PASSING
-- [x] Run full test suite collection (98 tests collected successfully)
+#### Category 1: MiCA Compliance Violation (Subagent: Risk)
+- [x] **CRITICAL**: Remove USDT allowance in personal deployment (compliance.py lines 25-27)
+- [x] Enforce strict USDC/RLUSD pairs only for personal use
+- [x] Update all config files to remove USDT references
+- [x] Add compliance validation in deployment scripts
+- [x] Test compliance enforcement with all trading pairs
 
-#### Category 2: Model & Data Integrity (Subagent: Engineer)
-- [x] Fix invalid model checksums and mismatched paths (USDT->USDC) - Fixed all 7 metadata files with real checksums and correct USDC paths
-- [ ] Retrain models with proper hyperparameters (epochs >1, better convergence)
-- [x] Add LINK/IOTA pair model loading (complete 10-pair coverage) - Trained LINK/USDC and IOTA/USDC transformer models, created metadata files, verified loading
-- [ ] Validate model performance metrics (accuracy >80%)
+#### Category 2: Model Accuracy Crisis (Subagent: Engineer)
+- [ ] **URGENT**: Retrain all 9 models - only 2/9 meet 80% accuracy threshold (BTC 82%, ETH 82.7%)
+- [ ] Add missing 10th pair (VET/XDC/ONDO) for complete MiCA coverage
+- [ ] Implement proper hyperparameter tuning (epochs >30, better optimization)
+- [ ] Add model validation pipeline with automated retraining
+- [ ] Fix model loading for all 10 pairs with proper error handling
 
-#### Category 3: Configuration & Deployment (Subagent: DevOps)
-- [x] Create missing config files (trading parameters, API keys, risk limits) - Created trading_config.json, api_keys.json, risk_limits.json, deployment_config.json
-- [x] Fix k8s manifests (remove 'latest' tags, add image pull policies) - Updated sovereignforge-deployment.yaml to v1.0.0 and IfNotPresent
-- [ ] Implement config validation and environment-specific settings
-- [ ] Add deployment health checks and rollback procedures
+#### Category 3: Test Suite Integrity (Subagent: Tester)
+- [x] **COMPLETED**: 71/73 tests passing (97.3%) - no actual failures, only 2 appropriate skips
+- [x] **COMPLETED**: Fixed all syntax errors and import issues
+- [x] **COMPLETED**: Converted unittest to pytest format
+- [x] **COMPLETED**: Resolved async test warnings and mock complexity
+- [ ] Add integration tests for MiCA compliance enforcement
+- [ ] Add model accuracy validation tests (>80% threshold)
 
-#### Category 4: Connectivity & Reliability (Subagent: Network)
-- [ ] Live test WebSocket reconnect logic with real exchanges
-- [x] Implement WebSocket circuit breaker with exponential backoff - Added CircuitBreaker class to websocket_connector.py with CLOSED/OPEN/HALF_OPEN states
+#### Category 4: WebSocket Live Testing (Subagent: Network)
+- [ ] **HIGH**: Live test WebSocket reconnect logic with real exchanges
+- [ ] Verify circuit breaker functionality under network failures
+- [ ] Test multi-exchange connectivity (Binance, Coinbase, Kraken, KuCoin, OKX)
 - [ ] Add connection health monitoring and automatic failover
-- [ ] Test multi-exchange connectivity under network stress
+- [ ] Implement network stress testing and recovery procedures
 
 ### Wave 2: Core AI/ML Enhancements (Priority: HIGH)
 *Focus: Improve prediction accuracy and automation*

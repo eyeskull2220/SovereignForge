@@ -1,7 +1,7 @@
 {
   "model_path": "models\\final_HBAR_USDC.pth",
   "architecture_hash": "legacy_lstm_model",
-  "parameters_count": 1000,
+  "parameters_count": 18922499,
   "expected_input_shape": [
     22
   ],
@@ -9,7 +9,13 @@
     1
   ],
   "trading_pair": "HBARUSDC",
-  "model_version": "1.0",
+  "model_version": "2.0",
   "created_timestamp": "2026-03-07T00:00:00Z",
-  "security_checksum": "92eec38b21dd6f51f700250a51356a10e84a6032134ae19413e7bfacb0a35138"
+  "security_checksum": "92eec38b21dd6f51f700250a51356a10e84a6032134ae19413e7bfacb0a35138",
+  "validation_accuracy": 0.215,
+  "validation_precision": 0.215,
+  "validation_recall": 1.0,
+  "validation_f1": 0.35390946502057613,
+  "last_validated": "2026-03-11T20:12:20.808542",
+  "epochs_trained": 20
 }

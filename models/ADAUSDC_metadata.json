@@ -1,7 +1,7 @@
 {
   "model_path": "models\\final_ADA_USDC.pth",
   "architecture_hash": "legacy_lstm_model",
-  "parameters_count": 1000,
+  "parameters_count": 18922499,
   "expected_input_shape": [
     22
   ],
@@ -9,7 +9,13 @@
     1
   ],
   "trading_pair": "ADAUSDC",
-  "model_version": "1.0",
+  "model_version": "2.0",
   "created_timestamp": "2026-03-07T00:00:00Z",
-  "security_checksum": "3f4bdc1eb6bffca8db5e1f777029ff6f66b965e4a0e223e5464004cbd5c66a94"
+  "security_checksum": "3f4bdc1eb6bffca8db5e1f777029ff6f66b965e4a0e223e5464004cbd5c66a94",
+  "validation_accuracy": 0.797,
+  "validation_precision": 0.0,
+  "validation_recall": 0.0,
+  "validation_f1": 0.0,
+  "last_validated": "2026-03-11T20:12:22.674959",
+  "epochs_trained": 20
 }

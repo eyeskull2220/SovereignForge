@@ -1,7 +1,7 @@
 {
   "model_path": "models\\final_XRP_USDC.pth",
   "architecture_hash": "legacy_lstm_model",
-  "parameters_count": 1000,
+  "parameters_count": 18922499,
   "expected_input_shape": [
     22
   ],
@@ -9,7 +9,13 @@
     1
   ],
   "trading_pair": "XRPUSDC",
-  "model_version": "1.0",
+  "model_version": "2.0",
   "created_timestamp": "2026-03-07T00:00:00Z",
-  "security_checksum": "6628d80e996d5cde1ca263c1a8f1c189112717b586cf6ca66e7e2f1828a7e9e1"
+  "security_checksum": "6628d80e996d5cde1ca263c1a8f1c189112717b586cf6ca66e7e2f1828a7e9e1",
+  "validation_accuracy": 0.727,
+  "validation_precision": 0.21782178217821782,
+  "validation_recall": 0.10185185185185185,
+  "validation_f1": 0.138801261829653,
+  "last_validated": "2026-03-11T20:12:18.957064",
+  "epochs_trained": 20
 }

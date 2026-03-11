@@ -71,7 +71,7 @@
 
 ### **Critical Issues**
 - **Test Status**: ✅ FIXED - 71/73 tests passing (97.3%)
-- **MiCA Violations**: USDT pairs in personal deployment (must be USDC/RLUSD only)
+- **MiCA Violations**: ✅ FIXED - USDT pairs removed from personal deployment, only USDC/RLUSD allowed
 - **Context Degradation**: Long sessions lose project context
 
 ### **Backtesting Issues**

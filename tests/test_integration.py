@@ -45,10 +45,10 @@ async def test_data_integration_service_market_data_callback():
 
     data_service.add_data_callback(test_callback)
 
-    # Simulate receiving market data
+    # Simulate receiving market data with MiCA-compliant pair
     test_data = MarketData(
         exchange='binance',
-        pair='BTC/USDT',
+        pair='BTC/USDC',  # Changed to USDC for MiCA compliance
         timestamp=time.time(),
         price=45000.0,
         volume=100.0,
@@ -69,10 +69,10 @@ async def test_data_integration_service_compliance_filtering():
     """Test MiCA compliance filtering in data service"""
     data_service = HybridDataIntegrationService()
 
-    # Test with compliant pair
-    compliant_pairs = data_service.compliance_engine.filter_compliant_pairs(['BTC/USDT', 'SHIB/USDT'])
-    assert 'BTC/USDT' in compliant_pairs
-    assert 'SHIB/USDT' not in compliant_pairs
+    # Test with MiCA-compliant pairs (USDC/RLUSD only)
+    compliant_pairs = data_service.compliance_engine.filter_compliant_pairs(['BTC/USDC', 'SHIB/USDT'])
+    assert 'BTC/USDC' in compliant_pairs  # USDC is compliant
+    assert 'SHIB/USDT' not in compliant_pairs  # SHIB is not compliant, USDT is forbidden
 
 
 def test_data_integration_service_status():
@@ -216,7 +216,7 @@ def test_live_arbitrage_pipeline_status():
 
 
 def test_compliance_engine():
-    """Test compliance engine functionality"""
+    """Test compliance engine functionality - USDT pairs are FORBIDDEN per AGENTS.md"""
     engine = get_compliance_engine()
 
     # Test asset compliance
@@ -224,29 +224,33 @@ def test_compliance_engine():
     assert engine.is_asset_compliant('XRP') == True
     assert engine.is_asset_compliant('SHIB') == False
 
-    # Test pair compliance
-    assert engine.is_pair_compliant('BTC/USDT') == True
-    assert engine.is_pair_compliant('XRP/USDC') == True
-    assert engine.is_pair_compliant('SHIB/USDT') == False
+    # Test pair compliance - USDT pairs are now FORBIDDEN
+    assert engine.is_pair_compliant('BTC/USDT') == False  # USDT forbidden
+    assert engine.is_pair_compliant('XRP/USDC') == True   # USDC compliant
+    assert engine.is_pair_compliant('SHIB/USDT') == False  # SHIB not compliant, USDT forbidden
+    assert engine.is_pair_compliant('BTC/USDC') == True   # MiCA compliant
 
 
 def test_compliance_filtering():
-    """Test compliance filtering"""
+    """Test compliance filtering - USDT pairs are now FORBIDDEN per AGENTS.md"""
     engine = get_compliance_engine()
 
-    pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'SHIB/USDT', 'DOGE/USDT']
-
-    # In hard enforcement mode, non-compliant pairs raise exceptions
-    # So we test with only compliant pairs
-    compliant_pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'DOGE/USDT']
+    # Test MiCA-compliant pairs (USDC/RLUSD only)
+    compliant_pairs = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'ADA/USDC', 'DOGE/USDC']
     filtered = engine.filter_compliant_pairs(compliant_pairs)
 
-    assert 'BTC/USDT' in filtered
-    assert 'ETH/USDT' in filtered
-    assert 'XRP/USDT' in filtered
-    assert 'DOGE/USDT' in filtered  # DOGE is compliant
+    assert 'BTC/USDC' in filtered
+    assert 'ETH/USDC' in filtered
+    assert 'XRP/USDC' in filtered
+    assert 'ADA/USDC' in filtered
+    assert 'DOGE/USDC' in filtered  # DOGE is compliant
 
-    # Test that non-compliant pairs are filtered out (not raise exceptions)
+    # Test that USDT pairs are filtered out (CRITICAL: MiCA compliance violation fixed)
+    usdt_pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT']
+    usdt_filtered = engine.filter_compliant_pairs(usdt_pairs)
+    assert usdt_filtered == []  # USDT pairs must be rejected
+
+    # Test that non-compliant pairs are filtered out
     non_compliant_result = engine.filter_compliant_pairs(['SHIB/USDT'])
     assert non_compliant_result == []  # Should return empty list
 

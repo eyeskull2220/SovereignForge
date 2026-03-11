@@ -6,7 +6,7 @@ Handles real-time arbitrage opportunity alerts and system notifications
 
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Callable
 from dataclasses import dataclass
 import os
 

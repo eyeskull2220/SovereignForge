@@ -1,7 +1,7 @@
 {
   "model_path": "models\\final_ALGO_USDC.pth",
   "architecture_hash": "legacy_lstm_model",
-  "parameters_count": 1000,
+  "parameters_count": 18922499,
   "expected_input_shape": [
     22
   ],
@@ -9,7 +9,13 @@
     1
   ],
   "trading_pair": "ALGOUSDC",
-  "model_version": "1.0",
+  "model_version": "2.0",
   "created_timestamp": "2026-03-07T00:00:00Z",
-  "security_checksum": "7c36605c0067edb9b7fa8114bdb8330b33328f08cd84c8d19e090ba996429927"
+  "security_checksum": "7c36605c0067edb9b7fa8114bdb8330b33328f08cd84c8d19e090ba996429927",
+  "validation_accuracy": 0.37,
+  "validation_precision": 0.21592442645074225,
+  "validation_recall": 0.7655502392344498,
+  "validation_f1": 0.3368421052631579,
+  "last_validated": "2026-03-11T20:12:21.726210",
+  "epochs_trained": 20
 }

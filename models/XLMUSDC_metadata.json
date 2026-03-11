@@ -1,7 +1,7 @@
 {
   "model_path": "models\\final_XLM_USDC.pth",
   "architecture_hash": "legacy_lstm_model",
-  "parameters_count": 1000,
+  "parameters_count": 18922499,
   "expected_input_shape": [
     22
   ],
@@ -9,7 +9,13 @@
     1
   ],
   "trading_pair": "XLMUSDC",
-  "model_version": "1.0",
+  "model_version": "2.0",
   "created_timestamp": "2026-03-07T00:00:00Z",
-  "security_checksum": "062be6be1da50a70fa453dfa5afd5b06c8403cdf01b5513c3dc8bb14bfc94e37"
+  "security_checksum": "062be6be1da50a70fa453dfa5afd5b06c8403cdf01b5513c3dc8bb14bfc94e37",
+  "validation_accuracy": 0.731,
+  "validation_precision": 0.2268041237113402,
+  "validation_recall": 0.10185185185185185,
+  "validation_f1": 0.1405750798722045,
+  "last_validated": "2026-03-11T20:12:19.905331",
+  "epochs_trained": 20
 }

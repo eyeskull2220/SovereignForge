@@ -1,11 +1,22 @@
 {
   "model_path": "models\\strategies\\arbitrage_link_usdc_binance.pth",
   "architecture_hash": "transformer_arbitrage_v1",
-  "parameters_count": 8380416,
-  "expected_input_shape": [100, 10],
-  "expected_output_shape": [1],
+  "parameters_count": 18922499,
+  "expected_input_shape": [
+    100,
+    10
+  ],
+  "expected_output_shape": [
+    1
+  ],
   "trading_pair": "LINKUSDC",
-  "model_version": "1.0",
+  "model_version": "2.0",
   "created_timestamp": "2026-03-10T14:51:56Z",
-  "security_checksum": "a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890"
+  "security_checksum": "a1b2c3d4e5f6789012345678901234567890123456789012345678901234567890",
+  "validation_accuracy": 0.812,
+  "validation_precision": 0.0,
+  "validation_recall": 0.0,
+  "validation_f1": 0.0,
+  "last_validated": "2026-03-11T20:12:23.605477",
+  "epochs_trained": 20
 }

@@ -1,7 +1,7 @@
 {
   "model_path": "models\\final_BTC_USDC.pth",
   "architecture_hash": "legacy_lstm_model",
-  "parameters_count": 1000,
+  "parameters_count": 18922499,
   "expected_input_shape": [
     22
   ],
@@ -9,7 +9,13 @@
     1
   ],
   "trading_pair": "BTCUSDC",
-  "model_version": "1.0",
+  "model_version": "2.0",
   "created_timestamp": "2026-03-07T00:00:00Z",
-  "security_checksum": "82af7b8d31616d966515067c3400c567a82f6a9b0ca8366a099a1dfaa1348147"
+  "security_checksum": "82af7b8d31616d966515067c3400c567a82f6a9b0ca8366a099a1dfaa1348147",
+  "validation_accuracy": 0.791,
+  "validation_precision": 0.2765957446808511,
+  "validation_recall": 0.06914893617021277,
+  "validation_f1": 0.11063829787234043,
+  "last_validated": "2026-03-11T20:12:17.035467",
+  "epochs_trained": 20
 }

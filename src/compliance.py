@@ -35,16 +35,11 @@ class MiCAComplianceEngine:
                 'XRP', 'ADA', 'XLM', 'HBAR', 'ALGO', 'VECHAIN', 'ONDO', 'XDC'
             }
 
-        # For personal deployment, include major stablecoins
-        if personal_deployment:
-            self.compliant_stablecoins = {
-                'USDC', 'RLUSD', 'USDT'  # USDT allowed for personal trading
-            }
-        else:
-            # Strict MiCA compliance (Article 5)
-            self.compliant_stablecoins = {
-                'USDC', 'RLUSD'
-            }
+        # Strict MiCA compliance (Article 5) - NO USDT ALLOWED IN PERSONAL DEPLOYMENT
+        # AGENTS.md explicitly forbids USDT pairs in personal deployment
+        self.compliant_stablecoins = {
+            'USDC', 'RLUSD'  # Only MiCA-compliant stablecoins
+        }
 
         # MiCA compliant trading pairs
         self.compliant_pairs = set()

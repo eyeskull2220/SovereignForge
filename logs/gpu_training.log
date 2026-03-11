@@ -686,3 +686,1157 @@ GPU Training Configuration:
 2026-03-10 14:51:56,494 - INFO - Shutting down GPUManager
 2026-03-10 14:52:01,507 - INFO - GPUManager shutdown complete
 2026-03-10 14:52:01,507 - INFO - GPU training cleanup completed
+2026-03-11 17:40:55,390 - INFO - Initializing GPU training environment...
+2026-03-11 17:40:55,599 - INFO - Detected 1 CUDA GPUs
+2026-03-11 17:40:55,600 - INFO - GPU monitoring started
+2026-03-11 17:40:55,600 - INFO - GPUManager initialized with 1 GPUs
+2026-03-11 17:40:55,600 - INFO - GPU training optimizations enabled
+2026-03-11 17:40:55,601 - INFO - GPU training environment initialized successfully
+2026-03-11 17:40:55,601 - INFO - ============================================================
+2026-03-11 17:40:55,601 - INFO - STARTING SOVEREIGNFORGE GPU TRAINING - WAVE 7
+2026-03-11 17:40:55,601 - INFO - ============================================================
+2026-03-11 17:40:55,601 - INFO - 
+GPU Training Configuration:
+- Pairs: ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC']
+- Epochs: 20
+- Batch Size: 64
+- GPU Device: 0
+- Memory Fraction: 0.8
+- Learning Rate: 0.001
+- Gradient Clip: 1.0
+- TensorBoard: False
+- Weights & Biases: False
+- GPU Monitoring: True
+- Mixed Precision: False
+        
+2026-03-11 17:40:55,601 - INFO - GPU monitoring active via GPU manager
+2026-03-11 17:40:55,601 - INFO - Starting GPU arbitrage training for 9 pairs: ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC']
+2026-03-11 17:40:55,602 - INFO - Training model for BTC/USDC
+2026-03-11 17:40:55,725 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 17:40:55,726 - INFO - Epoch 1/20 - Train Loss: 0.7335, Val Loss: 0.7085
+2026-03-11 17:40:55,726 - INFO - Epoch 2/20 - Train Loss: 0.7390, Val Loss: 0.7247
+2026-03-11 17:40:55,726 - INFO - Epoch 3/20 - Train Loss: 0.7412, Val Loss: 0.7493
+2026-03-11 17:40:55,726 - INFO - Epoch 4/20 - Train Loss: 0.5190, Val Loss: 0.7489
+2026-03-11 17:40:55,726 - INFO - Epoch 5/20 - Train Loss: 0.5809, Val Loss: 0.5032
+2026-03-11 17:40:55,726 - INFO - Epoch 6/20 - Train Loss: 0.5437, Val Loss: 0.7827
+2026-03-11 17:40:55,726 - INFO - Epoch 7/20 - Train Loss: 0.7203, Val Loss: 0.6249
+2026-03-11 17:40:55,736 - INFO - Epoch 8/20 - Train Loss: 0.6902, Val Loss: 0.6396
+2026-03-11 17:40:55,736 - INFO - Epoch 9/20 - Train Loss: 0.5005, Val Loss: 0.6784
+2026-03-11 17:40:55,736 - INFO - Epoch 10/20 - Train Loss: 0.5808, Val Loss: 0.5229
+2026-03-11 17:40:55,736 - INFO - Epoch 11/20 - Train Loss: 0.6368, Val Loss: 0.6945
+2026-03-11 17:40:55,736 - INFO - Epoch 12/20 - Train Loss: 0.6001, Val Loss: 0.5357
+2026-03-11 17:40:55,736 - INFO - Epoch 13/20 - Train Loss: 0.5903, Val Loss: 0.7491
+2026-03-11 17:40:55,736 - INFO - Epoch 14/20 - Train Loss: 0.7821, Val Loss: 0.5620
+2026-03-11 17:40:55,736 - INFO - Epoch 15/20 - Train Loss: 0.5166, Val Loss: 0.5511
+2026-03-11 17:40:55,736 - INFO - Epoch 16/20 - Train Loss: 0.6536, Val Loss: 0.5468
+2026-03-11 17:40:55,736 - INFO - Epoch 17/20 - Train Loss: 0.7350, Val Loss: 0.7147
+2026-03-11 17:40:55,737 - INFO - Epoch 18/20 - Train Loss: 0.6544, Val Loss: 0.7920
+2026-03-11 17:40:55,737 - INFO - Epoch 19/20 - Train Loss: 0.6671, Val Loss: 0.5585
+2026-03-11 17:40:55,737 - INFO - Epoch 20/20 - Train Loss: 0.5341, Val Loss: 0.5407
+2026-03-11 17:40:55,814 - INFO - Model saved to models/strategies/arbitrage_btc_usdc_binance.pth
+2026-03-11 17:40:55,814 - INFO - Training model for ETH/USDC
+2026-03-11 17:40:55,871 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 17:40:55,871 - INFO - Epoch 1/20 - Train Loss: 0.7496, Val Loss: 0.7550
+2026-03-11 17:40:55,871 - INFO - Epoch 2/20 - Train Loss: 0.7040, Val Loss: 0.6944
+2026-03-11 17:40:55,871 - INFO - Epoch 3/20 - Train Loss: 0.7063, Val Loss: 0.7874
+2026-03-11 17:40:55,871 - INFO - Epoch 4/20 - Train Loss: 0.7518, Val Loss: 0.6880
+2026-03-11 17:40:55,871 - INFO - Epoch 5/20 - Train Loss: 0.5287, Val Loss: 0.6549
+2026-03-11 17:40:55,871 - INFO - Epoch 6/20 - Train Loss: 0.5904, Val Loss: 0.7358
+2026-03-11 17:40:55,871 - INFO - Epoch 7/20 - Train Loss: 0.7575, Val Loss: 0.5174
+2026-03-11 17:40:55,871 - INFO - Epoch 8/20 - Train Loss: 0.5958, Val Loss: 0.6332
+2026-03-11 17:40:55,871 - INFO - Epoch 9/20 - Train Loss: 0.6130, Val Loss: 0.6823
+2026-03-11 17:40:55,871 - INFO - Epoch 10/20 - Train Loss: 0.7256, Val Loss: 0.6636
+2026-03-11 17:40:55,872 - INFO - Epoch 11/20 - Train Loss: 0.5704, Val Loss: 0.6351
+2026-03-11 17:40:55,872 - INFO - Epoch 12/20 - Train Loss: 0.7269, Val Loss: 0.5631
+2026-03-11 17:40:55,872 - INFO - Epoch 13/20 - Train Loss: 0.5821, Val Loss: 0.6830
+2026-03-11 17:40:55,872 - INFO - Epoch 14/20 - Train Loss: 0.5559, Val Loss: 0.7268
+2026-03-11 17:40:55,872 - INFO - Epoch 15/20 - Train Loss: 0.6933, Val Loss: 0.7659
+2026-03-11 17:40:55,872 - INFO - Epoch 16/20 - Train Loss: 0.6268, Val Loss: 0.7014
+2026-03-11 17:40:55,872 - INFO - Epoch 17/20 - Train Loss: 0.5884, Val Loss: 0.5603
+2026-03-11 17:40:55,872 - INFO - Epoch 18/20 - Train Loss: 0.6250, Val Loss: 0.7862
+2026-03-11 17:40:55,872 - INFO - Epoch 19/20 - Train Loss: 0.6506, Val Loss: 0.5341
+2026-03-11 17:40:55,872 - INFO - Epoch 20/20 - Train Loss: 0.7722, Val Loss: 0.5536
+2026-03-11 17:40:55,946 - INFO - Model saved to models/strategies/arbitrage_eth_usdc_binance.pth
+2026-03-11 17:40:55,946 - INFO - Training model for XRP/USDC
+2026-03-11 17:40:55,991 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 17:40:55,991 - INFO - Epoch 1/20 - Train Loss: 0.6206, Val Loss: 0.6381
+2026-03-11 17:40:55,991 - INFO - Epoch 2/20 - Train Loss: 0.5801, Val Loss: 0.6665
+2026-03-11 17:40:55,991 - INFO - Epoch 3/20 - Train Loss: 0.5443, Val Loss: 0.7427
+2026-03-11 17:40:55,991 - INFO - Epoch 4/20 - Train Loss: 0.7757, Val Loss: 0.5048
+2026-03-11 17:40:55,991 - INFO - Epoch 5/20 - Train Loss: 0.7568, Val Loss: 0.5846
+2026-03-11 17:40:55,991 - INFO - Epoch 6/20 - Train Loss: 0.7649, Val Loss: 0.6297
+2026-03-11 17:40:55,991 - INFO - Epoch 7/20 - Train Loss: 0.5780, Val Loss: 0.6165
+2026-03-11 17:40:55,991 - INFO - Epoch 8/20 - Train Loss: 0.6056, Val Loss: 0.6817
+2026-03-11 17:40:55,991 - INFO - Epoch 9/20 - Train Loss: 0.6729, Val Loss: 0.6198
+2026-03-11 17:40:55,991 - INFO - Epoch 10/20 - Train Loss: 0.7940, Val Loss: 0.6611
+2026-03-11 17:40:55,991 - INFO - Epoch 11/20 - Train Loss: 0.6412, Val Loss: 0.5326
+2026-03-11 17:40:55,991 - INFO - Epoch 12/20 - Train Loss: 0.5430, Val Loss: 0.7548
+2026-03-11 17:40:55,991 - INFO - Epoch 13/20 - Train Loss: 0.7525, Val Loss: 0.6315
+2026-03-11 17:40:55,991 - INFO - Epoch 14/20 - Train Loss: 0.5939, Val Loss: 0.7371
+2026-03-11 17:40:55,991 - INFO - Epoch 15/20 - Train Loss: 0.6559, Val Loss: 0.7234
+2026-03-11 17:40:55,991 - INFO - Epoch 16/20 - Train Loss: 0.5193, Val Loss: 0.5826
+2026-03-11 17:40:55,991 - INFO - Epoch 17/20 - Train Loss: 0.7101, Val Loss: 0.6447
+2026-03-11 17:40:55,991 - INFO - Epoch 18/20 - Train Loss: 0.7634, Val Loss: 0.5231
+2026-03-11 17:40:55,993 - INFO - Epoch 19/20 - Train Loss: 0.7105, Val Loss: 0.6792
+2026-03-11 17:40:55,993 - INFO - Epoch 20/20 - Train Loss: 0.5544, Val Loss: 0.5070
+2026-03-11 17:40:56,066 - INFO - Model saved to models/strategies/arbitrage_xrp_usdc_binance.pth
+2026-03-11 17:40:56,066 - INFO - Training model for XLM/USDC
+2026-03-11 17:40:56,106 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 17:40:56,106 - INFO - Epoch 1/20 - Train Loss: 0.5404, Val Loss: 0.5449
+2026-03-11 17:40:56,106 - INFO - Epoch 2/20 - Train Loss: 0.6061, Val Loss: 0.6911
+2026-03-11 17:40:56,106 - INFO - Epoch 3/20 - Train Loss: 0.6361, Val Loss: 0.7425
+2026-03-11 17:40:56,108 - INFO - Epoch 4/20 - Train Loss: 0.7715, Val Loss: 0.7320
+2026-03-11 17:40:56,108 - INFO - Epoch 5/20 - Train Loss: 0.7710, Val Loss: 0.7524
+2026-03-11 17:40:56,108 - INFO - Epoch 6/20 - Train Loss: 0.7155, Val Loss: 0.5065
+2026-03-11 17:40:56,108 - INFO - Epoch 7/20 - Train Loss: 0.5930, Val Loss: 0.5198
+2026-03-11 17:40:56,108 - INFO - Epoch 8/20 - Train Loss: 0.7800, Val Loss: 0.6722
+2026-03-11 17:40:56,108 - INFO - Epoch 9/20 - Train Loss: 0.7946, Val Loss: 0.5583
+2026-03-11 17:40:56,108 - INFO - Epoch 10/20 - Train Loss: 0.7654, Val Loss: 0.7579
+2026-03-11 17:40:56,108 - INFO - Epoch 11/20 - Train Loss: 0.6347, Val Loss: 0.7535
+2026-03-11 17:40:56,108 - INFO - Epoch 12/20 - Train Loss: 0.7296, Val Loss: 0.6042
+2026-03-11 17:40:56,108 - INFO - Epoch 13/20 - Train Loss: 0.7440, Val Loss: 0.5603
+2026-03-11 17:40:56,108 - INFO - Epoch 14/20 - Train Loss: 0.7038, Val Loss: 0.6699
+2026-03-11 17:40:56,108 - INFO - Epoch 15/20 - Train Loss: 0.7951, Val Loss: 0.6183
+2026-03-11 17:40:56,108 - INFO - Epoch 16/20 - Train Loss: 0.7142, Val Loss: 0.5300
+2026-03-11 17:40:56,108 - INFO - Epoch 17/20 - Train Loss: 0.5098, Val Loss: 0.6438
+2026-03-11 17:40:56,108 - INFO - Epoch 18/20 - Train Loss: 0.6228, Val Loss: 0.5525
+2026-03-11 17:40:56,108 - INFO - Epoch 19/20 - Train Loss: 0.5366, Val Loss: 0.6392
+2026-03-11 17:40:56,108 - INFO - Epoch 20/20 - Train Loss: 0.5124, Val Loss: 0.6766
+2026-03-11 17:40:56,179 - INFO - Model saved to models/strategies/arbitrage_xlm_usdc_binance.pth
+2026-03-11 17:40:56,179 - INFO - Training model for HBAR/USDC
+2026-03-11 17:40:56,218 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 17:40:56,218 - INFO - Epoch 1/20 - Train Loss: 0.5491, Val Loss: 0.6811
+2026-03-11 17:40:56,218 - INFO - Epoch 2/20 - Train Loss: 0.5699, Val Loss: 0.6607
+2026-03-11 17:40:56,218 - INFO - Epoch 3/20 - Train Loss: 0.7563, Val Loss: 0.5909
+2026-03-11 17:40:56,218 - INFO - Epoch 4/20 - Train Loss: 0.5944, Val Loss: 0.6571
+2026-03-11 17:40:56,218 - INFO - Epoch 5/20 - Train Loss: 0.7226, Val Loss: 0.6897
+2026-03-11 17:40:56,218 - INFO - Epoch 6/20 - Train Loss: 0.5777, Val Loss: 0.7671
+2026-03-11 17:40:56,218 - INFO - Epoch 7/20 - Train Loss: 0.7206, Val Loss: 0.7397
+2026-03-11 17:40:56,218 - INFO - Epoch 8/20 - Train Loss: 0.6061, Val Loss: 0.5961
+2026-03-11 17:40:56,218 - INFO - Epoch 9/20 - Train Loss: 0.5013, Val Loss: 0.5764
+2026-03-11 17:40:56,218 - INFO - Epoch 10/20 - Train Loss: 0.5739, Val Loss: 0.7090
+2026-03-11 17:40:56,218 - INFO - Epoch 11/20 - Train Loss: 0.6533, Val Loss: 0.5774
+2026-03-11 17:40:56,218 - INFO - Epoch 12/20 - Train Loss: 0.6835, Val Loss: 0.5079
+2026-03-11 17:40:56,218 - INFO - Epoch 13/20 - Train Loss: 0.7816, Val Loss: 0.5757
+2026-03-11 17:40:56,218 - INFO - Epoch 14/20 - Train Loss: 0.7015, Val Loss: 0.7409
+2026-03-11 17:40:56,218 - INFO - Epoch 15/20 - Train Loss: 0.5280, Val Loss: 0.7331
+2026-03-11 17:40:56,218 - INFO - Epoch 16/20 - Train Loss: 0.5889, Val Loss: 0.7457
+2026-03-11 17:40:56,218 - INFO - Epoch 17/20 - Train Loss: 0.5904, Val Loss: 0.5015
+2026-03-11 17:40:56,218 - INFO - Epoch 18/20 - Train Loss: 0.5251, Val Loss: 0.5657
+2026-03-11 17:40:56,218 - INFO - Epoch 19/20 - Train Loss: 0.6192, Val Loss: 0.7268
+2026-03-11 17:40:56,220 - INFO - Epoch 20/20 - Train Loss: 0.6066, Val Loss: 0.7380
+2026-03-11 17:40:56,295 - INFO - Model saved to models/strategies/arbitrage_hbar_usdc_binance.pth
+2026-03-11 17:40:56,295 - INFO - Training model for ALGO/USDC
+2026-03-11 17:40:56,338 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 17:40:56,338 - INFO - Epoch 1/20 - Train Loss: 0.6353, Val Loss: 0.6485
+2026-03-11 17:40:56,338 - INFO - Epoch 2/20 - Train Loss: 0.5005, Val Loss: 0.5328
+2026-03-11 17:40:56,338 - INFO - Epoch 3/20 - Train Loss: 0.5429, Val Loss: 0.5026
+2026-03-11 17:40:56,338 - INFO - Epoch 4/20 - Train Loss: 0.6864, Val Loss: 0.5304
+2026-03-11 17:40:56,338 - INFO - Epoch 5/20 - Train Loss: 0.6506, Val Loss: 0.5646
+2026-03-11 17:40:56,338 - INFO - Epoch 6/20 - Train Loss: 0.6719, Val Loss: 0.5335
+2026-03-11 17:40:56,338 - INFO - Epoch 7/20 - Train Loss: 0.7854, Val Loss: 0.7875
+2026-03-11 17:40:56,338 - INFO - Epoch 8/20 - Train Loss: 0.7293, Val Loss: 0.5906
+2026-03-11 17:40:56,338 - INFO - Epoch 9/20 - Train Loss: 0.5097, Val Loss: 0.7504
+2026-03-11 17:40:56,338 - INFO - Epoch 10/20 - Train Loss: 0.6440, Val Loss: 0.5052
+2026-03-11 17:40:56,338 - INFO - Epoch 11/20 - Train Loss: 0.5809, Val Loss: 0.7238
+2026-03-11 17:40:56,338 - INFO - Epoch 12/20 - Train Loss: 0.7894, Val Loss: 0.6733
+2026-03-11 17:40:56,338 - INFO - Epoch 13/20 - Train Loss: 0.5771, Val Loss: 0.5319
+2026-03-11 17:40:56,338 - INFO - Epoch 14/20 - Train Loss: 0.6879, Val Loss: 0.7972
+2026-03-11 17:40:56,338 - INFO - Epoch 15/20 - Train Loss: 0.6585, Val Loss: 0.7669
+2026-03-11 17:40:56,338 - INFO - Epoch 16/20 - Train Loss: 0.5217, Val Loss: 0.6411
+2026-03-11 17:40:56,338 - INFO - Epoch 17/20 - Train Loss: 0.7668, Val Loss: 0.6182
+2026-03-11 17:40:56,338 - INFO - Epoch 18/20 - Train Loss: 0.5139, Val Loss: 0.5329
+2026-03-11 17:40:56,338 - INFO - Epoch 19/20 - Train Loss: 0.7118, Val Loss: 0.5861
+2026-03-11 17:40:56,338 - INFO - Epoch 20/20 - Train Loss: 0.6770, Val Loss: 0.5932
+2026-03-11 17:40:56,416 - INFO - Model saved to models/strategies/arbitrage_algo_usdc_binance.pth
+2026-03-11 17:40:56,416 - INFO - Training model for ADA/USDC
+2026-03-11 17:40:56,462 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 17:40:56,462 - INFO - Epoch 1/20 - Train Loss: 0.5749, Val Loss: 0.6111
+2026-03-11 17:40:56,462 - INFO - Epoch 2/20 - Train Loss: 0.6997, Val Loss: 0.7514
+2026-03-11 17:40:56,462 - INFO - Epoch 3/20 - Train Loss: 0.6810, Val Loss: 0.7888
+2026-03-11 17:40:56,462 - INFO - Epoch 4/20 - Train Loss: 0.6972, Val Loss: 0.6258
+2026-03-11 17:40:56,462 - INFO - Epoch 5/20 - Train Loss: 0.6950, Val Loss: 0.5413
+2026-03-11 17:40:56,462 - INFO - Epoch 6/20 - Train Loss: 0.7012, Val Loss: 0.6959
+2026-03-11 17:40:56,462 - INFO - Epoch 7/20 - Train Loss: 0.5105, Val Loss: 0.7151
+2026-03-11 17:40:56,462 - INFO - Epoch 8/20 - Train Loss: 0.7638, Val Loss: 0.7365
+2026-03-11 17:40:56,462 - INFO - Epoch 9/20 - Train Loss: 0.7037, Val Loss: 0.5905
+2026-03-11 17:40:56,462 - INFO - Epoch 10/20 - Train Loss: 0.5355, Val Loss: 0.6222
+2026-03-11 17:40:56,462 - INFO - Epoch 11/20 - Train Loss: 0.6037, Val Loss: 0.5769
+2026-03-11 17:40:56,462 - INFO - Epoch 12/20 - Train Loss: 0.6950, Val Loss: 0.6841
+2026-03-11 17:40:56,462 - INFO - Epoch 13/20 - Train Loss: 0.7312, Val Loss: 0.5721
+2026-03-11 17:40:56,462 - INFO - Epoch 14/20 - Train Loss: 0.6124, Val Loss: 0.7023
+2026-03-11 17:40:56,462 - INFO - Epoch 15/20 - Train Loss: 0.6017, Val Loss: 0.6931
+2026-03-11 17:40:56,464 - INFO - Epoch 16/20 - Train Loss: 0.7573, Val Loss: 0.7552
+2026-03-11 17:40:56,464 - INFO - Epoch 17/20 - Train Loss: 0.5629, Val Loss: 0.5013
+2026-03-11 17:40:56,464 - INFO - Epoch 18/20 - Train Loss: 0.6567, Val Loss: 0.5352
+2026-03-11 17:40:56,464 - INFO - Epoch 19/20 - Train Loss: 0.7808, Val Loss: 0.6139
+2026-03-11 17:40:56,464 - INFO - Epoch 20/20 - Train Loss: 0.6585, Val Loss: 0.6887
+2026-03-11 17:40:56,533 - INFO - Model saved to models/strategies/arbitrage_ada_usdc_binance.pth
+2026-03-11 17:40:56,533 - INFO - Training model for LINK/USDC
+2026-03-11 17:40:56,585 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 17:40:56,585 - INFO - Epoch 1/20 - Train Loss: 0.7292, Val Loss: 0.6029
+2026-03-11 17:40:56,585 - INFO - Epoch 2/20 - Train Loss: 0.7321, Val Loss: 0.6126
+2026-03-11 17:40:56,585 - INFO - Epoch 3/20 - Train Loss: 0.6213, Val Loss: 0.6300
+2026-03-11 17:40:56,585 - INFO - Epoch 4/20 - Train Loss: 0.5710, Val Loss: 0.6645
+2026-03-11 17:40:56,585 - INFO - Epoch 5/20 - Train Loss: 0.5311, Val Loss: 0.6864
+2026-03-11 17:40:56,585 - INFO - Epoch 6/20 - Train Loss: 0.6615, Val Loss: 0.6985
+2026-03-11 17:40:56,585 - INFO - Epoch 7/20 - Train Loss: 0.5119, Val Loss: 0.5060
+2026-03-11 17:40:56,585 - INFO - Epoch 8/20 - Train Loss: 0.7234, Val Loss: 0.6365
+2026-03-11 17:40:56,585 - INFO - Epoch 9/20 - Train Loss: 0.6371, Val Loss: 0.7036
+2026-03-11 17:40:56,585 - INFO - Epoch 10/20 - Train Loss: 0.7797, Val Loss: 0.5458
+2026-03-11 17:40:56,585 - INFO - Epoch 11/20 - Train Loss: 0.7461, Val Loss: 0.5481
+2026-03-11 17:40:56,585 - INFO - Epoch 12/20 - Train Loss: 0.5431, Val Loss: 0.5601
+2026-03-11 17:40:56,585 - INFO - Epoch 13/20 - Train Loss: 0.6076, Val Loss: 0.6957
+2026-03-11 17:40:56,585 - INFO - Epoch 14/20 - Train Loss: 0.7660, Val Loss: 0.6470
+2026-03-11 17:40:56,585 - INFO - Epoch 15/20 - Train Loss: 0.7252, Val Loss: 0.7395
+2026-03-11 17:40:56,585 - INFO - Epoch 16/20 - Train Loss: 0.7223, Val Loss: 0.6451
+2026-03-11 17:40:56,585 - INFO - Epoch 17/20 - Train Loss: 0.5536, Val Loss: 0.7977
+2026-03-11 17:40:56,585 - INFO - Epoch 18/20 - Train Loss: 0.5703, Val Loss: 0.6951
+2026-03-11 17:40:56,585 - INFO - Epoch 19/20 - Train Loss: 0.7765, Val Loss: 0.7564
+2026-03-11 17:40:56,585 - INFO - Epoch 20/20 - Train Loss: 0.7907, Val Loss: 0.5013
+2026-03-11 17:40:56,702 - INFO - Model saved to models/strategies/arbitrage_link_usdc_binance.pth
+2026-03-11 17:40:56,704 - INFO - Training model for IOTA/USDC
+2026-03-11 17:40:56,761 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 17:40:56,763 - INFO - Epoch 1/20 - Train Loss: 0.6595, Val Loss: 0.5601
+2026-03-11 17:40:56,763 - INFO - Epoch 2/20 - Train Loss: 0.6576, Val Loss: 0.6625
+2026-03-11 17:40:56,763 - INFO - Epoch 3/20 - Train Loss: 0.7871, Val Loss: 0.5922
+2026-03-11 17:40:56,763 - INFO - Epoch 4/20 - Train Loss: 0.7590, Val Loss: 0.7244
+2026-03-11 17:40:56,763 - INFO - Epoch 5/20 - Train Loss: 0.7843, Val Loss: 0.6493
+2026-03-11 17:40:56,763 - INFO - Epoch 6/20 - Train Loss: 0.7698, Val Loss: 0.6909
+2026-03-11 17:40:56,763 - INFO - Epoch 7/20 - Train Loss: 0.6939, Val Loss: 0.5162
+2026-03-11 17:40:56,763 - INFO - Epoch 8/20 - Train Loss: 0.6537, Val Loss: 0.7014
+2026-03-11 17:40:56,763 - INFO - Epoch 9/20 - Train Loss: 0.7477, Val Loss: 0.7374
+2026-03-11 17:40:56,763 - INFO - Epoch 10/20 - Train Loss: 0.5900, Val Loss: 0.7989
+2026-03-11 17:40:56,763 - INFO - Epoch 11/20 - Train Loss: 0.7919, Val Loss: 0.6460
+2026-03-11 17:40:56,763 - INFO - Epoch 12/20 - Train Loss: 0.5881, Val Loss: 0.7094
+2026-03-11 17:40:56,763 - INFO - Epoch 13/20 - Train Loss: 0.7236, Val Loss: 0.7169
+2026-03-11 17:40:56,763 - INFO - Epoch 14/20 - Train Loss: 0.6486, Val Loss: 0.7173
+2026-03-11 17:40:56,763 - INFO - Epoch 15/20 - Train Loss: 0.5730, Val Loss: 0.6744
+2026-03-11 17:40:56,763 - INFO - Epoch 16/20 - Train Loss: 0.5601, Val Loss: 0.7547
+2026-03-11 17:40:56,763 - INFO - Epoch 17/20 - Train Loss: 0.7899, Val Loss: 0.6377
+2026-03-11 17:40:56,763 - INFO - Epoch 18/20 - Train Loss: 0.6409, Val Loss: 0.7801
+2026-03-11 17:40:56,763 - INFO - Epoch 19/20 - Train Loss: 0.7692, Val Loss: 0.7520
+2026-03-11 17:40:56,763 - INFO - Epoch 20/20 - Train Loss: 0.5490, Val Loss: 0.6458
+2026-03-11 17:40:56,834 - INFO - Model saved to models/strategies/arbitrage_iota_usdc_binance.pth
+2026-03-11 17:40:56,834 - INFO - GPU training completed in 1.23 seconds
+2026-03-11 17:40:56,834 - ERROR - Failed to save training results: 'GPUManager' object has no attribute 'is_available'
+2026-03-11 17:40:56,834 - ERROR - Failed to generate training report: 'str' object has no attribute 'get'
+2026-03-11 17:40:56,835 - INFO - Training completed in 1.23 seconds
+2026-03-11 17:40:56,835 - INFO - Shutting down GPUManager
+2026-03-11 17:41:01,838 - INFO - GPUManager shutdown complete
+2026-03-11 17:41:01,838 - INFO - GPU training cleanup completed
+2026-03-11 18:09:57,245 - INFO - Initializing GPU training environment...
+2026-03-11 18:09:57,361 - INFO - Detected 1 CUDA GPUs
+2026-03-11 18:09:57,361 - INFO - GPU monitoring started
+2026-03-11 18:09:57,361 - INFO - GPUManager initialized with 1 GPUs
+2026-03-11 18:09:57,361 - INFO - GPU training optimizations enabled
+2026-03-11 18:09:57,361 - INFO - GPU training environment initialized successfully
+2026-03-11 18:09:57,361 - INFO - ============================================================
+2026-03-11 18:09:57,361 - INFO - STARTING SOVEREIGNFORGE GPU TRAINING - WAVE 7
+2026-03-11 18:09:57,361 - INFO - ============================================================
+2026-03-11 18:09:57,361 - INFO - 
+GPU Training Configuration:
+- Pairs: ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC']
+- Epochs: 50
+- Batch Size: 64
+- GPU Device: 0
+- Memory Fraction: 0.8
+- Learning Rate: 0.0005
+- Gradient Clip: 1.0
+- TensorBoard: False
+- Weights & Biases: False
+- GPU Monitoring: True
+- Mixed Precision: False
+        
+2026-03-11 18:09:57,361 - INFO - GPU monitoring active via GPU manager
+2026-03-11 18:09:57,361 - INFO - Starting GPU arbitrage training for 9 pairs: ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC']
+2026-03-11 18:09:57,361 - INFO - Training model for BTC/USDC
+2026-03-11 18:09:57,415 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 18:09:57,415 - INFO - Epoch 1/50 - Train Loss: 0.5611, Val Loss: 0.6254
+2026-03-11 18:09:57,415 - INFO - Epoch 2/50 - Train Loss: 0.6519, Val Loss: 0.7045
+2026-03-11 18:09:57,415 - INFO - Epoch 3/50 - Train Loss: 0.5932, Val Loss: 0.6299
+2026-03-11 18:09:57,415 - INFO - Epoch 4/50 - Train Loss: 0.6829, Val Loss: 0.7244
+2026-03-11 18:09:57,415 - INFO - Epoch 5/50 - Train Loss: 0.7243, Val Loss: 0.7245
+2026-03-11 18:09:57,415 - INFO - Epoch 6/50 - Train Loss: 0.6253, Val Loss: 0.6938
+2026-03-11 18:09:57,415 - INFO - Epoch 7/50 - Train Loss: 0.5513, Val Loss: 0.6641
+2026-03-11 18:09:57,415 - INFO - Epoch 8/50 - Train Loss: 0.7441, Val Loss: 0.5518
+2026-03-11 18:09:57,415 - INFO - Epoch 9/50 - Train Loss: 0.7718, Val Loss: 0.7313
+2026-03-11 18:09:57,415 - INFO - Epoch 10/50 - Train Loss: 0.7832, Val Loss: 0.6197
+2026-03-11 18:09:57,415 - INFO - Epoch 11/50 - Train Loss: 0.5105, Val Loss: 0.5089
+2026-03-11 18:09:57,415 - INFO - Epoch 12/50 - Train Loss: 0.7825, Val Loss: 0.5581
+2026-03-11 18:09:57,415 - INFO - Epoch 13/50 - Train Loss: 0.5629, Val Loss: 0.5596
+2026-03-11 18:09:57,415 - INFO - Epoch 14/50 - Train Loss: 0.6318, Val Loss: 0.7959
+2026-03-11 18:09:57,415 - INFO - Epoch 15/50 - Train Loss: 0.6113, Val Loss: 0.5608
+2026-03-11 18:09:57,415 - INFO - Epoch 16/50 - Train Loss: 0.5158, Val Loss: 0.5527
+2026-03-11 18:09:57,415 - INFO - Epoch 17/50 - Train Loss: 0.6964, Val Loss: 0.5686
+2026-03-11 18:09:57,415 - INFO - Epoch 18/50 - Train Loss: 0.7842, Val Loss: 0.5012
+2026-03-11 18:09:57,415 - INFO - Epoch 19/50 - Train Loss: 0.7596, Val Loss: 0.7298
+2026-03-11 18:09:57,415 - INFO - Epoch 20/50 - Train Loss: 0.7949, Val Loss: 0.6856
+2026-03-11 18:09:57,415 - INFO - Epoch 21/50 - Train Loss: 0.6021, Val Loss: 0.5923
+2026-03-11 18:09:57,415 - INFO - Epoch 22/50 - Train Loss: 0.7144, Val Loss: 0.7362
+2026-03-11 18:09:57,415 - INFO - Epoch 23/50 - Train Loss: 0.5926, Val Loss: 0.7835
+2026-03-11 18:09:57,415 - INFO - Epoch 24/50 - Train Loss: 0.6491, Val Loss: 0.6126
+2026-03-11 18:09:57,415 - INFO - Epoch 25/50 - Train Loss: 0.6012, Val Loss: 0.6280
+2026-03-11 18:09:57,415 - INFO - Epoch 26/50 - Train Loss: 0.7654, Val Loss: 0.7957
+2026-03-11 18:09:57,415 - INFO - Epoch 27/50 - Train Loss: 0.5880, Val Loss: 0.5725
+2026-03-11 18:09:57,415 - INFO - Epoch 28/50 - Train Loss: 0.6303, Val Loss: 0.5593
+2026-03-11 18:09:57,415 - INFO - Epoch 29/50 - Train Loss: 0.5013, Val Loss: 0.7325
+2026-03-11 18:09:57,415 - INFO - Epoch 30/50 - Train Loss: 0.6708, Val Loss: 0.7712
+2026-03-11 18:09:57,415 - INFO - Epoch 31/50 - Train Loss: 0.5597, Val Loss: 0.7977
+2026-03-11 18:09:57,415 - INFO - Epoch 32/50 - Train Loss: 0.7830, Val Loss: 0.5245
+2026-03-11 18:09:57,415 - INFO - Epoch 33/50 - Train Loss: 0.7034, Val Loss: 0.7627
+2026-03-11 18:09:57,415 - INFO - Epoch 34/50 - Train Loss: 0.5524, Val Loss: 0.6202
+2026-03-11 18:09:57,415 - INFO - Epoch 35/50 - Train Loss: 0.7853, Val Loss: 0.7027
+2026-03-11 18:09:57,415 - INFO - Epoch 36/50 - Train Loss: 0.6437, Val Loss: 0.7195
+2026-03-11 18:09:57,415 - INFO - Epoch 37/50 - Train Loss: 0.7267, Val Loss: 0.6286
+2026-03-11 18:09:57,415 - INFO - Epoch 38/50 - Train Loss: 0.5200, Val Loss: 0.6873
+2026-03-11 18:09:57,415 - INFO - Epoch 39/50 - Train Loss: 0.5062, Val Loss: 0.7033
+2026-03-11 18:09:57,415 - INFO - Epoch 40/50 - Train Loss: 0.5507, Val Loss: 0.7297
+2026-03-11 18:09:57,415 - INFO - Epoch 41/50 - Train Loss: 0.5064, Val Loss: 0.5285
+2026-03-11 18:09:57,418 - INFO - Epoch 42/50 - Train Loss: 0.5223, Val Loss: 0.6003
+2026-03-11 18:09:57,418 - INFO - Epoch 43/50 - Train Loss: 0.7721, Val Loss: 0.6532
+2026-03-11 18:09:57,418 - INFO - Epoch 44/50 - Train Loss: 0.7767, Val Loss: 0.7939
+2026-03-11 18:09:57,418 - INFO - Epoch 45/50 - Train Loss: 0.5704, Val Loss: 0.7044
+2026-03-11 18:09:57,418 - INFO - Epoch 46/50 - Train Loss: 0.7248, Val Loss: 0.6204
+2026-03-11 18:09:57,418 - INFO - Epoch 47/50 - Train Loss: 0.5202, Val Loss: 0.6514
+2026-03-11 18:09:57,418 - INFO - Epoch 48/50 - Train Loss: 0.7519, Val Loss: 0.6006
+2026-03-11 18:09:57,418 - INFO - Epoch 49/50 - Train Loss: 0.5676, Val Loss: 0.6963
+2026-03-11 18:09:57,418 - INFO - Epoch 50/50 - Train Loss: 0.7594, Val Loss: 0.6643
+2026-03-11 18:09:57,498 - INFO - Model saved to models/strategies/arbitrage_btc_usdc_binance.pth
+2026-03-11 18:09:57,499 - INFO - Training model for ETH/USDC
+2026-03-11 18:09:57,542 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 18:09:57,542 - INFO - Epoch 1/50 - Train Loss: 0.5714, Val Loss: 0.7328
+2026-03-11 18:09:57,542 - INFO - Epoch 2/50 - Train Loss: 0.5132, Val Loss: 0.7866
+2026-03-11 18:09:57,542 - INFO - Epoch 3/50 - Train Loss: 0.5371, Val Loss: 0.6267
+2026-03-11 18:09:57,542 - INFO - Epoch 4/50 - Train Loss: 0.5137, Val Loss: 0.7196
+2026-03-11 18:09:57,542 - INFO - Epoch 5/50 - Train Loss: 0.6803, Val Loss: 0.7667
+2026-03-11 18:09:57,542 - INFO - Epoch 6/50 - Train Loss: 0.5161, Val Loss: 0.5575
+2026-03-11 18:09:57,542 - INFO - Epoch 7/50 - Train Loss: 0.7882, Val Loss: 0.7234
+2026-03-11 18:09:57,542 - INFO - Epoch 8/50 - Train Loss: 0.7922, Val Loss: 0.7735
+2026-03-11 18:09:57,542 - INFO - Epoch 9/50 - Train Loss: 0.6092, Val Loss: 0.7303
+2026-03-11 18:09:57,544 - INFO - Epoch 10/50 - Train Loss: 0.5856, Val Loss: 0.6180
+2026-03-11 18:09:57,544 - INFO - Epoch 11/50 - Train Loss: 0.7874, Val Loss: 0.6905
+2026-03-11 18:09:57,544 - INFO - Epoch 12/50 - Train Loss: 0.6705, Val Loss: 0.6536
+2026-03-11 18:09:57,544 - INFO - Epoch 13/50 - Train Loss: 0.6827, Val Loss: 0.5858
+2026-03-11 18:09:57,544 - INFO - Epoch 14/50 - Train Loss: 0.5494, Val Loss: 0.5689
+2026-03-11 18:09:57,544 - INFO - Epoch 15/50 - Train Loss: 0.7737, Val Loss: 0.5697
+2026-03-11 18:09:57,544 - INFO - Epoch 16/50 - Train Loss: 0.7481, Val Loss: 0.6856
+2026-03-11 18:09:57,544 - INFO - Epoch 17/50 - Train Loss: 0.7549, Val Loss: 0.5809
+2026-03-11 18:09:57,544 - INFO - Epoch 18/50 - Train Loss: 0.7944, Val Loss: 0.6015
+2026-03-11 18:09:57,544 - INFO - Epoch 19/50 - Train Loss: 0.6564, Val Loss: 0.6617
+2026-03-11 18:09:57,544 - INFO - Epoch 20/50 - Train Loss: 0.6848, Val Loss: 0.6039
+2026-03-11 18:09:57,544 - INFO - Epoch 21/50 - Train Loss: 0.5401, Val Loss: 0.7030
+2026-03-11 18:09:57,544 - INFO - Epoch 22/50 - Train Loss: 0.7283, Val Loss: 0.5062
+2026-03-11 18:09:57,544 - INFO - Epoch 23/50 - Train Loss: 0.5808, Val Loss: 0.5233
+2026-03-11 18:09:57,544 - INFO - Epoch 24/50 - Train Loss: 0.7864, Val Loss: 0.7785
+2026-03-11 18:09:57,544 - INFO - Epoch 25/50 - Train Loss: 0.6823, Val Loss: 0.7142
+2026-03-11 18:09:57,544 - INFO - Epoch 26/50 - Train Loss: 0.5300, Val Loss: 0.5548
+2026-03-11 18:09:57,544 - INFO - Epoch 27/50 - Train Loss: 0.7671, Val Loss: 0.7192
+2026-03-11 18:09:57,544 - INFO - Epoch 28/50 - Train Loss: 0.7253, Val Loss: 0.7623
+2026-03-11 18:09:57,544 - INFO - Epoch 29/50 - Train Loss: 0.6059, Val Loss: 0.7423
+2026-03-11 18:09:57,544 - INFO - Epoch 30/50 - Train Loss: 0.7007, Val Loss: 0.5003
+2026-03-11 18:09:57,544 - INFO - Epoch 31/50 - Train Loss: 0.5717, Val Loss: 0.5625
+2026-03-11 18:09:57,544 - INFO - Epoch 32/50 - Train Loss: 0.5287, Val Loss: 0.7917
+2026-03-11 18:09:57,544 - INFO - Epoch 33/50 - Train Loss: 0.6101, Val Loss: 0.6655
+2026-03-11 18:09:57,544 - INFO - Epoch 34/50 - Train Loss: 0.5152, Val Loss: 0.5096
+2026-03-11 18:09:57,544 - INFO - Epoch 35/50 - Train Loss: 0.5844, Val Loss: 0.7821
+2026-03-11 18:09:57,544 - INFO - Epoch 36/50 - Train Loss: 0.6231, Val Loss: 0.7484
+2026-03-11 18:09:57,544 - INFO - Epoch 37/50 - Train Loss: 0.6845, Val Loss: 0.6327
+2026-03-11 18:09:57,544 - INFO - Epoch 38/50 - Train Loss: 0.7483, Val Loss: 0.5735
+2026-03-11 18:09:57,544 - INFO - Epoch 39/50 - Train Loss: 0.7265, Val Loss: 0.7191
+2026-03-11 18:09:57,544 - INFO - Epoch 40/50 - Train Loss: 0.7107, Val Loss: 0.7023
+2026-03-11 18:09:57,544 - INFO - Epoch 41/50 - Train Loss: 0.6828, Val Loss: 0.6075
+2026-03-11 18:09:57,544 - INFO - Epoch 42/50 - Train Loss: 0.7019, Val Loss: 0.5256
+2026-03-11 18:09:57,544 - INFO - Epoch 43/50 - Train Loss: 0.7336, Val Loss: 0.7116
+2026-03-11 18:09:57,544 - INFO - Epoch 44/50 - Train Loss: 0.7473, Val Loss: 0.5995
+2026-03-11 18:09:57,544 - INFO - Epoch 45/50 - Train Loss: 0.5804, Val Loss: 0.7820
+2026-03-11 18:09:57,544 - INFO - Epoch 46/50 - Train Loss: 0.5801, Val Loss: 0.7375
+2026-03-11 18:09:57,544 - INFO - Epoch 47/50 - Train Loss: 0.6095, Val Loss: 0.7062
+2026-03-11 18:09:57,546 - INFO - Epoch 48/50 - Train Loss: 0.7754, Val Loss: 0.7184
+2026-03-11 18:09:57,546 - INFO - Epoch 49/50 - Train Loss: 0.5199, Val Loss: 0.5621
+2026-03-11 18:09:57,546 - INFO - Epoch 50/50 - Train Loss: 0.7631, Val Loss: 0.7980
+2026-03-11 18:09:57,618 - INFO - Model saved to models/strategies/arbitrage_eth_usdc_binance.pth
+2026-03-11 18:09:57,618 - INFO - Training model for XRP/USDC
+2026-03-11 18:09:57,659 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 18:09:57,659 - INFO - Epoch 1/50 - Train Loss: 0.6884, Val Loss: 0.6573
+2026-03-11 18:09:57,659 - INFO - Epoch 2/50 - Train Loss: 0.6788, Val Loss: 0.6699
+2026-03-11 18:09:57,659 - INFO - Epoch 3/50 - Train Loss: 0.5347, Val Loss: 0.6231
+2026-03-11 18:09:57,660 - INFO - Epoch 4/50 - Train Loss: 0.6212, Val Loss: 0.6410
+2026-03-11 18:09:57,660 - INFO - Epoch 5/50 - Train Loss: 0.5405, Val Loss: 0.6480
+2026-03-11 18:09:57,660 - INFO - Epoch 6/50 - Train Loss: 0.6635, Val Loss: 0.5224
+2026-03-11 18:09:57,660 - INFO - Epoch 7/50 - Train Loss: 0.5302, Val Loss: 0.7785
+2026-03-11 18:09:57,660 - INFO - Epoch 8/50 - Train Loss: 0.6123, Val Loss: 0.6678
+2026-03-11 18:09:57,660 - INFO - Epoch 9/50 - Train Loss: 0.7659, Val Loss: 0.7616
+2026-03-11 18:09:57,660 - INFO - Epoch 10/50 - Train Loss: 0.5803, Val Loss: 0.6498
+2026-03-11 18:09:57,660 - INFO - Epoch 11/50 - Train Loss: 0.6621, Val Loss: 0.5423
+2026-03-11 18:09:57,660 - INFO - Epoch 12/50 - Train Loss: 0.6647, Val Loss: 0.6714
+2026-03-11 18:09:57,660 - INFO - Epoch 13/50 - Train Loss: 0.6275, Val Loss: 0.7241
+2026-03-11 18:09:57,660 - INFO - Epoch 14/50 - Train Loss: 0.6237, Val Loss: 0.5425
+2026-03-11 18:09:57,660 - INFO - Epoch 15/50 - Train Loss: 0.6353, Val Loss: 0.5153
+2026-03-11 18:09:57,660 - INFO - Epoch 16/50 - Train Loss: 0.5929, Val Loss: 0.5698
+2026-03-11 18:09:57,660 - INFO - Epoch 17/50 - Train Loss: 0.5800, Val Loss: 0.6234
+2026-03-11 18:09:57,660 - INFO - Epoch 18/50 - Train Loss: 0.5130, Val Loss: 0.5948
+2026-03-11 18:09:57,660 - INFO - Epoch 19/50 - Train Loss: 0.6406, Val Loss: 0.6201
+2026-03-11 18:09:57,660 - INFO - Epoch 20/50 - Train Loss: 0.5462, Val Loss: 0.7866
+2026-03-11 18:09:57,661 - INFO - Epoch 21/50 - Train Loss: 0.6546, Val Loss: 0.7028
+2026-03-11 18:09:57,661 - INFO - Epoch 22/50 - Train Loss: 0.5755, Val Loss: 0.7888
+2026-03-11 18:09:57,661 - INFO - Epoch 23/50 - Train Loss: 0.5875, Val Loss: 0.5716
+2026-03-11 18:09:57,661 - INFO - Epoch 24/50 - Train Loss: 0.5257, Val Loss: 0.6935
+2026-03-11 18:09:57,661 - INFO - Epoch 25/50 - Train Loss: 0.6087, Val Loss: 0.5809
+2026-03-11 18:09:57,661 - INFO - Epoch 26/50 - Train Loss: 0.5236, Val Loss: 0.7249
+2026-03-11 18:09:57,661 - INFO - Epoch 27/50 - Train Loss: 0.7922, Val Loss: 0.6774
+2026-03-11 18:09:57,661 - INFO - Epoch 28/50 - Train Loss: 0.6206, Val Loss: 0.7691
+2026-03-11 18:09:57,661 - INFO - Epoch 29/50 - Train Loss: 0.5369, Val Loss: 0.6214
+2026-03-11 18:09:57,661 - INFO - Epoch 30/50 - Train Loss: 0.6745, Val Loss: 0.6642
+2026-03-11 18:09:57,661 - INFO - Epoch 31/50 - Train Loss: 0.6548, Val Loss: 0.7000
+2026-03-11 18:09:57,661 - INFO - Epoch 32/50 - Train Loss: 0.6501, Val Loss: 0.5921
+2026-03-11 18:09:57,661 - INFO - Epoch 33/50 - Train Loss: 0.7373, Val Loss: 0.7503
+2026-03-11 18:09:57,661 - INFO - Epoch 34/50 - Train Loss: 0.7318, Val Loss: 0.5623
+2026-03-11 18:09:57,661 - INFO - Epoch 35/50 - Train Loss: 0.7430, Val Loss: 0.7155
+2026-03-11 18:09:57,661 - INFO - Epoch 36/50 - Train Loss: 0.6947, Val Loss: 0.7467
+2026-03-11 18:09:57,661 - INFO - Epoch 37/50 - Train Loss: 0.6663, Val Loss: 0.5988
+2026-03-11 18:09:57,661 - INFO - Epoch 38/50 - Train Loss: 0.5744, Val Loss: 0.7962
+2026-03-11 18:09:57,662 - INFO - Epoch 39/50 - Train Loss: 0.6543, Val Loss: 0.5817
+2026-03-11 18:09:57,662 - INFO - Epoch 40/50 - Train Loss: 0.5159, Val Loss: 0.5273
+2026-03-11 18:09:57,662 - INFO - Epoch 41/50 - Train Loss: 0.6055, Val Loss: 0.7797
+2026-03-11 18:09:57,662 - INFO - Epoch 42/50 - Train Loss: 0.7565, Val Loss: 0.5377
+2026-03-11 18:09:57,662 - INFO - Epoch 43/50 - Train Loss: 0.6011, Val Loss: 0.6625
+2026-03-11 18:09:57,662 - INFO - Epoch 44/50 - Train Loss: 0.5833, Val Loss: 0.6620
+2026-03-11 18:09:57,662 - INFO - Epoch 45/50 - Train Loss: 0.6544, Val Loss: 0.7975
+2026-03-11 18:09:57,662 - INFO - Epoch 46/50 - Train Loss: 0.7247, Val Loss: 0.6649
+2026-03-11 18:09:57,662 - INFO - Epoch 47/50 - Train Loss: 0.6019, Val Loss: 0.5036
+2026-03-11 18:09:57,662 - INFO - Epoch 48/50 - Train Loss: 0.5249, Val Loss: 0.6372
+2026-03-11 18:09:57,662 - INFO - Epoch 49/50 - Train Loss: 0.6687, Val Loss: 0.6036
+2026-03-11 18:09:57,662 - INFO - Epoch 50/50 - Train Loss: 0.6219, Val Loss: 0.6659
+2026-03-11 18:09:57,747 - INFO - Model saved to models/strategies/arbitrage_xrp_usdc_binance.pth
+2026-03-11 18:09:57,747 - INFO - Training model for XLM/USDC
+2026-03-11 18:09:57,784 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 18:09:57,784 - INFO - Epoch 1/50 - Train Loss: 0.7708, Val Loss: 0.6353
+2026-03-11 18:09:57,784 - INFO - Epoch 2/50 - Train Loss: 0.5357, Val Loss: 0.7274
+2026-03-11 18:09:57,784 - INFO - Epoch 3/50 - Train Loss: 0.7116, Val Loss: 0.6198
+2026-03-11 18:09:57,784 - INFO - Epoch 4/50 - Train Loss: 0.7016, Val Loss: 0.7040
+2026-03-11 18:09:57,784 - INFO - Epoch 5/50 - Train Loss: 0.7960, Val Loss: 0.7340
+2026-03-11 18:09:57,784 - INFO - Epoch 6/50 - Train Loss: 0.6146, Val Loss: 0.7206
+2026-03-11 18:09:57,785 - INFO - Epoch 7/50 - Train Loss: 0.5289, Val Loss: 0.7419
+2026-03-11 18:09:57,785 - INFO - Epoch 8/50 - Train Loss: 0.7344, Val Loss: 0.6588
+2026-03-11 18:09:57,785 - INFO - Epoch 9/50 - Train Loss: 0.5172, Val Loss: 0.6143
+2026-03-11 18:09:57,785 - INFO - Epoch 10/50 - Train Loss: 0.7552, Val Loss: 0.7979
+2026-03-11 18:09:57,785 - INFO - Epoch 11/50 - Train Loss: 0.7849, Val Loss: 0.6229
+2026-03-11 18:09:57,785 - INFO - Epoch 12/50 - Train Loss: 0.6871, Val Loss: 0.5228
+2026-03-11 18:09:57,785 - INFO - Epoch 13/50 - Train Loss: 0.5459, Val Loss: 0.7145
+2026-03-11 18:09:57,785 - INFO - Epoch 14/50 - Train Loss: 0.7242, Val Loss: 0.6872
+2026-03-11 18:09:57,785 - INFO - Epoch 15/50 - Train Loss: 0.7004, Val Loss: 0.7715
+2026-03-11 18:09:57,785 - INFO - Epoch 16/50 - Train Loss: 0.6504, Val Loss: 0.5440
+2026-03-11 18:09:57,785 - INFO - Epoch 17/50 - Train Loss: 0.5371, Val Loss: 0.7356
+2026-03-11 18:09:57,785 - INFO - Epoch 18/50 - Train Loss: 0.6756, Val Loss: 0.6795
+2026-03-11 18:09:57,785 - INFO - Epoch 19/50 - Train Loss: 0.7158, Val Loss: 0.7167
+2026-03-11 18:09:57,785 - INFO - Epoch 20/50 - Train Loss: 0.5050, Val Loss: 0.6310
+2026-03-11 18:09:57,785 - INFO - Epoch 21/50 - Train Loss: 0.6377, Val Loss: 0.5813
+2026-03-11 18:09:57,785 - INFO - Epoch 22/50 - Train Loss: 0.6220, Val Loss: 0.6492
+2026-03-11 18:09:57,785 - INFO - Epoch 23/50 - Train Loss: 0.6317, Val Loss: 0.6953
+2026-03-11 18:09:57,785 - INFO - Epoch 24/50 - Train Loss: 0.6736, Val Loss: 0.5628
+2026-03-11 18:09:57,785 - INFO - Epoch 25/50 - Train Loss: 0.6501, Val Loss: 0.5898
+2026-03-11 18:09:57,785 - INFO - Epoch 26/50 - Train Loss: 0.7850, Val Loss: 0.6691
+2026-03-11 18:09:57,785 - INFO - Epoch 27/50 - Train Loss: 0.6691, Val Loss: 0.5595
+2026-03-11 18:09:57,786 - INFO - Epoch 28/50 - Train Loss: 0.6048, Val Loss: 0.6301
+2026-03-11 18:09:57,786 - INFO - Epoch 29/50 - Train Loss: 0.6092, Val Loss: 0.7955
+2026-03-11 18:09:57,786 - INFO - Epoch 30/50 - Train Loss: 0.7631, Val Loss: 0.5027
+2026-03-11 18:09:57,786 - INFO - Epoch 31/50 - Train Loss: 0.5580, Val Loss: 0.7580
+2026-03-11 18:09:57,786 - INFO - Epoch 32/50 - Train Loss: 0.7483, Val Loss: 0.7835
+2026-03-11 18:09:57,786 - INFO - Epoch 33/50 - Train Loss: 0.6570, Val Loss: 0.7169
+2026-03-11 18:09:57,786 - INFO - Epoch 34/50 - Train Loss: 0.6603, Val Loss: 0.7597
+2026-03-11 18:09:57,786 - INFO - Epoch 35/50 - Train Loss: 0.6368, Val Loss: 0.7083
+2026-03-11 18:09:57,786 - INFO - Epoch 36/50 - Train Loss: 0.5492, Val Loss: 0.5913
+2026-03-11 18:09:57,786 - INFO - Epoch 37/50 - Train Loss: 0.5802, Val Loss: 0.6948
+2026-03-11 18:09:57,786 - INFO - Epoch 38/50 - Train Loss: 0.6186, Val Loss: 0.5185
+2026-03-11 18:09:57,786 - INFO - Epoch 39/50 - Train Loss: 0.6674, Val Loss: 0.6455
+2026-03-11 18:09:57,786 - INFO - Epoch 40/50 - Train Loss: 0.5666, Val Loss: 0.7646
+2026-03-11 18:09:57,786 - INFO - Epoch 41/50 - Train Loss: 0.6947, Val Loss: 0.6952
+2026-03-11 18:09:57,786 - INFO - Epoch 42/50 - Train Loss: 0.5014, Val Loss: 0.6318
+2026-03-11 18:09:57,786 - INFO - Epoch 43/50 - Train Loss: 0.6880, Val Loss: 0.7084
+2026-03-11 18:09:57,786 - INFO - Epoch 44/50 - Train Loss: 0.5122, Val Loss: 0.7815
+2026-03-11 18:09:57,786 - INFO - Epoch 45/50 - Train Loss: 0.5600, Val Loss: 0.5955
+2026-03-11 18:09:57,786 - INFO - Epoch 46/50 - Train Loss: 0.7799, Val Loss: 0.7228
+2026-03-11 18:09:57,786 - INFO - Epoch 47/50 - Train Loss: 0.5170, Val Loss: 0.7879
+2026-03-11 18:09:57,786 - INFO - Epoch 48/50 - Train Loss: 0.7071, Val Loss: 0.6298
+2026-03-11 18:09:57,786 - INFO - Epoch 49/50 - Train Loss: 0.6002, Val Loss: 0.7379
+2026-03-11 18:09:57,786 - INFO - Epoch 50/50 - Train Loss: 0.7068, Val Loss: 0.5924
+2026-03-11 18:09:57,858 - INFO - Model saved to models/strategies/arbitrage_xlm_usdc_binance.pth
+2026-03-11 18:09:57,858 - INFO - Training model for HBAR/USDC
+2026-03-11 18:09:57,900 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 18:09:57,900 - INFO - Epoch 1/50 - Train Loss: 0.7442, Val Loss: 0.7413
+2026-03-11 18:09:57,900 - INFO - Epoch 2/50 - Train Loss: 0.6727, Val Loss: 0.6962
+2026-03-11 18:09:57,900 - INFO - Epoch 3/50 - Train Loss: 0.5621, Val Loss: 0.5250
+2026-03-11 18:09:57,900 - INFO - Epoch 4/50 - Train Loss: 0.6697, Val Loss: 0.6880
+2026-03-11 18:09:57,900 - INFO - Epoch 5/50 - Train Loss: 0.5789, Val Loss: 0.5058
+2026-03-11 18:09:57,900 - INFO - Epoch 6/50 - Train Loss: 0.7012, Val Loss: 0.5403
+2026-03-11 18:09:57,900 - INFO - Epoch 7/50 - Train Loss: 0.6596, Val Loss: 0.6256
+2026-03-11 18:09:57,900 - INFO - Epoch 8/50 - Train Loss: 0.6781, Val Loss: 0.7711
+2026-03-11 18:09:57,900 - INFO - Epoch 9/50 - Train Loss: 0.5950, Val Loss: 0.6760
+2026-03-11 18:09:57,900 - INFO - Epoch 10/50 - Train Loss: 0.5660, Val Loss: 0.7886
+2026-03-11 18:09:57,900 - INFO - Epoch 11/50 - Train Loss: 0.7216, Val Loss: 0.5120
+2026-03-11 18:09:57,901 - INFO - Epoch 12/50 - Train Loss: 0.7553, Val Loss: 0.5758
+2026-03-11 18:09:57,901 - INFO - Epoch 13/50 - Train Loss: 0.6192, Val Loss: 0.7043
+2026-03-11 18:09:57,901 - INFO - Epoch 14/50 - Train Loss: 0.7337, Val Loss: 0.7786
+2026-03-11 18:09:57,901 - INFO - Epoch 15/50 - Train Loss: 0.7208, Val Loss: 0.6716
+2026-03-11 18:09:57,901 - INFO - Epoch 16/50 - Train Loss: 0.7913, Val Loss: 0.5707
+2026-03-11 18:09:57,901 - INFO - Epoch 17/50 - Train Loss: 0.7821, Val Loss: 0.5552
+2026-03-11 18:09:57,901 - INFO - Epoch 18/50 - Train Loss: 0.7706, Val Loss: 0.6054
+2026-03-11 18:09:57,901 - INFO - Epoch 19/50 - Train Loss: 0.7914, Val Loss: 0.7121
+2026-03-11 18:09:57,901 - INFO - Epoch 20/50 - Train Loss: 0.7002, Val Loss: 0.5788
+2026-03-11 18:09:57,901 - INFO - Epoch 21/50 - Train Loss: 0.5882, Val Loss: 0.6443
+2026-03-11 18:09:57,901 - INFO - Epoch 22/50 - Train Loss: 0.6003, Val Loss: 0.5260
+2026-03-11 18:09:57,901 - INFO - Epoch 23/50 - Train Loss: 0.5399, Val Loss: 0.5546
+2026-03-11 18:09:57,901 - INFO - Epoch 24/50 - Train Loss: 0.7363, Val Loss: 0.6674
+2026-03-11 18:09:57,901 - INFO - Epoch 25/50 - Train Loss: 0.6846, Val Loss: 0.5799
+2026-03-11 18:09:57,901 - INFO - Epoch 26/50 - Train Loss: 0.5147, Val Loss: 0.6813
+2026-03-11 18:09:57,901 - INFO - Epoch 27/50 - Train Loss: 0.6132, Val Loss: 0.6771
+2026-03-11 18:09:57,901 - INFO - Epoch 28/50 - Train Loss: 0.5716, Val Loss: 0.6006
+2026-03-11 18:09:57,901 - INFO - Epoch 29/50 - Train Loss: 0.7675, Val Loss: 0.6446
+2026-03-11 18:09:57,901 - INFO - Epoch 30/50 - Train Loss: 0.6363, Val Loss: 0.6615
+2026-03-11 18:09:57,901 - INFO - Epoch 31/50 - Train Loss: 0.7135, Val Loss: 0.6134
+2026-03-11 18:09:57,901 - INFO - Epoch 32/50 - Train Loss: 0.5533, Val Loss: 0.5883
+2026-03-11 18:09:57,901 - INFO - Epoch 33/50 - Train Loss: 0.7969, Val Loss: 0.7035
+2026-03-11 18:09:57,901 - INFO - Epoch 34/50 - Train Loss: 0.6238, Val Loss: 0.5871
+2026-03-11 18:09:57,901 - INFO - Epoch 35/50 - Train Loss: 0.6512, Val Loss: 0.7012
+2026-03-11 18:09:57,901 - INFO - Epoch 36/50 - Train Loss: 0.6334, Val Loss: 0.6804
+2026-03-11 18:09:57,901 - INFO - Epoch 37/50 - Train Loss: 0.7747, Val Loss: 0.7112
+2026-03-11 18:09:57,901 - INFO - Epoch 38/50 - Train Loss: 0.6245, Val Loss: 0.7724
+2026-03-11 18:09:57,901 - INFO - Epoch 39/50 - Train Loss: 0.7712, Val Loss: 0.7276
+2026-03-11 18:09:57,901 - INFO - Epoch 40/50 - Train Loss: 0.7194, Val Loss: 0.7425
+2026-03-11 18:09:57,901 - INFO - Epoch 41/50 - Train Loss: 0.7516, Val Loss: 0.5474
+2026-03-11 18:09:57,901 - INFO - Epoch 42/50 - Train Loss: 0.6992, Val Loss: 0.7558
+2026-03-11 18:09:57,901 - INFO - Epoch 43/50 - Train Loss: 0.7120, Val Loss: 0.5173
+2026-03-11 18:09:57,901 - INFO - Epoch 44/50 - Train Loss: 0.7785, Val Loss: 0.7532
+2026-03-11 18:09:57,901 - INFO - Epoch 45/50 - Train Loss: 0.7477, Val Loss: 0.5463
+2026-03-11 18:09:57,901 - INFO - Epoch 46/50 - Train Loss: 0.6279, Val Loss: 0.5617
+2026-03-11 18:09:57,901 - INFO - Epoch 47/50 - Train Loss: 0.5479, Val Loss: 0.5198
+2026-03-11 18:09:57,901 - INFO - Epoch 48/50 - Train Loss: 0.5042, Val Loss: 0.7984
+2026-03-11 18:09:57,901 - INFO - Epoch 49/50 - Train Loss: 0.6623, Val Loss: 0.6122
+2026-03-11 18:09:57,901 - INFO - Epoch 50/50 - Train Loss: 0.6537, Val Loss: 0.6457
+2026-03-11 18:09:57,968 - INFO - Model saved to models/strategies/arbitrage_hbar_usdc_binance.pth
+2026-03-11 18:09:57,968 - INFO - Training model for ALGO/USDC
+2026-03-11 18:09:58,007 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 18:09:58,007 - INFO - Epoch 1/50 - Train Loss: 0.7532, Val Loss: 0.5098
+2026-03-11 18:09:58,007 - INFO - Epoch 2/50 - Train Loss: 0.6315, Val Loss: 0.6564
+2026-03-11 18:09:58,007 - INFO - Epoch 3/50 - Train Loss: 0.5964, Val Loss: 0.5446
+2026-03-11 18:09:58,007 - INFO - Epoch 4/50 - Train Loss: 0.5905, Val Loss: 0.5798
+2026-03-11 18:09:58,007 - INFO - Epoch 5/50 - Train Loss: 0.7634, Val Loss: 0.6486
+2026-03-11 18:09:58,007 - INFO - Epoch 6/50 - Train Loss: 0.6886, Val Loss: 0.6919
+2026-03-11 18:09:58,007 - INFO - Epoch 7/50 - Train Loss: 0.5117, Val Loss: 0.7239
+2026-03-11 18:09:58,007 - INFO - Epoch 8/50 - Train Loss: 0.7681, Val Loss: 0.6380
+2026-03-11 18:09:58,007 - INFO - Epoch 9/50 - Train Loss: 0.5415, Val Loss: 0.6440
+2026-03-11 18:09:58,007 - INFO - Epoch 10/50 - Train Loss: 0.5468, Val Loss: 0.5671
+2026-03-11 18:09:58,007 - INFO - Epoch 11/50 - Train Loss: 0.6688, Val Loss: 0.6459
+2026-03-11 18:09:58,007 - INFO - Epoch 12/50 - Train Loss: 0.6801, Val Loss: 0.7743
+2026-03-11 18:09:58,007 - INFO - Epoch 13/50 - Train Loss: 0.6804, Val Loss: 0.6797
+2026-03-11 18:09:58,007 - INFO - Epoch 14/50 - Train Loss: 0.6102, Val Loss: 0.6101
+2026-03-11 18:09:58,007 - INFO - Epoch 15/50 - Train Loss: 0.7522, Val Loss: 0.5484
+2026-03-11 18:09:58,007 - INFO - Epoch 16/50 - Train Loss: 0.6140, Val Loss: 0.5263
+2026-03-11 18:09:58,007 - INFO - Epoch 17/50 - Train Loss: 0.5395, Val Loss: 0.6138
+2026-03-11 18:09:58,007 - INFO - Epoch 18/50 - Train Loss: 0.5427, Val Loss: 0.6728
+2026-03-11 18:09:58,007 - INFO - Epoch 19/50 - Train Loss: 0.5783, Val Loss: 0.5718
+2026-03-11 18:09:58,007 - INFO - Epoch 20/50 - Train Loss: 0.7467, Val Loss: 0.6275
+2026-03-11 18:09:58,007 - INFO - Epoch 21/50 - Train Loss: 0.5948, Val Loss: 0.7216
+2026-03-11 18:09:58,007 - INFO - Epoch 22/50 - Train Loss: 0.6228, Val Loss: 0.6067
+2026-03-11 18:09:58,007 - INFO - Epoch 23/50 - Train Loss: 0.6279, Val Loss: 0.7378
+2026-03-11 18:09:58,007 - INFO - Epoch 24/50 - Train Loss: 0.5934, Val Loss: 0.6008
+2026-03-11 18:09:58,007 - INFO - Epoch 25/50 - Train Loss: 0.6115, Val Loss: 0.5663
+2026-03-11 18:09:58,007 - INFO - Epoch 26/50 - Train Loss: 0.6084, Val Loss: 0.5249
+2026-03-11 18:09:58,007 - INFO - Epoch 27/50 - Train Loss: 0.7125, Val Loss: 0.7361
+2026-03-11 18:09:58,007 - INFO - Epoch 28/50 - Train Loss: 0.5363, Val Loss: 0.6092
+2026-03-11 18:09:58,007 - INFO - Epoch 29/50 - Train Loss: 0.7758, Val Loss: 0.7306
+2026-03-11 18:09:58,007 - INFO - Epoch 30/50 - Train Loss: 0.5193, Val Loss: 0.5146
+2026-03-11 18:09:58,007 - INFO - Epoch 31/50 - Train Loss: 0.7847, Val Loss: 0.5844
+2026-03-11 18:09:58,007 - INFO - Epoch 32/50 - Train Loss: 0.6497, Val Loss: 0.5475
+2026-03-11 18:09:58,007 - INFO - Epoch 33/50 - Train Loss: 0.6010, Val Loss: 0.7145
+2026-03-11 18:09:58,007 - INFO - Epoch 34/50 - Train Loss: 0.7458, Val Loss: 0.6325
+2026-03-11 18:09:58,007 - INFO - Epoch 35/50 - Train Loss: 0.5556, Val Loss: 0.6444
+2026-03-11 18:09:58,007 - INFO - Epoch 36/50 - Train Loss: 0.5707, Val Loss: 0.6872
+2026-03-11 18:09:58,009 - INFO - Epoch 37/50 - Train Loss: 0.5452, Val Loss: 0.7741
+2026-03-11 18:09:58,009 - INFO - Epoch 38/50 - Train Loss: 0.6008, Val Loss: 0.6145
+2026-03-11 18:09:58,009 - INFO - Epoch 39/50 - Train Loss: 0.6639, Val Loss: 0.6225
+2026-03-11 18:09:58,009 - INFO - Epoch 40/50 - Train Loss: 0.7086, Val Loss: 0.7009
+2026-03-11 18:09:58,009 - INFO - Epoch 41/50 - Train Loss: 0.5456, Val Loss: 0.7296
+2026-03-11 18:09:58,009 - INFO - Epoch 42/50 - Train Loss: 0.7524, Val Loss: 0.6748
+2026-03-11 18:09:58,009 - INFO - Epoch 43/50 - Train Loss: 0.7250, Val Loss: 0.6809
+2026-03-11 18:09:58,009 - INFO - Epoch 44/50 - Train Loss: 0.7040, Val Loss: 0.5181
+2026-03-11 18:09:58,009 - INFO - Epoch 45/50 - Train Loss: 0.6007, Val Loss: 0.5039
+2026-03-11 18:09:58,009 - INFO - Epoch 46/50 - Train Loss: 0.5051, Val Loss: 0.5975
+2026-03-11 18:09:58,009 - INFO - Epoch 47/50 - Train Loss: 0.7442, Val Loss: 0.5380
+2026-03-11 18:09:58,009 - INFO - Epoch 48/50 - Train Loss: 0.6530, Val Loss: 0.7952
+2026-03-11 18:09:58,009 - INFO - Epoch 49/50 - Train Loss: 0.7031, Val Loss: 0.5032
+2026-03-11 18:09:58,009 - INFO - Epoch 50/50 - Train Loss: 0.7716, Val Loss: 0.7666
+2026-03-11 18:09:58,075 - INFO - Model saved to models/strategies/arbitrage_algo_usdc_binance.pth
+2026-03-11 18:09:58,075 - INFO - Training model for ADA/USDC
+2026-03-11 18:09:58,114 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 18:09:58,114 - INFO - Epoch 1/50 - Train Loss: 0.5193, Val Loss: 0.7718
+2026-03-11 18:09:58,114 - INFO - Epoch 2/50 - Train Loss: 0.7614, Val Loss: 0.7736
+2026-03-11 18:09:58,114 - INFO - Epoch 3/50 - Train Loss: 0.5595, Val Loss: 0.5458
+2026-03-11 18:09:58,114 - INFO - Epoch 4/50 - Train Loss: 0.6618, Val Loss: 0.5501
+2026-03-11 18:09:58,114 - INFO - Epoch 5/50 - Train Loss: 0.7548, Val Loss: 0.6218
+2026-03-11 18:09:58,114 - INFO - Epoch 6/50 - Train Loss: 0.6136, Val Loss: 0.5073
+2026-03-11 18:09:58,114 - INFO - Epoch 7/50 - Train Loss: 0.5283, Val Loss: 0.5344
+2026-03-11 18:09:58,114 - INFO - Epoch 8/50 - Train Loss: 0.7063, Val Loss: 0.5638
+2026-03-11 18:09:58,114 - INFO - Epoch 9/50 - Train Loss: 0.7415, Val Loss: 0.5067
+2026-03-11 18:09:58,114 - INFO - Epoch 10/50 - Train Loss: 0.5294, Val Loss: 0.7593
+2026-03-11 18:09:58,114 - INFO - Epoch 11/50 - Train Loss: 0.7774, Val Loss: 0.7898
+2026-03-11 18:09:58,114 - INFO - Epoch 12/50 - Train Loss: 0.5672, Val Loss: 0.5817
+2026-03-11 18:09:58,114 - INFO - Epoch 13/50 - Train Loss: 0.5491, Val Loss: 0.5388
+2026-03-11 18:09:58,114 - INFO - Epoch 14/50 - Train Loss: 0.7620, Val Loss: 0.7766
+2026-03-11 18:09:58,114 - INFO - Epoch 15/50 - Train Loss: 0.5437, Val Loss: 0.7872
+2026-03-11 18:09:58,114 - INFO - Epoch 16/50 - Train Loss: 0.7743, Val Loss: 0.7735
+2026-03-11 18:09:58,114 - INFO - Epoch 17/50 - Train Loss: 0.7989, Val Loss: 0.5212
+2026-03-11 18:09:58,116 - INFO - Epoch 18/50 - Train Loss: 0.7815, Val Loss: 0.7727
+2026-03-11 18:09:58,116 - INFO - Epoch 19/50 - Train Loss: 0.6683, Val Loss: 0.5631
+2026-03-11 18:09:58,116 - INFO - Epoch 20/50 - Train Loss: 0.7403, Val Loss: 0.5528
+2026-03-11 18:09:58,116 - INFO - Epoch 21/50 - Train Loss: 0.5624, Val Loss: 0.5169
+2026-03-11 18:09:58,116 - INFO - Epoch 22/50 - Train Loss: 0.6481, Val Loss: 0.5712
+2026-03-11 18:09:58,116 - INFO - Epoch 23/50 - Train Loss: 0.6848, Val Loss: 0.5955
+2026-03-11 18:09:58,116 - INFO - Epoch 24/50 - Train Loss: 0.6566, Val Loss: 0.6828
+2026-03-11 18:09:58,116 - INFO - Epoch 25/50 - Train Loss: 0.5059, Val Loss: 0.5264
+2026-03-11 18:09:58,116 - INFO - Epoch 26/50 - Train Loss: 0.6172, Val Loss: 0.6570
+2026-03-11 18:09:58,116 - INFO - Epoch 27/50 - Train Loss: 0.7889, Val Loss: 0.5347
+2026-03-11 18:09:58,116 - INFO - Epoch 28/50 - Train Loss: 0.6716, Val Loss: 0.5702
+2026-03-11 18:09:58,116 - INFO - Epoch 29/50 - Train Loss: 0.7404, Val Loss: 0.5039
+2026-03-11 18:09:58,116 - INFO - Epoch 30/50 - Train Loss: 0.7008, Val Loss: 0.7069
+2026-03-11 18:09:58,116 - INFO - Epoch 31/50 - Train Loss: 0.5806, Val Loss: 0.7639
+2026-03-11 18:09:58,116 - INFO - Epoch 32/50 - Train Loss: 0.5457, Val Loss: 0.6770
+2026-03-11 18:09:58,116 - INFO - Epoch 33/50 - Train Loss: 0.7564, Val Loss: 0.6274
+2026-03-11 18:09:58,116 - INFO - Epoch 34/50 - Train Loss: 0.6191, Val Loss: 0.5701
+2026-03-11 18:09:58,116 - INFO - Epoch 35/50 - Train Loss: 0.7617, Val Loss: 0.7601
+2026-03-11 18:09:58,116 - INFO - Epoch 36/50 - Train Loss: 0.6377, Val Loss: 0.6619
+2026-03-11 18:09:58,116 - INFO - Epoch 37/50 - Train Loss: 0.6885, Val Loss: 0.7278
+2026-03-11 18:09:58,116 - INFO - Epoch 38/50 - Train Loss: 0.6111, Val Loss: 0.7392
+2026-03-11 18:09:58,116 - INFO - Epoch 39/50 - Train Loss: 0.5002, Val Loss: 0.7535
+2026-03-11 18:09:58,116 - INFO - Epoch 40/50 - Train Loss: 0.6222, Val Loss: 0.7944
+2026-03-11 18:09:58,116 - INFO - Epoch 41/50 - Train Loss: 0.5880, Val Loss: 0.6400
+2026-03-11 18:09:58,116 - INFO - Epoch 42/50 - Train Loss: 0.7102, Val Loss: 0.5599
+2026-03-11 18:09:58,116 - INFO - Epoch 43/50 - Train Loss: 0.7811, Val Loss: 0.6581
+2026-03-11 18:09:58,116 - INFO - Epoch 44/50 - Train Loss: 0.6824, Val Loss: 0.6569
+2026-03-11 18:09:58,116 - INFO - Epoch 45/50 - Train Loss: 0.6813, Val Loss: 0.7043
+2026-03-11 18:09:58,116 - INFO - Epoch 46/50 - Train Loss: 0.7214, Val Loss: 0.6900
+2026-03-11 18:09:58,116 - INFO - Epoch 47/50 - Train Loss: 0.5737, Val Loss: 0.6873
+2026-03-11 18:09:58,116 - INFO - Epoch 48/50 - Train Loss: 0.6122, Val Loss: 0.5011
+2026-03-11 18:09:58,116 - INFO - Epoch 49/50 - Train Loss: 0.7228, Val Loss: 0.7919
+2026-03-11 18:09:58,116 - INFO - Epoch 50/50 - Train Loss: 0.7131, Val Loss: 0.7654
+2026-03-11 18:09:58,175 - INFO - Model saved to models/strategies/arbitrage_ada_usdc_binance.pth
+2026-03-11 18:09:58,175 - INFO - Training model for LINK/USDC
+2026-03-11 18:09:58,219 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 18:09:58,219 - INFO - Epoch 1/50 - Train Loss: 0.7737, Val Loss: 0.5954
+2026-03-11 18:09:58,219 - INFO - Epoch 2/50 - Train Loss: 0.6900, Val Loss: 0.7646
+2026-03-11 18:09:58,219 - INFO - Epoch 3/50 - Train Loss: 0.5944, Val Loss: 0.5650
+2026-03-11 18:09:58,219 - INFO - Epoch 4/50 - Train Loss: 0.7354, Val Loss: 0.6421
+2026-03-11 18:09:58,219 - INFO - Epoch 5/50 - Train Loss: 0.6503, Val Loss: 0.7744
+2026-03-11 18:09:58,219 - INFO - Epoch 6/50 - Train Loss: 0.5481, Val Loss: 0.6501
+2026-03-11 18:09:58,219 - INFO - Epoch 7/50 - Train Loss: 0.6103, Val Loss: 0.5680
+2026-03-11 18:09:58,219 - INFO - Epoch 8/50 - Train Loss: 0.7881, Val Loss: 0.6674
+2026-03-11 18:09:58,219 - INFO - Epoch 9/50 - Train Loss: 0.7167, Val Loss: 0.6587
+2026-03-11 18:09:58,219 - INFO - Epoch 10/50 - Train Loss: 0.6878, Val Loss: 0.7751
+2026-03-11 18:09:58,219 - INFO - Epoch 11/50 - Train Loss: 0.5306, Val Loss: 0.6192
+2026-03-11 18:09:58,219 - INFO - Epoch 12/50 - Train Loss: 0.5139, Val Loss: 0.5747
+2026-03-11 18:09:58,219 - INFO - Epoch 13/50 - Train Loss: 0.5464, Val Loss: 0.5089
+2026-03-11 18:09:58,219 - INFO - Epoch 14/50 - Train Loss: 0.6167, Val Loss: 0.7722
+2026-03-11 18:09:58,219 - INFO - Epoch 15/50 - Train Loss: 0.6288, Val Loss: 0.5605
+2026-03-11 18:09:58,219 - INFO - Epoch 16/50 - Train Loss: 0.6529, Val Loss: 0.5063
+2026-03-11 18:09:58,219 - INFO - Epoch 17/50 - Train Loss: 0.5667, Val Loss: 0.5064
+2026-03-11 18:09:58,219 - INFO - Epoch 18/50 - Train Loss: 0.5617, Val Loss: 0.5564
+2026-03-11 18:09:58,219 - INFO - Epoch 19/50 - Train Loss: 0.6507, Val Loss: 0.6079
+2026-03-11 18:09:58,219 - INFO - Epoch 20/50 - Train Loss: 0.7455, Val Loss: 0.7408
+2026-03-11 18:09:58,219 - INFO - Epoch 21/50 - Train Loss: 0.6085, Val Loss: 0.5779
+2026-03-11 18:09:58,219 - INFO - Epoch 22/50 - Train Loss: 0.6842, Val Loss: 0.6883
+2026-03-11 18:09:58,219 - INFO - Epoch 23/50 - Train Loss: 0.7538, Val Loss: 0.5211
+2026-03-11 18:09:58,219 - INFO - Epoch 24/50 - Train Loss: 0.5427, Val Loss: 0.6493
+2026-03-11 18:09:58,219 - INFO - Epoch 25/50 - Train Loss: 0.6051, Val Loss: 0.6954
+2026-03-11 18:09:58,219 - INFO - Epoch 26/50 - Train Loss: 0.5588, Val Loss: 0.7434
+2026-03-11 18:09:58,219 - INFO - Epoch 27/50 - Train Loss: 0.7271, Val Loss: 0.5556
+2026-03-11 18:09:58,219 - INFO - Epoch 28/50 - Train Loss: 0.7002, Val Loss: 0.5904
+2026-03-11 18:09:58,219 - INFO - Epoch 29/50 - Train Loss: 0.6731, Val Loss: 0.5823
+2026-03-11 18:09:58,219 - INFO - Epoch 30/50 - Train Loss: 0.7325, Val Loss: 0.6734
+2026-03-11 18:09:58,219 - INFO - Epoch 31/50 - Train Loss: 0.5663, Val Loss: 0.5639
+2026-03-11 18:09:58,219 - INFO - Epoch 32/50 - Train Loss: 0.7145, Val Loss: 0.5550
+2026-03-11 18:09:58,219 - INFO - Epoch 33/50 - Train Loss: 0.6598, Val Loss: 0.5772
+2026-03-11 18:09:58,219 - INFO - Epoch 34/50 - Train Loss: 0.7288, Val Loss: 0.7568
+2026-03-11 18:09:58,219 - INFO - Epoch 35/50 - Train Loss: 0.5620, Val Loss: 0.7437
+2026-03-11 18:09:58,219 - INFO - Epoch 36/50 - Train Loss: 0.6236, Val Loss: 0.7484
+2026-03-11 18:09:58,219 - INFO - Epoch 37/50 - Train Loss: 0.5216, Val Loss: 0.6035
+2026-03-11 18:09:58,219 - INFO - Epoch 38/50 - Train Loss: 0.7428, Val Loss: 0.6208
+2026-03-11 18:09:58,219 - INFO - Epoch 39/50 - Train Loss: 0.7493, Val Loss: 0.7570
+2026-03-11 18:09:58,219 - INFO - Epoch 40/50 - Train Loss: 0.7959, Val Loss: 0.7315
+2026-03-11 18:09:58,219 - INFO - Epoch 41/50 - Train Loss: 0.5506, Val Loss: 0.6396
+2026-03-11 18:09:58,219 - INFO - Epoch 42/50 - Train Loss: 0.6618, Val Loss: 0.6795
+2026-03-11 18:09:58,219 - INFO - Epoch 43/50 - Train Loss: 0.7638, Val Loss: 0.6141
+2026-03-11 18:09:58,219 - INFO - Epoch 44/50 - Train Loss: 0.5559, Val Loss: 0.7073
+2026-03-11 18:09:58,219 - INFO - Epoch 45/50 - Train Loss: 0.6766, Val Loss: 0.6514
+2026-03-11 18:09:58,219 - INFO - Epoch 46/50 - Train Loss: 0.5238, Val Loss: 0.6295
+2026-03-11 18:09:58,219 - INFO - Epoch 47/50 - Train Loss: 0.6116, Val Loss: 0.6007
+2026-03-11 18:09:58,219 - INFO - Epoch 48/50 - Train Loss: 0.7538, Val Loss: 0.5089
+2026-03-11 18:09:58,219 - INFO - Epoch 49/50 - Train Loss: 0.6235, Val Loss: 0.7442
+2026-03-11 18:09:58,219 - INFO - Epoch 50/50 - Train Loss: 0.5885, Val Loss: 0.7501
+2026-03-11 18:09:58,290 - INFO - Model saved to models/strategies/arbitrage_link_usdc_binance.pth
+2026-03-11 18:09:58,290 - INFO - Training model for IOTA/USDC
+2026-03-11 18:09:58,325 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 18:09:58,325 - INFO - Epoch 1/50 - Train Loss: 0.5831, Val Loss: 0.5373
+2026-03-11 18:09:58,325 - INFO - Epoch 2/50 - Train Loss: 0.6556, Val Loss: 0.5949
+2026-03-11 18:09:58,325 - INFO - Epoch 3/50 - Train Loss: 0.6415, Val Loss: 0.7251
+2026-03-11 18:09:58,325 - INFO - Epoch 4/50 - Train Loss: 0.5444, Val Loss: 0.6479
+2026-03-11 18:09:58,325 - INFO - Epoch 5/50 - Train Loss: 0.7281, Val Loss: 0.7380
+2026-03-11 18:09:58,325 - INFO - Epoch 6/50 - Train Loss: 0.7080, Val Loss: 0.6501
+2026-03-11 18:09:58,325 - INFO - Epoch 7/50 - Train Loss: 0.7240, Val Loss: 0.6534
+2026-03-11 18:09:58,325 - INFO - Epoch 8/50 - Train Loss: 0.7570, Val Loss: 0.7650
+2026-03-11 18:09:58,325 - INFO - Epoch 9/50 - Train Loss: 0.5467, Val Loss: 0.6450
+2026-03-11 18:09:58,325 - INFO - Epoch 10/50 - Train Loss: 0.7749, Val Loss: 0.6084
+2026-03-11 18:09:58,325 - INFO - Epoch 11/50 - Train Loss: 0.5021, Val Loss: 0.6013
+2026-03-11 18:09:58,325 - INFO - Epoch 12/50 - Train Loss: 0.5328, Val Loss: 0.5231
+2026-03-11 18:09:58,325 - INFO - Epoch 13/50 - Train Loss: 0.7305, Val Loss: 0.5051
+2026-03-11 18:09:58,325 - INFO - Epoch 14/50 - Train Loss: 0.5920, Val Loss: 0.7626
+2026-03-11 18:09:58,325 - INFO - Epoch 15/50 - Train Loss: 0.7436, Val Loss: 0.6776
+2026-03-11 18:09:58,325 - INFO - Epoch 16/50 - Train Loss: 0.7977, Val Loss: 0.7102
+2026-03-11 18:09:58,325 - INFO - Epoch 17/50 - Train Loss: 0.7633, Val Loss: 0.5398
+2026-03-11 18:09:58,325 - INFO - Epoch 18/50 - Train Loss: 0.5654, Val Loss: 0.7783
+2026-03-11 18:09:58,325 - INFO - Epoch 19/50 - Train Loss: 0.5400, Val Loss: 0.7243
+2026-03-11 18:09:58,325 - INFO - Epoch 20/50 - Train Loss: 0.7230, Val Loss: 0.7030
+2026-03-11 18:09:58,325 - INFO - Epoch 21/50 - Train Loss: 0.5857, Val Loss: 0.7215
+2026-03-11 18:09:58,325 - INFO - Epoch 22/50 - Train Loss: 0.7057, Val Loss: 0.7807
+2026-03-11 18:09:58,325 - INFO - Epoch 23/50 - Train Loss: 0.7781, Val Loss: 0.6797
+2026-03-11 18:09:58,325 - INFO - Epoch 24/50 - Train Loss: 0.5944, Val Loss: 0.7269
+2026-03-11 18:09:58,325 - INFO - Epoch 25/50 - Train Loss: 0.5197, Val Loss: 0.6452
+2026-03-11 18:09:58,325 - INFO - Epoch 26/50 - Train Loss: 0.5478, Val Loss: 0.7398
+2026-03-11 18:09:58,325 - INFO - Epoch 27/50 - Train Loss: 0.5489, Val Loss: 0.7510
+2026-03-11 18:09:58,325 - INFO - Epoch 28/50 - Train Loss: 0.5761, Val Loss: 0.6995
+2026-03-11 18:09:58,327 - INFO - Epoch 29/50 - Train Loss: 0.6729, Val Loss: 0.7802
+2026-03-11 18:09:58,327 - INFO - Epoch 30/50 - Train Loss: 0.5117, Val Loss: 0.7982
+2026-03-11 18:09:58,327 - INFO - Epoch 31/50 - Train Loss: 0.6525, Val Loss: 0.6873
+2026-03-11 18:09:58,327 - INFO - Epoch 32/50 - Train Loss: 0.5140, Val Loss: 0.6143
+2026-03-11 18:09:58,327 - INFO - Epoch 33/50 - Train Loss: 0.6053, Val Loss: 0.6161
+2026-03-11 18:09:58,327 - INFO - Epoch 34/50 - Train Loss: 0.6445, Val Loss: 0.6211
+2026-03-11 18:09:58,327 - INFO - Epoch 35/50 - Train Loss: 0.5079, Val Loss: 0.6118
+2026-03-11 18:09:58,327 - INFO - Epoch 36/50 - Train Loss: 0.7077, Val Loss: 0.6235
+2026-03-11 18:09:58,327 - INFO - Epoch 37/50 - Train Loss: 0.6179, Val Loss: 0.6236
+2026-03-11 18:09:58,327 - INFO - Epoch 38/50 - Train Loss: 0.7485, Val Loss: 0.5286
+2026-03-11 18:09:58,327 - INFO - Epoch 39/50 - Train Loss: 0.7303, Val Loss: 0.6469
+2026-03-11 18:09:58,327 - INFO - Epoch 40/50 - Train Loss: 0.5531, Val Loss: 0.7386
+2026-03-11 18:09:58,327 - INFO - Epoch 41/50 - Train Loss: 0.6405, Val Loss: 0.5981
+2026-03-11 18:09:58,327 - INFO - Epoch 42/50 - Train Loss: 0.7363, Val Loss: 0.7193
+2026-03-11 18:09:58,327 - INFO - Epoch 43/50 - Train Loss: 0.6419, Val Loss: 0.5177
+2026-03-11 18:09:58,327 - INFO - Epoch 44/50 - Train Loss: 0.5451, Val Loss: 0.5980
+2026-03-11 18:09:58,327 - INFO - Epoch 45/50 - Train Loss: 0.7534, Val Loss: 0.5696
+2026-03-11 18:09:58,327 - INFO - Epoch 46/50 - Train Loss: 0.5275, Val Loss: 0.6455
+2026-03-11 18:09:58,327 - INFO - Epoch 47/50 - Train Loss: 0.6162, Val Loss: 0.6310
+2026-03-11 18:09:58,327 - INFO - Epoch 48/50 - Train Loss: 0.7303, Val Loss: 0.6463
+2026-03-11 18:09:58,327 - INFO - Epoch 49/50 - Train Loss: 0.7593, Val Loss: 0.7083
+2026-03-11 18:09:58,327 - INFO - Epoch 50/50 - Train Loss: 0.6990, Val Loss: 0.7179
+2026-03-11 18:09:58,431 - INFO - Model saved to models/strategies/arbitrage_iota_usdc_binance.pth
+2026-03-11 18:09:58,431 - INFO - GPU training completed in 1.07 seconds
+2026-03-11 18:09:58,431 - ERROR - Failed to save training results: 'GPUManager' object has no attribute 'is_available'
+2026-03-11 18:09:58,431 - ERROR - Failed to generate training report: 'str' object has no attribute 'get'
+2026-03-11 18:09:58,431 - INFO - Training completed in 1.07 seconds
+2026-03-11 18:09:58,431 - INFO - Shutting down GPUManager
+2026-03-11 18:10:03,519 - INFO - GPUManager shutdown complete
+2026-03-11 18:10:03,519 - INFO - GPU training cleanup completed
+2026-03-11 18:32:24,327 - INFO - Initializing GPU training environment...
+2026-03-11 18:32:24,437 - INFO - Detected 1 CUDA GPUs
+2026-03-11 18:32:24,438 - INFO - GPU monitoring started
+2026-03-11 18:32:24,438 - INFO - GPUManager initialized with 1 GPUs
+2026-03-11 18:32:24,439 - INFO - GPU training optimizations enabled
+2026-03-11 18:32:24,439 - INFO - GPU training environment initialized successfully
+2026-03-11 18:32:24,439 - INFO - ============================================================
+2026-03-11 18:32:24,440 - INFO - STARTING SOVEREIGNFORGE GPU TRAINING - WAVE 7
+2026-03-11 18:32:24,440 - INFO - ============================================================
+2026-03-11 18:32:24,440 - INFO - 
+GPU Training Configuration:
+- Pairs: ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC']
+- Epochs: 30
+- Batch Size: 64
+- GPU Device: 0
+- Memory Fraction: 0.8
+- Learning Rate: 0.001
+- Gradient Clip: 1.0
+- TensorBoard: False
+- Weights & Biases: False
+- GPU Monitoring: True
+- Mixed Precision: False
+        
+2026-03-11 18:32:24,440 - INFO - GPU monitoring active via GPU manager
+2026-03-11 18:32:24,440 - INFO - Starting GPU arbitrage training for 9 pairs: ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC']
+2026-03-11 18:32:24,440 - INFO - Training model for BTC/USDC
+2026-03-11 18:32:24,499 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 18:32:26,851 - ERROR - Training execution failed: Expected all tensors to be on the same device, but found at least two devices, cuda:0 and cpu! (when checking argument for argument mat1 in method wrapper_CUDA_addmm)
+2026-03-11 18:32:26,852 - INFO - Training completed in 2.41 seconds
+2026-03-11 18:32:26,852 - INFO - Shutting down GPUManager
+2026-03-11 18:32:31,867 - INFO - GPUManager shutdown complete
+2026-03-11 18:32:31,869 - INFO - GPU training cleanup completed
+2026-03-11 18:40:14,865 - INFO - Initializing GPU training environment...
+2026-03-11 18:40:14,967 - INFO - Detected 1 CUDA GPUs
+2026-03-11 18:40:14,967 - INFO - GPU monitoring started
+2026-03-11 18:40:14,967 - INFO - GPUManager initialized with 1 GPUs
+2026-03-11 18:40:14,968 - INFO - GPU training optimizations enabled
+2026-03-11 18:40:14,969 - INFO - GPU training environment initialized successfully
+2026-03-11 18:40:14,969 - INFO - ============================================================
+2026-03-11 18:40:14,969 - INFO - STARTING SOVEREIGNFORGE GPU TRAINING - WAVE 7
+2026-03-11 18:40:14,969 - INFO - ============================================================
+2026-03-11 18:40:14,969 - INFO - 
+GPU Training Configuration:
+- Pairs: ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC']
+- Epochs: 30
+- Batch Size: 64
+- GPU Device: 0
+- Memory Fraction: 0.8
+- Learning Rate: 0.001
+- Gradient Clip: 1.0
+- TensorBoard: False
+- Weights & Biases: False
+- GPU Monitoring: True
+- Mixed Precision: False
+        
+2026-03-11 18:40:14,969 - INFO - GPU monitoring active via GPU manager
+2026-03-11 18:40:14,969 - INFO - Starting GPU arbitrage training for 9 pairs: ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC']
+2026-03-11 18:40:14,969 - INFO - Training model for BTC/USDC
+2026-03-11 18:40:15,038 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 18:40:31,324 - INFO - Epoch 1/30 - Train Loss: 0.5171, Train Acc: 0.8043, Val Loss: 0.5298, Val Acc: 0.8110
+2026-03-11 18:40:31,404 - INFO - Model saved to models/strategies/arbitrage_btc_usdc_binance.pth
+2026-03-11 18:40:43,350 - INFO - Epoch 2/30 - Train Loss: 0.5043, Train Acc: 0.8043, Val Loss: 0.5019, Val Acc: 0.8110
+2026-03-11 18:40:45,084 - WARNING - GPU 0 utilization: 98.0%
+2026-03-11 18:40:55,837 - INFO - Epoch 3/30 - Train Loss: 0.5091, Train Acc: 0.7995, Val Loss: 0.5003, Val Acc: 0.8110
+2026-03-11 18:41:08,338 - INFO - Epoch 4/30 - Train Loss: 0.4999, Train Acc: 0.8043, Val Loss: 0.5011, Val Acc: 0.8110
+2026-03-11 18:41:15,159 - WARNING - GPU 0 utilization: 97.0%
+2026-03-11 18:41:19,530 - INFO - Epoch 5/30 - Train Loss: 0.4995, Train Acc: 0.8043, Val Loss: 0.5011, Val Acc: 0.8110
+2026-03-11 18:41:30,071 - INFO - Epoch 6/30 - Train Loss: 0.4894, Train Acc: 0.7993, Val Loss: 0.4609, Val Acc: 0.8110
+2026-03-11 18:41:40,604 - INFO - Epoch 7/30 - Train Loss: 0.4425, Train Acc: 0.8125, Val Loss: 0.4600, Val Acc: 0.8230
+2026-03-11 18:41:40,685 - INFO - Model saved to models/strategies/arbitrage_btc_usdc_binance.pth
+2026-03-11 18:41:45,201 - WARNING - GPU 0 utilization: 97.0%
+2026-03-11 18:41:50,856 - INFO - Epoch 8/30 - Train Loss: 0.4276, Train Acc: 0.8193, Val Loss: 0.4568, Val Acc: 0.8085
+2026-03-11 18:42:01,009 - INFO - Epoch 9/30 - Train Loss: 0.4057, Train Acc: 0.8332, Val Loss: 0.4900, Val Acc: 0.8250
+2026-03-11 18:42:01,091 - INFO - Model saved to models/strategies/arbitrage_btc_usdc_binance.pth
+2026-03-11 18:42:11,687 - INFO - Epoch 10/30 - Train Loss: 0.3895, Train Acc: 0.8416, Val Loss: 0.4739, Val Acc: 0.7920
+2026-03-11 18:42:15,260 - WARNING - GPU 0 utilization: 98.0%
+2026-03-11 18:42:22,172 - INFO - Epoch 11/30 - Train Loss: 0.3676, Train Acc: 0.8519, Val Loss: 0.5146, Val Acc: 0.7560
+2026-03-11 18:42:32,240 - INFO - Epoch 12/30 - Train Loss: 0.3599, Train Acc: 0.8536, Val Loss: 0.4855, Val Acc: 0.7790
+2026-03-11 18:42:45,311 - WARNING - GPU 0 utilization: 97.0%
+2026-03-11 18:42:46,752 - INFO - Epoch 13/30 - Train Loss: 0.3523, Train Acc: 0.8581, Val Loss: 0.5436, Val Acc: 0.7580
+2026-03-11 18:42:57,687 - INFO - Epoch 14/30 - Train Loss: 0.3408, Train Acc: 0.8640, Val Loss: 0.7520, Val Acc: 0.7345
+2026-03-11 18:43:08,307 - INFO - Epoch 15/30 - Train Loss: 0.3207, Train Acc: 0.8766, Val Loss: 0.5488, Val Acc: 0.7670
+2026-03-11 18:43:15,352 - WARNING - GPU 0 utilization: 95.0%
+2026-03-11 18:43:18,913 - INFO - Epoch 16/30 - Train Loss: 0.3006, Train Acc: 0.8851, Val Loss: 0.5991, Val Acc: 0.7480
+2026-03-11 18:43:29,497 - INFO - Epoch 17/30 - Train Loss: 0.2895, Train Acc: 0.8919, Val Loss: 0.5550, Val Acc: 0.7845
+2026-03-11 18:43:40,160 - INFO - Epoch 18/30 - Train Loss: 0.2684, Train Acc: 0.8997, Val Loss: 0.4853, Val Acc: 0.8170
+2026-03-11 18:43:45,415 - WARNING - GPU 0 utilization: 98.0%
+2026-03-11 18:43:50,803 - INFO - Epoch 19/30 - Train Loss: 0.2831, Train Acc: 0.8939, Val Loss: 0.5321, Val Acc: 0.8185
+2026-03-11 18:44:01,352 - INFO - Epoch 20/30 - Train Loss: 0.2587, Train Acc: 0.9049, Val Loss: 0.5644, Val Acc: 0.8020
+2026-03-11 18:44:11,916 - INFO - Epoch 21/30 - Train Loss: 0.2320, Train Acc: 0.9200, Val Loss: 0.5677, Val Acc: 0.8160
+2026-03-11 18:44:15,462 - WARNING - GPU 0 utilization: 98.0%
+2026-03-11 18:44:22,501 - INFO - Epoch 22/30 - Train Loss: 0.2418, Train Acc: 0.9152, Val Loss: 0.5965, Val Acc: 0.7880
+2026-03-11 18:44:37,048 - INFO - Epoch 23/30 - Train Loss: 0.2241, Train Acc: 0.9212, Val Loss: 0.6199, Val Acc: 0.7965
+2026-03-11 18:44:45,508 - WARNING - GPU 0 utilization: 98.0%
+2026-03-11 18:44:47,894 - INFO - Epoch 24/30 - Train Loss: 0.2291, Train Acc: 0.9206, Val Loss: 0.5932, Val Acc: 0.8195
+2026-03-11 18:44:58,866 - INFO - Epoch 25/30 - Train Loss: 0.2202, Train Acc: 0.9217, Val Loss: 0.6628, Val Acc: 0.8035
+2026-03-11 18:45:09,559 - INFO - Epoch 26/30 - Train Loss: 0.2091, Train Acc: 0.9284, Val Loss: 0.6348, Val Acc: 0.8180
+2026-03-11 18:45:15,564 - WARNING - GPU 0 utilization: 99.0%
+2026-03-11 18:45:20,033 - INFO - Epoch 27/30 - Train Loss: 0.1912, Train Acc: 0.9340, Val Loss: 0.6622, Val Acc: 0.8110
+2026-03-11 18:45:30,187 - INFO - Epoch 28/30 - Train Loss: 0.1854, Train Acc: 0.9369, Val Loss: 0.6419, Val Acc: 0.8175
+2026-03-11 18:45:40,317 - INFO - Epoch 29/30 - Train Loss: 0.1757, Train Acc: 0.9421, Val Loss: 0.6878, Val Acc: 0.8085
+2026-03-11 18:45:45,617 - WARNING - GPU 0 utilization: 98.0%
+2026-03-11 18:45:50,362 - INFO - Epoch 30/30 - Train Loss: 0.1636, Train Acc: 0.9458, Val Loss: 0.7005, Val Acc: 0.8200
+2026-03-11 18:45:50,426 - INFO - Model saved to models/strategies/arbitrage_btc_usdc_binance.pth
+2026-03-11 18:45:50,426 - INFO - Training model for ETH/USDC
+2026-03-11 18:45:50,466 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 18:46:01,368 - INFO - Epoch 1/30 - Train Loss: 0.5199, Train Acc: 0.7962, Val Loss: 0.5048, Val Acc: 0.8065
+2026-03-11 18:46:01,454 - INFO - Model saved to models/strategies/arbitrage_eth_usdc_binance.pth
+2026-03-11 18:46:11,772 - INFO - Epoch 2/30 - Train Loss: 0.5099, Train Acc: 0.7988, Val Loss: 0.5168, Val Acc: 0.8065
+2026-03-11 18:46:15,664 - WARNING - GPU 0 utilization: 98.0%
+2026-03-11 18:46:24,823 - INFO - Epoch 3/30 - Train Loss: 0.4582, Train Acc: 0.8060, Val Loss: 0.5034, Val Acc: 0.7480
+2026-03-11 18:46:37,093 - INFO - Epoch 4/30 - Train Loss: 0.4282, Train Acc: 0.8129, Val Loss: 0.4521, Val Acc: 0.7945
+2026-03-11 18:46:45,707 - WARNING - GPU 0 utilization: 99.0%
+2026-03-11 18:46:47,756 - INFO - Epoch 5/30 - Train Loss: 0.4189, Train Acc: 0.8178, Val Loss: 0.4274, Val Acc: 0.8270
+2026-03-11 18:46:47,829 - INFO - Model saved to models/strategies/arbitrage_eth_usdc_binance.pth
+2026-03-11 18:46:58,546 - INFO - Epoch 6/30 - Train Loss: 0.3953, Train Acc: 0.8326, Val Loss: 0.4711, Val Acc: 0.8040
+2026-03-11 18:47:08,565 - INFO - Epoch 7/30 - Train Loss: 0.3805, Train Acc: 0.8416, Val Loss: 0.4640, Val Acc: 0.8080
+2026-03-11 18:47:15,751 - WARNING - GPU 0 utilization: 98.0%
+2026-03-11 18:47:18,611 - INFO - Epoch 8/30 - Train Loss: 0.3656, Train Acc: 0.8456, Val Loss: 0.5232, Val Acc: 0.7760
+2026-03-11 18:47:28,625 - INFO - Epoch 9/30 - Train Loss: 0.3596, Train Acc: 0.8497, Val Loss: 0.5396, Val Acc: 0.8275
+2026-03-11 18:47:28,695 - INFO - Model saved to models/strategies/arbitrage_eth_usdc_binance.pth
+2026-03-11 18:47:38,880 - INFO - Epoch 10/30 - Train Loss: 0.3367, Train Acc: 0.8625, Val Loss: 0.5483, Val Acc: 0.8230
+2026-03-11 18:47:45,830 - WARNING - GPU 0 utilization: 98.0%
+2026-03-11 18:47:48,926 - INFO - Epoch 11/30 - Train Loss: 0.3122, Train Acc: 0.8706, Val Loss: 0.5531, Val Acc: 0.8135
+2026-03-11 18:47:58,969 - INFO - Epoch 12/30 - Train Loss: 0.3000, Train Acc: 0.8818, Val Loss: 0.6203, Val Acc: 0.8185
+2026-03-11 18:48:09,370 - INFO - Epoch 13/30 - Train Loss: 0.2852, Train Acc: 0.8853, Val Loss: 0.5605, Val Acc: 0.8125
+2026-03-11 18:48:15,874 - WARNING - GPU 0 utilization: 99.0%
+2026-03-11 18:48:23,624 - INFO - Epoch 14/30 - Train Loss: 0.2634, Train Acc: 0.8987, Val Loss: 0.6154, Val Acc: 0.8160
+2026-03-11 18:48:33,714 - INFO - Epoch 15/30 - Train Loss: 0.2448, Train Acc: 0.9097, Val Loss: 0.6642, Val Acc: 0.8220
+2026-03-11 18:48:44,013 - INFO - Epoch 16/30 - Train Loss: 0.2266, Train Acc: 0.9165, Val Loss: 0.6825, Val Acc: 0.8080
+2026-03-11 18:48:45,919 - WARNING - GPU 0 utilization: 98.0%
+2026-03-11 18:48:54,067 - INFO - Epoch 17/30 - Train Loss: 0.2164, Train Acc: 0.9191, Val Loss: 0.6877, Val Acc: 0.7960
+2026-03-11 18:49:04,213 - INFO - Epoch 18/30 - Train Loss: 0.1921, Train Acc: 0.9295, Val Loss: 0.7303, Val Acc: 0.7720
+2026-03-11 18:49:14,203 - INFO - Epoch 19/30 - Train Loss: 0.1823, Train Acc: 0.9336, Val Loss: 0.7336, Val Acc: 0.7745
+2026-03-11 18:49:15,973 - WARNING - GPU 0 utilization: 98.0%
+2026-03-11 18:49:24,457 - INFO - Epoch 20/30 - Train Loss: 0.1695, Train Acc: 0.9401, Val Loss: 0.6742, Val Acc: 0.8070
+2026-03-11 18:49:38,457 - INFO - Epoch 21/30 - Train Loss: 0.1528, Train Acc: 0.9442, Val Loss: 0.7953, Val Acc: 0.8000
+2026-03-11 18:49:46,049 - WARNING - GPU 0 utilization: 99.0%
+2026-03-11 18:49:48,730 - INFO - Epoch 22/30 - Train Loss: 0.1879, Train Acc: 0.9290, Val Loss: 0.7218, Val Acc: 0.7575
+2026-03-11 18:49:58,374 - INFO - Epoch 23/30 - Train Loss: 0.1436, Train Acc: 0.9483, Val Loss: 0.7996, Val Acc: 0.7965
+2026-03-11 18:50:08,039 - INFO - Epoch 24/30 - Train Loss: 0.1188, Train Acc: 0.9590, Val Loss: 0.8374, Val Acc: 0.7865
+2026-03-11 18:50:16,100 - WARNING - GPU 0 utilization: 98.0%
+2026-03-11 18:50:17,732 - INFO - Epoch 25/30 - Train Loss: 0.1420, Train Acc: 0.9487, Val Loss: 0.7137, Val Acc: 0.7930
+2026-03-11 18:50:27,609 - INFO - Epoch 26/30 - Train Loss: 0.1100, Train Acc: 0.9632, Val Loss: 0.9102, Val Acc: 0.7800
+2026-03-11 18:50:37,271 - INFO - Epoch 27/30 - Train Loss: 0.1016, Train Acc: 0.9647, Val Loss: 0.8583, Val Acc: 0.7715
+2026-03-11 19:39:51,431 - INFO - Initializing GPU training environment...
+2026-03-11 19:39:51,563 - INFO - Detected 1 CUDA GPUs
+2026-03-11 19:39:51,564 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:39:51,564 - INFO - GPU monitoring started
+2026-03-11 19:39:51,564 - INFO - GPUManager initialized with 1 GPUs
+2026-03-11 19:39:51,564 - INFO - GPU training optimizations enabled
+2026-03-11 19:39:51,565 - INFO - GPU training environment initialized successfully
+2026-03-11 19:39:51,565 - INFO - ============================================================
+2026-03-11 19:39:51,565 - INFO - STARTING SOVEREIGNFORGE GPU TRAINING - WAVE 7
+2026-03-11 19:39:51,566 - INFO - ============================================================
+2026-03-11 19:39:51,566 - INFO - 
+GPU Training Configuration:
+- Pairs: ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC']
+- Epochs: 50
+- Batch Size: 200
+- GPU Device: 0
+- Memory Fraction: 0.8
+- Learning Rate: 0.0001
+- Gradient Clip: 1.0
+- TensorBoard: False
+- Weights & Biases: False
+- GPU Monitoring: False
+- Mixed Precision: False
+        
+2026-03-11 19:39:51,566 - INFO - Starting GPU arbitrage training for 9 pairs: ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC']
+2026-03-11 19:39:51,566 - INFO - Training model for BTC/USDC
+2026-03-11 19:39:51,656 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 19:40:07,608 - INFO - Epoch 1/50 - Train Loss: 0.5364, Train Acc: 0.7996, Val Loss: 0.5212, Val Acc: 0.7890
+2026-03-11 19:40:07,703 - INFO - Model saved to models/strategies/arbitrage_btc_usdc_binance.pth
+2026-03-11 19:40:18,297 - INFO - Epoch 2/50 - Train Loss: 0.5051, Train Acc: 0.7996, Val Loss: 0.5209, Val Acc: 0.7890
+2026-03-11 19:40:21,565 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:40:28,951 - INFO - Epoch 3/50 - Train Loss: 0.5222, Train Acc: 0.7847, Val Loss: 0.5137, Val Acc: 0.7890
+2026-03-11 19:40:39,608 - INFO - Epoch 4/50 - Train Loss: 0.4963, Train Acc: 0.7765, Val Loss: 0.4518, Val Acc: 0.7890
+2026-03-11 19:40:50,225 - INFO - Epoch 5/50 - Train Loss: 0.4544, Train Acc: 0.8038, Val Loss: 0.4600, Val Acc: 0.7930
+2026-03-11 19:40:50,321 - INFO - Model saved to models/strategies/arbitrage_btc_usdc_binance.pth
+2026-03-11 19:40:51,566 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:41:00,949 - INFO - Epoch 6/50 - Train Loss: 0.4211, Train Acc: 0.8152, Val Loss: 0.4102, Val Acc: 0.8160
+2026-03-11 19:41:01,023 - INFO - Model saved to models/strategies/arbitrage_btc_usdc_binance.pth
+2026-03-11 19:41:11,817 - INFO - Epoch 7/50 - Train Loss: 0.4163, Train Acc: 0.8207, Val Loss: 0.4027, Val Acc: 0.8290
+2026-03-11 19:41:11,920 - INFO - Model saved to models/strategies/arbitrage_btc_usdc_binance.pth
+2026-03-11 19:41:21,575 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:41:22,757 - INFO - Epoch 8/50 - Train Loss: 0.4005, Train Acc: 0.8292, Val Loss: 0.4023, Val Acc: 0.8325
+2026-03-11 19:41:22,847 - INFO - Model saved to models/strategies/arbitrage_btc_usdc_binance.pth
+2026-03-11 19:41:33,705 - INFO - Epoch 9/50 - Train Loss: 0.3897, Train Acc: 0.8292, Val Loss: 0.4016, Val Acc: 0.8285
+2026-03-11 19:41:44,540 - INFO - Epoch 10/50 - Train Loss: 0.3784, Train Acc: 0.8357, Val Loss: 0.4405, Val Acc: 0.7925
+2026-03-11 19:41:51,576 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:41:55,774 - INFO - Epoch 11/50 - Train Loss: 0.3758, Train Acc: 0.8424, Val Loss: 0.4766, Val Acc: 0.8105
+2026-03-11 19:42:07,695 - INFO - Epoch 12/50 - Train Loss: 0.3499, Train Acc: 0.8538, Val Loss: 0.4156, Val Acc: 0.8105
+2026-03-11 19:42:21,337 - INFO - Epoch 13/50 - Train Loss: 0.3279, Train Acc: 0.8624, Val Loss: 0.4386, Val Acc: 0.8115
+2026-03-11 19:42:21,577 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:42:32,173 - INFO - Epoch 14/50 - Train Loss: 0.3199, Train Acc: 0.8711, Val Loss: 0.4868, Val Acc: 0.8190
+2026-03-11 19:42:42,978 - INFO - Epoch 15/50 - Train Loss: 0.3057, Train Acc: 0.8729, Val Loss: 0.5040, Val Acc: 0.8170
+2026-03-11 19:42:51,577 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:42:53,884 - INFO - Epoch 16/50 - Train Loss: 0.2844, Train Acc: 0.8862, Val Loss: 0.5301, Val Acc: 0.8110
+2026-03-11 19:43:04,547 - INFO - Epoch 17/50 - Train Loss: 0.2429, Train Acc: 0.9038, Val Loss: 0.5915, Val Acc: 0.7830
+2026-03-11 19:43:16,283 - INFO - Epoch 18/50 - Train Loss: 0.2270, Train Acc: 0.9108, Val Loss: 0.5842, Val Acc: 0.8135
+2026-03-11 19:43:21,578 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:43:27,120 - INFO - Epoch 19/50 - Train Loss: 0.1823, Train Acc: 0.9334, Val Loss: 0.6077, Val Acc: 0.8095
+2026-03-11 19:43:38,057 - INFO - Epoch 20/50 - Train Loss: 0.1937, Train Acc: 0.9266, Val Loss: 0.7045, Val Acc: 0.8150
+2026-03-11 19:43:49,231 - INFO - Epoch 21/50 - Train Loss: 0.1809, Train Acc: 0.9292, Val Loss: 0.7904, Val Acc: 0.8120
+2026-03-11 19:43:51,579 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:44:00,101 - INFO - Epoch 22/50 - Train Loss: 0.1426, Train Acc: 0.9488, Val Loss: 0.7527, Val Acc: 0.8050
+2026-03-11 19:44:10,851 - INFO - Epoch 23/50 - Train Loss: 0.1673, Train Acc: 0.9341, Val Loss: 0.7869, Val Acc: 0.8145
+2026-03-11 19:44:21,579 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:44:21,584 - INFO - Epoch 24/50 - Train Loss: 0.1737, Train Acc: 0.9311, Val Loss: 0.6919, Val Acc: 0.7975
+2026-03-11 19:44:32,391 - INFO - Epoch 25/50 - Train Loss: 0.1617, Train Acc: 0.9377, Val Loss: 0.7819, Val Acc: 0.8020
+2026-03-11 19:44:43,003 - INFO - Epoch 26/50 - Train Loss: 0.0942, Train Acc: 0.9675, Val Loss: 0.8424, Val Acc: 0.8090
+2026-03-11 19:44:51,580 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:44:54,365 - INFO - Epoch 27/50 - Train Loss: 0.1000, Train Acc: 0.9638, Val Loss: 0.9602, Val Acc: 0.7645
+2026-03-11 19:45:05,378 - INFO - Epoch 28/50 - Train Loss: 0.0816, Train Acc: 0.9716, Val Loss: 0.9487, Val Acc: 0.8005
+2026-03-11 19:45:16,323 - INFO - Epoch 29/50 - Train Loss: 0.0942, Train Acc: 0.9648, Val Loss: 0.9355, Val Acc: 0.8120
+2026-03-11 19:45:21,581 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:45:27,294 - INFO - Epoch 30/50 - Train Loss: 0.0710, Train Acc: 0.9751, Val Loss: 0.9033, Val Acc: 0.7950
+2026-03-11 19:45:38,005 - INFO - Epoch 31/50 - Train Loss: 0.0697, Train Acc: 0.9747, Val Loss: 0.9287, Val Acc: 0.7940
+2026-03-11 19:45:48,671 - INFO - Epoch 32/50 - Train Loss: 0.0683, Train Acc: 0.9753, Val Loss: 0.9878, Val Acc: 0.7570
+2026-03-11 19:45:51,582 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:45:59,377 - INFO - Epoch 33/50 - Train Loss: 0.0809, Train Acc: 0.9709, Val Loss: 1.1016, Val Acc: 0.7515
+2026-03-11 19:46:10,011 - INFO - Epoch 34/50 - Train Loss: 0.0772, Train Acc: 0.9700, Val Loss: 0.9233, Val Acc: 0.7885
+2026-03-11 19:46:20,836 - INFO - Epoch 35/50 - Train Loss: 0.0588, Train Acc: 0.9795, Val Loss: 1.0079, Val Acc: 0.8040
+2026-03-11 19:46:21,582 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:46:31,274 - INFO - Epoch 36/50 - Train Loss: 0.0451, Train Acc: 0.9846, Val Loss: 1.0907, Val Acc: 0.7985
+2026-03-11 19:46:42,437 - INFO - Epoch 37/50 - Train Loss: 0.0543, Train Acc: 0.9804, Val Loss: 1.2350, Val Acc: 0.7970
+2026-03-11 19:46:51,583 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:46:53,896 - INFO - Epoch 38/50 - Train Loss: 0.0429, Train Acc: 0.9855, Val Loss: 1.1775, Val Acc: 0.7955
+2026-03-11 19:47:04,656 - INFO - Epoch 39/50 - Train Loss: 0.0400, Train Acc: 0.9863, Val Loss: 1.0473, Val Acc: 0.7930
+2026-03-11 19:47:15,548 - INFO - Epoch 40/50 - Train Loss: 0.0447, Train Acc: 0.9842, Val Loss: 1.0141, Val Acc: 0.7830
+2026-03-11 19:47:21,583 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:47:26,458 - INFO - Epoch 41/50 - Train Loss: 0.0524, Train Acc: 0.9805, Val Loss: 1.1589, Val Acc: 0.8045
+2026-03-11 19:47:37,105 - INFO - Epoch 42/50 - Train Loss: 0.0251, Train Acc: 0.9912, Val Loss: 1.2500, Val Acc: 0.7985
+2026-03-11 19:47:47,692 - INFO - Epoch 43/50 - Train Loss: 0.0332, Train Acc: 0.9893, Val Loss: 1.1647, Val Acc: 0.7805
+2026-03-11 19:47:51,584 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:47:58,376 - INFO - Epoch 44/50 - Train Loss: 0.0304, Train Acc: 0.9901, Val Loss: 1.2174, Val Acc: 0.8005
+2026-03-11 19:48:09,366 - INFO - Epoch 45/50 - Train Loss: 0.0300, Train Acc: 0.9895, Val Loss: 1.1556, Val Acc: 0.8075
+2026-03-11 19:48:20,223 - INFO - Epoch 46/50 - Train Loss: 0.0334, Train Acc: 0.9882, Val Loss: 1.1726, Val Acc: 0.8030
+2026-03-11 19:48:21,585 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:48:31,533 - INFO - Epoch 47/50 - Train Loss: 0.0257, Train Acc: 0.9904, Val Loss: 1.3424, Val Acc: 0.7970
+2026-03-11 19:48:42,633 - INFO - Epoch 48/50 - Train Loss: 0.0355, Train Acc: 0.9874, Val Loss: 1.3560, Val Acc: 0.7970
+2026-03-11 19:48:51,585 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:48:53,971 - INFO - Epoch 49/50 - Train Loss: 0.0396, Train Acc: 0.9859, Val Loss: 1.3654, Val Acc: 0.8000
+2026-03-11 19:49:04,738 - INFO - Epoch 50/50 - Train Loss: 0.0520, Train Acc: 0.9815, Val Loss: 1.2023, Val Acc: 0.8055
+2026-03-11 19:49:04,822 - INFO - Model saved to models/strategies/arbitrage_btc_usdc_binance.pth
+2026-03-11 19:49:04,822 - INFO - Training model for ETH/USDC
+2026-03-11 19:49:04,872 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 19:49:16,755 - INFO - Epoch 1/50 - Train Loss: 0.5326, Train Acc: 0.7882, Val Loss: 0.4996, Val Acc: 0.8010
+2026-03-11 19:49:16,841 - INFO - Model saved to models/strategies/arbitrage_eth_usdc_binance.pth
+2026-03-11 19:49:21,586 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:49:27,658 - INFO - Epoch 2/50 - Train Loss: 0.5087, Train Acc: 0.7977, Val Loss: 0.4987, Val Acc: 0.8010
+2026-03-11 19:49:38,179 - INFO - Epoch 3/50 - Train Loss: 0.5055, Train Acc: 0.7977, Val Loss: 0.4992, Val Acc: 0.8010
+2026-03-11 19:49:48,735 - INFO - Epoch 4/50 - Train Loss: 0.4700, Train Acc: 0.7973, Val Loss: 0.4056, Val Acc: 0.8200
+2026-03-11 19:49:48,803 - INFO - Model saved to models/strategies/arbitrage_eth_usdc_binance.pth
+2026-03-11 19:49:51,587 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:49:59,567 - INFO - Epoch 5/50 - Train Loss: 0.4526, Train Acc: 0.8094, Val Loss: 0.3970, Val Acc: 0.8330
+2026-03-11 19:49:59,652 - INFO - Model saved to models/strategies/arbitrage_eth_usdc_binance.pth
+2026-03-11 19:50:10,295 - INFO - Epoch 6/50 - Train Loss: 0.3987, Train Acc: 0.8255, Val Loss: 0.3839, Val Acc: 0.8395
+2026-03-11 19:50:10,366 - INFO - Model saved to models/strategies/arbitrage_eth_usdc_binance.pth
+2026-03-11 19:50:21,588 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:50:22,011 - INFO - Epoch 7/50 - Train Loss: 0.3757, Train Acc: 0.8415, Val Loss: 0.4569, Val Acc: 0.8095
+2026-03-11 19:50:33,641 - INFO - Epoch 8/50 - Train Loss: 0.3810, Train Acc: 0.8401, Val Loss: 0.4453, Val Acc: 0.8265
+2026-03-11 19:50:45,309 - INFO - Epoch 9/50 - Train Loss: 0.3645, Train Acc: 0.8440, Val Loss: 0.4545, Val Acc: 0.8020
+2026-03-11 19:50:51,591 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:50:56,622 - INFO - Epoch 10/50 - Train Loss: 0.3485, Train Acc: 0.8600, Val Loss: 0.5157, Val Acc: 0.7930
+2026-03-11 19:51:07,833 - INFO - Epoch 11/50 - Train Loss: 0.3352, Train Acc: 0.8630, Val Loss: 0.4336, Val Acc: 0.8310
+2026-03-11 19:51:19,055 - INFO - Epoch 12/50 - Train Loss: 0.3199, Train Acc: 0.8744, Val Loss: 0.5435, Val Acc: 0.8310
+2026-03-11 19:51:21,599 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:51:30,135 - INFO - Epoch 13/50 - Train Loss: 0.3401, Train Acc: 0.8569, Val Loss: 0.4939, Val Acc: 0.8225
+2026-03-11 19:51:41,063 - INFO - Epoch 14/50 - Train Loss: 0.2893, Train Acc: 0.8887, Val Loss: 0.5237, Val Acc: 0.8275
+2026-03-11 19:51:51,601 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:51:51,999 - INFO - Epoch 15/50 - Train Loss: 0.2847, Train Acc: 0.8910, Val Loss: 0.5050, Val Acc: 0.8295
+2026-03-11 19:52:02,917 - INFO - Epoch 16/50 - Train Loss: 0.2423, Train Acc: 0.9120, Val Loss: 0.6035, Val Acc: 0.8295
+2026-03-11 19:52:13,858 - INFO - Epoch 17/50 - Train Loss: 0.2267, Train Acc: 0.9213, Val Loss: 0.7232, Val Acc: 0.8030
+2026-03-11 19:52:21,602 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:52:24,731 - INFO - Epoch 18/50 - Train Loss: 0.2133, Train Acc: 0.9260, Val Loss: 0.6240, Val Acc: 0.8200
+2026-03-11 19:52:35,545 - INFO - Epoch 19/50 - Train Loss: 0.2302, Train Acc: 0.9119, Val Loss: 0.6107, Val Acc: 0.8100
+2026-03-11 19:52:46,503 - INFO - Epoch 20/50 - Train Loss: 0.1616, Train Acc: 0.9435, Val Loss: 0.6490, Val Acc: 0.8120
+2026-03-11 19:52:51,603 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:52:57,285 - INFO - Epoch 21/50 - Train Loss: 0.1414, Train Acc: 0.9517, Val Loss: 0.7544, Val Acc: 0.8175
+2026-03-11 19:53:08,068 - INFO - Epoch 22/50 - Train Loss: 0.1512, Train Acc: 0.9453, Val Loss: 0.7844, Val Acc: 0.8100
+2026-03-11 19:53:18,867 - INFO - Epoch 23/50 - Train Loss: 0.1072, Train Acc: 0.9650, Val Loss: 0.8130, Val Acc: 0.8265
+2026-03-11 19:53:21,604 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:53:29,783 - INFO - Epoch 24/50 - Train Loss: 0.1260, Train Acc: 0.9544, Val Loss: 0.8296, Val Acc: 0.8125
+2026-03-11 19:53:40,608 - INFO - Epoch 25/50 - Train Loss: 0.1066, Train Acc: 0.9636, Val Loss: 0.8464, Val Acc: 0.8200
+2026-03-11 19:53:51,529 - INFO - Epoch 26/50 - Train Loss: 0.1479, Train Acc: 0.9450, Val Loss: 0.9072, Val Acc: 0.8165
+2026-03-11 19:53:51,604 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:54:02,376 - INFO - Epoch 27/50 - Train Loss: 0.1437, Train Acc: 0.9471, Val Loss: 0.9053, Val Acc: 0.8175
+2026-03-11 19:54:13,250 - INFO - Epoch 28/50 - Train Loss: 0.0975, Train Acc: 0.9660, Val Loss: 0.9560, Val Acc: 0.8215
+2026-03-11 19:54:21,605 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:54:24,183 - INFO - Epoch 29/50 - Train Loss: 0.0633, Train Acc: 0.9803, Val Loss: 0.9965, Val Acc: 0.8185
+2026-03-11 19:54:35,053 - INFO - Epoch 30/50 - Train Loss: 0.0765, Train Acc: 0.9725, Val Loss: 0.9778, Val Acc: 0.8205
+2026-03-11 19:54:45,919 - INFO - Epoch 31/50 - Train Loss: 0.0678, Train Acc: 0.9745, Val Loss: 0.9077, Val Acc: 0.8120
+2026-03-11 19:54:51,606 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:54:56,938 - INFO - Epoch 32/50 - Train Loss: 0.1070, Train Acc: 0.9614, Val Loss: 0.9524, Val Acc: 0.8045
+2026-03-11 19:55:07,793 - INFO - Epoch 33/50 - Train Loss: 0.0532, Train Acc: 0.9820, Val Loss: 1.0540, Val Acc: 0.8235
+2026-03-11 19:55:18,708 - INFO - Epoch 34/50 - Train Loss: 0.0432, Train Acc: 0.9843, Val Loss: 1.1648, Val Acc: 0.8020
+2026-03-11 19:55:21,607 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:55:29,703 - INFO - Epoch 35/50 - Train Loss: 0.0520, Train Acc: 0.9817, Val Loss: 0.9966, Val Acc: 0.7970
+2026-03-11 19:55:40,540 - INFO - Epoch 36/50 - Train Loss: 0.0689, Train Acc: 0.9757, Val Loss: 1.0600, Val Acc: 0.8100
+2026-03-11 19:55:51,428 - INFO - Epoch 37/50 - Train Loss: 0.0415, Train Acc: 0.9856, Val Loss: 1.0727, Val Acc: 0.8130
+2026-03-11 19:55:51,608 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:56:02,271 - INFO - Epoch 38/50 - Train Loss: 0.0288, Train Acc: 0.9897, Val Loss: 1.1546, Val Acc: 0.8055
+2026-03-11 19:56:13,115 - INFO - Epoch 39/50 - Train Loss: 0.0293, Train Acc: 0.9896, Val Loss: 1.2565, Val Acc: 0.8175
+2026-03-11 19:56:21,638 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:56:24,126 - INFO - Epoch 40/50 - Train Loss: 0.0398, Train Acc: 0.9851, Val Loss: 1.2244, Val Acc: 0.8150
+2026-03-11 19:56:34,772 - INFO - Epoch 41/50 - Train Loss: 0.0329, Train Acc: 0.9879, Val Loss: 1.2370, Val Acc: 0.8170
+2026-03-11 19:56:45,658 - INFO - Epoch 42/50 - Train Loss: 0.0538, Train Acc: 0.9806, Val Loss: 1.0670, Val Acc: 0.8025
+2026-03-11 19:56:51,639 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:56:56,652 - INFO - Epoch 43/50 - Train Loss: 0.0477, Train Acc: 0.9820, Val Loss: 1.2524, Val Acc: 0.8145
+2026-03-11 19:57:07,515 - INFO - Epoch 44/50 - Train Loss: 0.0329, Train Acc: 0.9879, Val Loss: 1.1750, Val Acc: 0.8100
+2026-03-11 19:57:18,221 - INFO - Epoch 45/50 - Train Loss: 0.0298, Train Acc: 0.9901, Val Loss: 1.2787, Val Acc: 0.8170
+2026-03-11 19:57:21,640 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:57:28,992 - INFO - Epoch 46/50 - Train Loss: 0.0298, Train Acc: 0.9893, Val Loss: 1.3290, Val Acc: 0.8040
+2026-03-11 19:57:39,544 - INFO - Epoch 47/50 - Train Loss: 0.0359, Train Acc: 0.9875, Val Loss: 1.2228, Val Acc: 0.7755
+2026-03-11 19:57:50,236 - INFO - Epoch 48/50 - Train Loss: 0.0377, Train Acc: 0.9849, Val Loss: 1.3336, Val Acc: 0.8125
+2026-03-11 19:57:51,641 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:58:00,912 - INFO - Epoch 49/50 - Train Loss: 0.0218, Train Acc: 0.9924, Val Loss: 1.2330, Val Acc: 0.7935
+2026-03-11 19:58:11,649 - INFO - Epoch 50/50 - Train Loss: 0.0392, Train Acc: 0.9862, Val Loss: 1.1256, Val Acc: 0.7820
+2026-03-11 19:58:11,740 - INFO - Model saved to models/strategies/arbitrage_eth_usdc_binance.pth
+2026-03-11 19:58:11,740 - INFO - Training model for XRP/USDC
+2026-03-11 19:58:11,789 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 19:58:21,641 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:58:23,391 - INFO - Epoch 1/50 - Train Loss: 0.5604, Train Acc: 0.7502, Val Loss: 0.5248, Val Acc: 0.7985
+2026-03-11 19:58:23,498 - INFO - Model saved to models/strategies/arbitrage_xrp_usdc_binance.pth
+2026-03-11 19:58:34,279 - INFO - Epoch 2/50 - Train Loss: 0.5080, Train Acc: 0.7994, Val Loss: 0.5056, Val Acc: 0.7985
+2026-03-11 19:58:45,181 - INFO - Epoch 3/50 - Train Loss: 0.5048, Train Acc: 0.7994, Val Loss: 0.5071, Val Acc: 0.7985
+2026-03-11 19:58:51,642 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:58:56,235 - INFO - Epoch 4/50 - Train Loss: 0.5034, Train Acc: 0.7994, Val Loss: 0.5060, Val Acc: 0.7985
+2026-03-11 19:59:07,441 - INFO - Epoch 5/50 - Train Loss: 0.5069, Train Acc: 0.7935, Val Loss: 0.4708, Val Acc: 0.7960
+2026-03-11 19:59:18,330 - INFO - Epoch 6/50 - Train Loss: 0.4681, Train Acc: 0.8015, Val Loss: 0.4309, Val Acc: 0.8055
+2026-03-11 19:59:18,412 - INFO - Model saved to models/strategies/arbitrage_xrp_usdc_binance.pth
+2026-03-11 19:59:21,643 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 19:59:29,401 - INFO - Epoch 7/50 - Train Loss: 0.4358, Train Acc: 0.8089, Val Loss: 0.4098, Val Acc: 0.8245
+2026-03-11 19:59:29,473 - INFO - Model saved to models/strategies/arbitrage_xrp_usdc_binance.pth
+2026-03-11 19:59:40,398 - INFO - Epoch 8/50 - Train Loss: 0.4108, Train Acc: 0.8241, Val Loss: 0.4061, Val Acc: 0.8250
+2026-03-11 19:59:40,482 - INFO - Model saved to models/strategies/arbitrage_xrp_usdc_binance.pth
+2026-03-11 19:59:51,418 - INFO - Epoch 9/50 - Train Loss: 0.3937, Train Acc: 0.8316, Val Loss: 0.4104, Val Acc: 0.8235
+2026-03-11 19:59:51,643 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:00:02,310 - INFO - Epoch 10/50 - Train Loss: 0.3802, Train Acc: 0.8392, Val Loss: 0.4321, Val Acc: 0.8115
+2026-03-11 20:00:13,156 - INFO - Epoch 11/50 - Train Loss: 0.3639, Train Acc: 0.8470, Val Loss: 0.4425, Val Acc: 0.8060
+2026-03-11 20:00:21,644 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:00:24,089 - INFO - Epoch 12/50 - Train Loss: 0.3489, Train Acc: 0.8547, Val Loss: 0.5026, Val Acc: 0.7650
+2026-03-11 20:00:34,976 - INFO - Epoch 13/50 - Train Loss: 0.3304, Train Acc: 0.8649, Val Loss: 0.4594, Val Acc: 0.7975
+2026-03-11 20:00:45,729 - INFO - Epoch 14/50 - Train Loss: 0.3159, Train Acc: 0.8746, Val Loss: 0.5272, Val Acc: 0.7840
+2026-03-11 20:00:51,645 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:00:56,529 - INFO - Epoch 15/50 - Train Loss: 0.3141, Train Acc: 0.8728, Val Loss: 0.5998, Val Acc: 0.7780
+2026-03-11 20:01:07,409 - INFO - Epoch 16/50 - Train Loss: 0.2714, Train Acc: 0.8941, Val Loss: 0.5923, Val Acc: 0.8075
+2026-03-11 20:01:18,207 - INFO - Epoch 17/50 - Train Loss: 0.2583, Train Acc: 0.8967, Val Loss: 0.6615, Val Acc: 0.7995
+2026-03-11 20:01:21,645 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:01:29,167 - INFO - Epoch 18/50 - Train Loss: 0.2420, Train Acc: 0.9046, Val Loss: 0.6343, Val Acc: 0.8015
+2026-03-11 20:01:40,205 - INFO - Epoch 19/50 - Train Loss: 0.1917, Train Acc: 0.9312, Val Loss: 0.7066, Val Acc: 0.7835
+2026-03-11 20:01:51,616 - INFO - Epoch 20/50 - Train Loss: 0.1641, Train Acc: 0.9417, Val Loss: 0.7597, Val Acc: 0.7880
+2026-03-11 20:01:51,646 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:02:02,659 - INFO - Epoch 21/50 - Train Loss: 0.1605, Train Acc: 0.9426, Val Loss: 0.7681, Val Acc: 0.7755
+2026-03-11 20:02:13,451 - INFO - Epoch 22/50 - Train Loss: 0.1369, Train Acc: 0.9506, Val Loss: 0.8335, Val Acc: 0.7660
+2026-03-11 20:02:21,647 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:02:24,409 - INFO - Epoch 23/50 - Train Loss: 0.1475, Train Acc: 0.9466, Val Loss: 0.7819, Val Acc: 0.7580
+2026-03-11 20:02:35,132 - INFO - Epoch 24/50 - Train Loss: 0.1103, Train Acc: 0.9637, Val Loss: 0.9483, Val Acc: 0.7670
+2026-03-11 20:02:45,926 - INFO - Epoch 25/50 - Train Loss: 0.1242, Train Acc: 0.9578, Val Loss: 0.8168, Val Acc: 0.8020
+2026-03-11 20:02:51,647 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:02:56,894 - INFO - Epoch 26/50 - Train Loss: 0.1052, Train Acc: 0.9646, Val Loss: 0.9563, Val Acc: 0.7740
+2026-03-11 20:03:07,798 - INFO - Epoch 27/50 - Train Loss: 0.1055, Train Acc: 0.9660, Val Loss: 0.8427, Val Acc: 0.7965
+2026-03-11 20:03:18,661 - INFO - Epoch 28/50 - Train Loss: 0.0894, Train Acc: 0.9723, Val Loss: 1.0163, Val Acc: 0.7990
+2026-03-11 20:03:21,648 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:03:29,660 - INFO - Epoch 29/50 - Train Loss: 0.0781, Train Acc: 0.9751, Val Loss: 1.0003, Val Acc: 0.7750
+2026-03-11 20:03:40,505 - INFO - Epoch 30/50 - Train Loss: 0.0923, Train Acc: 0.9699, Val Loss: 0.8928, Val Acc: 0.7725
+2026-03-11 20:03:51,648 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:03:52,261 - INFO - Epoch 31/50 - Train Loss: 0.0658, Train Acc: 0.9790, Val Loss: 1.0172, Val Acc: 0.7910
+2026-03-11 20:04:04,250 - INFO - Epoch 32/50 - Train Loss: 0.0976, Train Acc: 0.9682, Val Loss: 0.9166, Val Acc: 0.7830
+2026-03-11 20:04:16,390 - INFO - Epoch 33/50 - Train Loss: 0.0682, Train Acc: 0.9771, Val Loss: 1.0462, Val Acc: 0.8045
+2026-03-11 20:04:21,665 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:04:28,518 - INFO - Epoch 34/50 - Train Loss: 0.0722, Train Acc: 0.9770, Val Loss: 0.9210, Val Acc: 0.7965
+2026-03-11 20:04:40,673 - INFO - Epoch 35/50 - Train Loss: 0.1110, Train Acc: 0.9605, Val Loss: 0.9911, Val Acc: 0.7635
+2026-03-11 20:04:51,704 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:04:52,495 - INFO - Epoch 36/50 - Train Loss: 0.0516, Train Acc: 0.9828, Val Loss: 1.1219, Val Acc: 0.7925
+2026-03-11 20:05:03,995 - INFO - Epoch 37/50 - Train Loss: 0.0454, Train Acc: 0.9852, Val Loss: 1.1405, Val Acc: 0.7665
+2026-03-11 20:05:15,954 - INFO - Epoch 38/50 - Train Loss: 0.0562, Train Acc: 0.9822, Val Loss: 1.1723, Val Acc: 0.7250
+2026-03-11 20:05:21,778 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:05:28,119 - INFO - Epoch 39/50 - Train Loss: 0.0547, Train Acc: 0.9813, Val Loss: 1.1148, Val Acc: 0.7585
+2026-03-11 20:05:40,383 - INFO - Epoch 40/50 - Train Loss: 0.0588, Train Acc: 0.9791, Val Loss: 1.0281, Val Acc: 0.7965
+2026-03-11 20:05:51,796 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:05:52,823 - INFO - Epoch 41/50 - Train Loss: 0.0408, Train Acc: 0.9863, Val Loss: 1.3150, Val Acc: 0.7630
+2026-03-11 20:06:05,320 - INFO - Epoch 42/50 - Train Loss: 0.0428, Train Acc: 0.9851, Val Loss: 1.1466, Val Acc: 0.7845
+2026-03-11 20:06:17,513 - INFO - Epoch 43/50 - Train Loss: 0.0549, Train Acc: 0.9823, Val Loss: 1.4300, Val Acc: 0.8035
+2026-03-11 20:06:21,840 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:06:29,737 - INFO - Epoch 44/50 - Train Loss: 0.0971, Train Acc: 0.9635, Val Loss: 1.3187, Val Acc: 0.8065
+2026-03-11 20:06:42,099 - INFO - Epoch 45/50 - Train Loss: 0.0501, Train Acc: 0.9827, Val Loss: 1.1646, Val Acc: 0.7970
+2026-03-11 20:06:51,927 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:06:54,486 - INFO - Epoch 46/50 - Train Loss: 0.0331, Train Acc: 0.9878, Val Loss: 1.2825, Val Acc: 0.7980
+2026-03-11 20:07:06,839 - INFO - Epoch 47/50 - Train Loss: 0.0302, Train Acc: 0.9901, Val Loss: 1.4194, Val Acc: 0.7995
+2026-03-11 20:07:19,078 - INFO - Epoch 48/50 - Train Loss: 0.0603, Train Acc: 0.9788, Val Loss: 1.2010, Val Acc: 0.8010
+2026-03-11 20:07:22,038 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:07:31,221 - INFO - Epoch 49/50 - Train Loss: 0.0720, Train Acc: 0.9742, Val Loss: 1.2069, Val Acc: 0.7715
+2026-03-11 20:07:43,305 - INFO - Epoch 50/50 - Train Loss: 0.0354, Train Acc: 0.9885, Val Loss: 1.2459, Val Acc: 0.7755
+2026-03-11 20:07:43,399 - INFO - Model saved to models/strategies/arbitrage_xrp_usdc_binance.pth
+2026-03-11 20:07:43,399 - INFO - Training model for XLM/USDC
+2026-03-11 20:07:43,528 - INFO - GPUArbitrageModel initialized on cuda
+2026-03-11 20:07:52,052 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'
+2026-03-11 20:07:56,780 - INFO - Epoch 1/50 - Train Loss: 0.5374, Train Acc: 0.7939, Val Loss: 0.5426, Val Acc: 0.7895
+2026-03-11 20:07:56,887 - INFO - Model saved to models/strategies/arbitrage_xlm_usdc_binance.pth
+2026-03-11 20:08:08,858 - INFO - Epoch 2/50 - Train Loss: 0.5152, Train Acc: 0.7939, Val Loss: 0.5173, Val Acc: 0.7895
+2026-03-11 20:08:21,630 - INFO - Epoch 3/50 - Train Loss: 0.5099, Train Acc: 0.7937, Val Loss: 0.4888, Val Acc: 0.7900
+2026-03-11 20:08:21,871 - INFO - Model saved to models/strategies/arbitrage_xlm_usdc_binance.pth
+2026-03-11 20:08:22,053 - WARNING - GPUtil failed, using basic info: 'NoneType' object has no attribute 'getGPUs'

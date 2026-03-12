@@ -4,7 +4,7 @@
 
 ## Current Status
 
-- **Tests**: 193 passing, 19 skipped (GPU/torch markers)
+- **Tests**: 202 passing, 19 skipped (GPU/torch markers)
 - **Lint**: Clean — ruff passes on both src/ and tests/
 - **MiCA Compliance**: Clean — 0 USDT violations in src/
 - **Models**: 5/10 above 80% accuracy threshold, 4 need retraining, 1 missing (VET/USDC)
@@ -25,7 +25,7 @@
 
 | Issue | Location | Fix |
 |-------|----------|-----|
-| Mock services in production pipeline | `src/live_arbitrage_pipeline.py` | Already wired — mocks only used when deps missing (e.g. no torch) |
+| Mock services in production pipeline | `src/live_arbitrage_pipeline.py` | Ensemble wired — mocks only used when deps missing (e.g. no torch) |
 | ~~3 stub .pth files~~ | ~~`models/strategies/`~~ | Resolved — no stub files remain |
 | ~~18MB `warm_start_state.json`~~ | ~~repo root~~ | Resolved — in .gitignore, removed from tracking |
 
@@ -38,6 +38,8 @@
 | GPU trainer `--strategy` flag | pending — `gpu_train.py` supports `--strategy arbitrage/fibonacci/grid/dca/all` |
 | Strategy config in trading_config.json | pending — per-strategy weights and parameters |
 | 17 new strategy tests | pending — multi-strategy training + ensemble tests (torch-gated) |
+| StrategyEnsemble wired into pipeline | pending — collective brain gates opportunities by multi-strategy agreement |
+| 9 ensemble integration tests | pending — buffer, readiness, agreement threshold, opportunity flow |
 | `asyncio.run()` in async context | `93ed347` — replaced with `loop.run_until_complete()` |
 | `time.sleep(300)` blocking | `93ed347` — replaced with `threading.Event.wait(timeout=300)` |
 | Monitoring wired into main.py | `93ed347` — factory function with no-op fallback |
@@ -82,7 +84,7 @@
 2. **Retrain failing models** — IOTA (0.2% gap), ETH (0.5%), XLM (1.9%), ADA (3.1%) — needs GPU
 3. **Train VET/USDC** model from scratch — needs GPU
 4. **Wire real services** in `src/live_arbitrage_pipeline.py` — replace mocks with real inference/data
-5. **Wire StrategyEnsemble** into pipeline — collective brain produces unified signals
+5. ~~**Wire StrategyEnsemble** into pipeline~~ — DONE: collective brain gates opportunities by agreement
 6. **Continue expanding test coverage** — target >85%
 
 ## Test Commands

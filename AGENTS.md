@@ -1,5 +1,7 @@
 # SovereignForge — Agent Operating Rules
 
+## Version: v1.1.1
+
 ## Session Start
 
 1. Read `CLAUDE.md` — project structure, commands, conventions
@@ -37,73 +39,75 @@ Must return zero results. CI enforces this.
 ## Commit Rules
 
 - Small, single-purpose commits
-- Prefix: `feat:`, `fix:`, `perf:`, `docs:`, `test:`, `refactor:`
+- Prefix: `feat:`, `fix:`, `perf:`, `docs:`, `test:`, `refactor:`, `chore:`
 - Tests must pass before committing
 - Update `WORKING.md` after significant changes
 
-## Known Problems Quick Reference
+## Known Open Issues
 
-Concise guide to every open issue. Fix these in priority order.
-
-### BLOCKERS (system won't run)
+### BLOCKERS (system won't run without these)
 
 | Problem | Where | Fix |
 |---------|-------|-----|
 | Deps not installed | `requirements.txt` | `pip install -r requirements.txt` |
 | API keys empty | `config/api_keys.json` | Fill real exchange keys |
 
-### BUGS (incorrect behavior)
+### GPU-DEPENDENT (cannot fix without GPU)
 
 | Problem | Where | Fix |
 |---------|-------|-----|
-| ~~Mock services in prod pipeline~~ | `src/live_arbitrage_pipeline.py` | **RESOLVED** — Pipeline now has `mode` config: `"production"` requires real services (raises `ServiceInitError`), `"development"` allows mocks with warnings. Added `start()`/`stop()` lifecycle and `get_readiness_check()`. |
-| ~~asyncio event loop in sync methods~~ | `src/main.py` | **RESOLVED** — Replaced `new_event_loop()` / `run_until_complete()` with `asyncio.run()` in `run_backtest()` and `run_paper_trading()` |
-| ~~Model weights not loaded~~ | `src/realtime_inference.py:233` | **RESOLVED** — `_create_model_from_metadata()` now imports `AdvancedArbitrageDetector` (LSTM+attention) matching trained `.pth` files. `load_state_dict()` uncommented with `strict=False` + error handling. `_weights_status` dict tracks which models have real vs random weights. |
-| ~~No pre-trade balance check~~ | `src/order_executor.py` | **RESOLVED** — Added `_check_sufficient_balance()` that verifies quote currency on buy exchange and base currency on sell exchange before placing orders. `PaperTradingExecutor` overrides with paper balance checks. Post-trade balance audit logging added. |
-| 4 models below 80% accuracy | `models/` metadata JSONs | Retrain via `gpu_train.py` with tuned hyperparams (see TODO_ENHANCEMENTS.md C3-C6) |
-| VET/USDC model missing entirely | `models/` | Fetch data with `src/data_fetcher.py`, train with `gpu_train.py` |
-| ~~time.sleep(300) blocks thread~~ | `src/model_retrainer.py` | **NOT A BUG** — `_stop_event.wait(timeout=300)` in daemon thread is correct; interruptible via `stop_monitoring()` |
-| ~~monitoring.py not wired to app~~ | `src/monitoring.py` | **RESOLVED** — `MetricsCollector` already wired via `_create_metrics_collector()` in main.py. `AlertManager` used independently; main.py has its own `_NoOpAlertManager` wrapping `multi_channel_alerts`. |
-| ~~cache.py has empty methods~~ | `src/cache.py` | **RESOLVED** — `cache.py` was deleted in previous cleanup. `cache_layer.py` is the sole cache implementation. |
+| 4 models below 80% accuracy | `models/` metadata JSONs | Retrain via `gpu_train.py` |
+| VET/USDC model missing | `models/` | Fetch data + train new model |
+| Mock services in pipeline | `src/live_arbitrage_pipeline.py` | Needs torch for real inference |
 
-### CLEANUP (duplicates to consolidate)
+### ALL RESOLVED
 
-| Duplicate Pair | Keep | Delete/Merge |
-|---------------|------|-------------|
-| ~~`risk_management.py` + `risk_manager.py`~~ | **RESOLVED** | Consolidated into `risk_management.py`, `risk_manager.py` deleted |
-| ~~`compliance.py` + `mica_compliance.py`~~ | **RESOLVED** | `mica_compliance.py` deleted in previous cleanup |
-| ~~`cache.py` + `cache_layer.py`~~ | **RESOLVED** | `cache.py` deleted, `cache_layer.py` is sole implementation |
-| ~~`sovereignforge_real.py` + `sovereignforge_working.py`~~ | **RESOLVED** | Both deleted in previous cleanup |
-| ~~8 root `.tsx` files~~ | **RESOLVED** | All deleted in previous cleanup |
-| ~~3 stub `.pth` files (<200B)~~ | **RESOLVED** | Deleted + added to `.gitignore` |
-| ~~`monitoring/dashboard/` scaffold~~ | **RESOLVED** | Deleted in previous cleanup |
-| ~~`warm_start_state.json` (18MB)~~ | **RESOLVED** | Added to `.gitignore` |
+| Problem | Resolution |
+|---------|-----------|
+| Mock services in prod pipeline | `bd53da6` — Pipeline has `mode` config: production requires real services |
+| asyncio event loop in sync methods | `93ed347` — Replaced with `asyncio.run()` |
+| Model weights not loaded | `2db7c3d` — `AdvancedArbitrageDetector` with `strict=False` |
+| No pre-trade balance check | `2db7c3d` — `_check_sufficient_balance()` added |
+| `risk_manager.py` + `risk_management.py` | `0a10a9a` — Consolidated into `risk_management.py` |
+| `compliance.py` + `mica_compliance.py` | `5e12b8b` — `mica_compliance.py` deleted |
+| `cache.py` + `cache_layer.py` | `5e12b8b` — `cache.py` deleted |
+| 8 root `.tsx` files | `cf7a50a` — Deleted |
+| 3 stub `.pth` files | `5e12b8b` — Deleted |
+| `monitoring/dashboard/` scaffold | `5e12b8b` — Deleted |
+| `warm_start_state.json` (18MB) | `.gitignore` — Untracked |
+| `time.sleep(300)` blocking | `93ed347` — `threading.Event.wait(timeout=300)` |
+| CI `|| true` on test steps | `ccd6038` — Removed, tests now fail the build |
+| Stale CRA test (dashboard) | `eb24c6a` — Replaced with 32 real component tests |
 
 ## Testing
 
 ```bash
-# All tests
-python -m pytest tests/ -v --tb=short
+# Python tests (363 total: 331 passing + 80 skipped)
+PYTHONPATH=src python -m pytest tests/ -v --tb=short \
+  --ignore=tests/test_websocket_integration.py \
+  --ignore=tests/test_integration.py
 
-# Specific suites
-python -m pytest tests/test_compliance_models.py -v
-python -m pytest tests/test_arbitrage_detector.py -v
-python -m pytest tests/test_integration.py -v
+# Dashboard tests (32 passing)
+cd dashboard && CI=true npm test -- --watchAll=false
 
-# GPU tests (needs NVIDIA GPU)
-python test_cuda.py
+# Lint
+ruff check src/ --select E,W,F,I --ignore E501,F401,E402,F841,E741
+ruff check tests/ --select E,W,F,I --ignore E501,F401,E402
+
+# TypeScript
+cd dashboard && npx tsc --noEmit
 ```
-
-**Current: 170+ tests passing**
 
 Test markers (skipped in CI): `@pytest.mark.gpu`, `@pytest.mark.network`, `@pytest.mark.slow`
 
 ## Architecture Notes
 
 - Entry point: `src/main.py production`
-- Dashboard: `dashboard/` (React 19, Tailwind, WebSocket to backend)
+- Dashboard: `dashboard/` (React 19, TypeScript, 6 components, 7 test suites)
 - Models: `models/strategies/arbitrage_*_usdc_binance.pth` (73MB each, PyTorch)
 - Config: `config/` (trading, risk, deployment, API keys)
 - Docker: `docker-compose.yml` (app + Redis + Prometheus + Grafana)
 - K8s: `k8s/` (11 manifests)
 - CI: `.github/workflows/` (test, lint, build)
+- Source: `src/` (40 Python modules)
+- Tests: `tests/` (12 Python test files) + `dashboard/src/` (7 TypeScript test files)

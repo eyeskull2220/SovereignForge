@@ -744,13 +744,9 @@ class ArbitrageCLI:
         print(f"Backtesting {symbol_list}")
         print(f"Period: {start_date.date()} to {end_date.date()}")
 
-        loop = asyncio.new_event_loop()
-        try:
-            results = loop.run_until_complete(
-                self.backtester.run_backtest(symbol_list, start_date, end_date)
-            )
-        finally:
-            loop.close()
+        results = asyncio.run(
+            self.backtester.run_backtest(symbol_list, start_date, end_date)
+        )
 
         # Display results
         print("\nBacktest Results:")
@@ -813,13 +809,9 @@ class ArbitrageCLI:
                         }
 
                         # Execute paper trade
-                        loop = asyncio.new_event_loop()
-                        try:
-                            trade_result = loop.run_until_complete(
-                                self.order_executor.execute_arbitrage_trade(opportunity)
-                            )
-                        finally:
-                            loop.close()
+                        trade_result = asyncio.run(
+                            self.order_executor.execute_arbitrage_trade(opportunity)
+                        )
 
                         timestamp = datetime.fromisoformat(result['timestamp'])
                         print(f"[{timestamp.strftime('%H:%M:%S')}] PAPER TRADE: "

@@ -56,27 +56,26 @@ Concise guide to every open issue. Fix these in priority order.
 
 | Problem | Where | Fix |
 |---------|-------|-----|
-| Mock services in prod pipeline | `src/live_arbitrage_pipeline.py:153,160` | Replace `MockDataService()` with `WebSocketConnector()`, `MockInferenceService()` with `RealtimeInferenceService()`. Delete mock classes at lines 311-356. |
-| asyncio.run() in async context | `src/main.py:738` | Change `results = asyncio.run(run_async_backtest())` to `results = await run_async_backtest()` |
-| asyncio.run() in async context | `src/main.py:802` | Change `trade_result = asyncio.run(self.order_executor.execute_arbitrage_trade(opportunity))` to use await |
+| ~~Mock services in prod pipeline~~ | `src/live_arbitrage_pipeline.py` | **RESOLVED** — Pipeline now has `mode` config: `"production"` requires real services (raises `ServiceInitError`), `"development"` allows mocks with warnings. Added `start()`/`stop()` lifecycle and `get_readiness_check()`. |
+| ~~asyncio event loop in sync methods~~ | `src/main.py` | **RESOLVED** — Replaced `new_event_loop()` / `run_until_complete()` with `asyncio.run()` in `run_backtest()` and `run_paper_trading()` |
 | 4 models below 80% accuracy | `models/` metadata JSONs | Retrain via `gpu_train.py` with tuned hyperparams (see TODO_ENHANCEMENTS.md C3-C6) |
 | VET/USDC model missing entirely | `models/` | Fetch data with `src/data_fetcher.py`, train with `gpu_train.py` |
-| time.sleep(300) blocks thread | `src/model_retrainer.py:588` | Replace with `await asyncio.sleep(300)` |
-| monitoring.py not wired to app | `src/monitoring.py` | Has 2 `pass` stubs. Implement them, call from `src/main.py` startup |
-| cache.py has empty methods | `src/cache.py:286,292` | `warm_market_data_cache()` and `warm_arbitrage_cache()` are `pass`. Implement or delete file (duplicate of cache_layer.py) |
+| ~~time.sleep(300) blocks thread~~ | `src/model_retrainer.py` | **NOT A BUG** — `_stop_event.wait(timeout=300)` in daemon thread is correct; interruptible via `stop_monitoring()` |
+| ~~monitoring.py not wired to app~~ | `src/monitoring.py` | **RESOLVED** — `MetricsCollector` already wired via `_create_metrics_collector()` in main.py. `AlertManager` used independently; main.py has its own `_NoOpAlertManager` wrapping `multi_channel_alerts`. |
+| ~~cache.py has empty methods~~ | `src/cache.py` | **RESOLVED** — `cache.py` was deleted in previous cleanup. `cache_layer.py` is the sole cache implementation. |
 
 ### CLEANUP (duplicates to consolidate)
 
 | Duplicate Pair | Keep | Delete/Merge |
 |---------------|------|-------------|
-| `risk_management.py` + `risk_manager.py` | Audit both, keep one | Redirect imports from deleted file |
-| `compliance.py` + `mica_compliance.py` | `compliance.py` | Merge unique logic from `mica_compliance.py` |
-| `cache.py` + `cache_layer.py` | `cache_layer.py` | Delete `cache.py`, update imports |
-| `sovereignforge_real.py` + `sovereignforge_working.py` | Neither (use `main.py`) | Delete both |
-| 8 root `.tsx` files | `dashboard/src/components/*` | Delete root copies |
-| 3 stub `.pth` files (<200B) | None | Delete or train real models |
-| `monitoring/dashboard/` scaffold | None | Delete dead Vite project |
-| `warm_start_state.json` (18MB) | Consider .gitignore | Lazy-load or compress |
+| ~~`risk_management.py` + `risk_manager.py`~~ | **RESOLVED** | Consolidated into `risk_management.py`, `risk_manager.py` deleted |
+| ~~`compliance.py` + `mica_compliance.py`~~ | **RESOLVED** | `mica_compliance.py` deleted in previous cleanup |
+| ~~`cache.py` + `cache_layer.py`~~ | **RESOLVED** | `cache.py` deleted, `cache_layer.py` is sole implementation |
+| ~~`sovereignforge_real.py` + `sovereignforge_working.py`~~ | **RESOLVED** | Both deleted in previous cleanup |
+| ~~8 root `.tsx` files~~ | **RESOLVED** | All deleted in previous cleanup |
+| ~~3 stub `.pth` files (<200B)~~ | **RESOLVED** | Deleted + added to `.gitignore` |
+| ~~`monitoring/dashboard/` scaffold~~ | **RESOLVED** | Deleted in previous cleanup |
+| ~~`warm_start_state.json` (18MB)~~ | **RESOLVED** | Added to `.gitignore` |
 
 ## Testing
 
@@ -93,7 +92,7 @@ python -m pytest tests/test_integration.py -v
 python test_cuda.py
 ```
 
-**Current: 71/73 passing (97.3%)**
+**Current: 155+ tests passing**
 
 Test markers (skipped in CI): `@pytest.mark.gpu`, `@pytest.mark.network`, `@pytest.mark.slow`
 

@@ -13,16 +13,17 @@ This module provides:
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Any, Tuple, Callable
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-from pathlib import Path
 
 # Import existing components
-from gpu_arbitrage_model import GPUArbitrageModel, ArbitrageTransformer
+from gpu_arbitrage_model import ArbitrageTransformer, GPUArbitrageModel
 from gpu_manager import get_gpu_manager
 
 logger = logging.getLogger(__name__)

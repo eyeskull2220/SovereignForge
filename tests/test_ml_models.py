@@ -3,21 +3,26 @@
 Comprehensive unit tests for SovereignForge ML models and training pipeline
 """
 
+import os
+import sys
 import unittest
+from pathlib import Path
+
+import numpy as np
 import torch
 import torch.nn as nn
-import numpy as np
-from pathlib import Path
-import sys
-import os
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
 from multi_strategy_training import (
-    TradingLSTM, create_lstm_model, create_gru_model,
-    create_transformer_model, create_attention_model
+    TradingLSTM,
+    create_attention_model,
+    create_gru_model,
+    create_lstm_model,
+    create_transformer_model,
 )
+
 
 class TestMLModels(unittest.TestCase):
     """Test ML model architectures and functionality"""

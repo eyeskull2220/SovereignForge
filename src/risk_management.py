@@ -5,10 +5,11 @@ Position sizing, stop-loss, and portfolio risk controls for MiCA compliance
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Tuple
+import math
 from dataclasses import dataclass
 from datetime import datetime
-import math
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ def _fire_alert(title: str, message: str, level: str = "warning") -> None:
         else:
             # No running loop — use multi_channel_alerts synchronous path or just log
             try:
-                from multi_channel_alerts import get_alert_router, Alert, AlertPriority
+                from multi_channel_alerts import Alert, AlertPriority, get_alert_router
                 pmap = {"error": AlertPriority.HIGH, "warning": AlertPriority.MEDIUM,
                         "success": AlertPriority.LOW, "info": AlertPriority.LOW}
                 priority = pmap.get(level, AlertPriority.MEDIUM)

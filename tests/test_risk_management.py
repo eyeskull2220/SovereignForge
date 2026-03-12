@@ -4,16 +4,18 @@ Test suite for Phase 2 Risk Management System
 Tests Kelly Criterion, portfolio optimization, VaR calculations
 """
 
-import pytest
-import numpy as np
-from unittest.mock import Mock, patch
-import sys
 import os
+import sys
+from unittest.mock import Mock, patch
+
+import numpy as np
+import pytest
 
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'src'))
 
 from live_arbitrage_pipeline import ArbitrageOpportunity
+
 
 class TestRiskManagement:
     """Test Phase 2 Risk Management components"""
@@ -21,7 +23,7 @@ class TestRiskManagement:
     def setup_method(self):
         """Setup test fixtures"""
         try:
-            from risk_management import get_risk_manager, RiskManager
+            from risk_management import RiskManager, get_risk_manager
             self.risk_manager = get_risk_manager()
             self.risk_available = True
         except ImportError:

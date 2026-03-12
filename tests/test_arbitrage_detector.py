@@ -3,15 +3,19 @@
 Unit tests for SovereignForge arbitrage detection components
 """
 
-import unittest
-import time
-import sys
 import os
+import sys
+import time
+import unittest
 
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from live_arbitrage_pipeline import ArbitrageOpportunity, OpportunityFilter, FilteredOpportunity
+from live_arbitrage_pipeline import (
+    ArbitrageOpportunity,
+    FilteredOpportunity,
+    OpportunityFilter,
+)
 
 
 class TestArbitrageOpportunity(unittest.TestCase):

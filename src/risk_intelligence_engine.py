@@ -12,19 +12,23 @@ This module provides:
 """
 
 import asyncio
-import logging
-from typing import Dict, List, Optional, Any, Callable, Tuple
-from dataclasses import dataclass, asdict
-from datetime import datetime, timedelta
 import json
+import logging
 import threading
 import time
+from dataclasses import asdict, dataclass
+from datetime import datetime, timedelta
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import numpy as np
+
 from advanced_risk_metrics import AdvancedRiskMetrics, RiskMetrics
 from dynamic_risk_adjustment import (
-    DynamicRiskAdjustment, MarketConditions, RiskThresholds,
-    ArbitrageOpportunityRisk, MarketRegime
+    ArbitrageOpportunityRisk,
+    DynamicRiskAdjustment,
+    MarketConditions,
+    MarketRegime,
+    RiskThresholds,
 )
 
 logger = logging.getLogger(__name__)
@@ -553,7 +557,7 @@ if __name__ == "__main__":
 
     arb_risk = risk_engine.assess_arbitrage_risk(opportunity_data)
 
-    print(f"\nArbitrage Opportunity Risk Assessment:")
+    print("\nArbitrage Opportunity Risk Assessment:")
     print(f"Adjusted Risk Score: {arb_risk.adjusted_risk_score:.2f}")
     print(f"Position Size Limit: {arb_risk.position_size_limit:.1%}")
     print(f"Execution Probability: {arb_risk.execution_probability:.2f}")

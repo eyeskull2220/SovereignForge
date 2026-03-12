@@ -5,8 +5,8 @@ Ensures all trading activities comply with EU MiCA regulations
 """
 
 import logging
-from typing import List, Dict, Any, Optional
 from dataclasses import dataclass
+from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 

@@ -4,13 +4,14 @@ SovereignForge Performance Analyzer - Wave 4
 Comprehensive analytics and performance metrics for arbitrage trading
 """
 
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
-import logging
 import json
+import logging
 import os
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+import pandas as pd
 from scipy import stats
 
 logger = logging.getLogger(__name__)
@@ -253,12 +254,12 @@ class PerformanceAnalyzer:
             'quantity': 'sum'
         })
 
-        for exchange, stats in buy_exchanges.iterrows():
+        for exchange, ex_stats in buy_exchanges.iterrows():
             exchange_stats[f"{exchange}_buy"] = {
-                'trades': stats[('pnl', 'count')],
-                'total_pnl': stats[('pnl', 'sum')],
-                'avg_pnl': stats[('pnl', 'mean')],
-                'total_volume': stats[('quantity', 'sum')]
+                'trades': ex_stats[('pnl', 'count')],
+                'total_pnl': ex_stats[('pnl', 'sum')],
+                'avg_pnl': ex_stats[('pnl', 'mean')],
+                'total_volume': ex_stats[('quantity', 'sum')]
             }
 
         # Sell exchanges
@@ -267,12 +268,12 @@ class PerformanceAnalyzer:
             'quantity': 'sum'
         })
 
-        for exchange, stats in sell_exchanges.iterrows():
+        for exchange, ex_stats in sell_exchanges.iterrows():
             exchange_stats[f"{exchange}_sell"] = {
-                'trades': stats[('pnl', 'count')],
-                'total_pnl': stats[('pnl', 'sum')],
-                'avg_pnl': stats[('pnl', 'mean')],
-                'total_volume': stats[('quantity', 'sum')]
+                'trades': ex_stats[('pnl', 'count')],
+                'total_pnl': ex_stats[('pnl', 'sum')],
+                'avg_pnl': ex_stats[('pnl', 'mean')],
+                'total_volume': ex_stats[('quantity', 'sum')]
             }
 
         return exchange_stats
@@ -508,7 +509,7 @@ class PerformanceAnalyzer:
             report_content = self.generate_performance_report([], format)
 
         # Create reports directory if it doesn't exist
-        reports_dir = "E:\\SovereignForge\\reports"
+        reports_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "reports")
         os.makedirs(reports_dir, exist_ok=True)
 
         filepath = os.path.join(reports_dir, filename)

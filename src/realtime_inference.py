@@ -11,23 +11,25 @@ This module provides:
 - Performance monitoring and health checks
 """
 
-import os
-import sys
-import torch
-import torch.nn as nn
-import numpy as np
-import logging
+import asyncio
+import gc
 import hashlib
 import json
-import asyncio
-from typing import Dict, List, Optional, Tuple, Any
-from pathlib import Path
-from dataclasses import dataclass
-from datetime import datetime
+import logging
+import os
+import sys
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
-import gc
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+import torch
+import torch.nn as nn
+
 
 @dataclass
 class ArbitrageOpportunity:
@@ -50,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 # Import Phase 2 components
 try:
-    from gpu_manager import get_gpu_manager, GPUManager
+    from gpu_manager import GPUManager, get_gpu_manager
     from secure_model_extractor import SecureModelExtractor
     GPU_MANAGER_AVAILABLE = True
     logger.info("Phase 2 GPU Manager and Secure Model Extractor loaded successfully")

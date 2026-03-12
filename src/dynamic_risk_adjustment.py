@@ -11,14 +11,15 @@ This module provides:
 - Real-time risk monitoring and alerts
 """
 
-import numpy as np
-from typing import Dict, List, Optional, Tuple, Any, Callable
+import asyncio
+import logging
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import logging
 from enum import Enum
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+import numpy as np
 
 from advanced_risk_metrics import AdvancedRiskMetrics, RiskMetrics
 
@@ -540,7 +541,7 @@ if __name__ == "__main__":
     # Calculate dynamic thresholds
     dynamic_thresholds = risk_adjuster.calculate_dynamic_thresholds(market_conditions, risk_metrics)
 
-    print(f"\nDynamic Risk Thresholds:")
+    print("\nDynamic Risk Thresholds:")
     print(f"Max Position Size: {dynamic_thresholds.max_position_size:.1%}")
     print(f"Max Portfolio VaR: {dynamic_thresholds.max_portfolio_var:.1%}")
     print(f"Circuit Breaker Threshold: {dynamic_thresholds.circuit_breaker_threshold:.1%}")
@@ -556,7 +557,7 @@ if __name__ == "__main__":
 
     opportunity_risk = risk_adjuster.assess_arbitrage_opportunity_risk(opportunity_data, market_conditions)
 
-    print(f"\nArbitrage Opportunity Risk Assessment:")
+    print("\nArbitrage Opportunity Risk Assessment:")
     print(f"Base Risk Score: {opportunity_risk.base_risk_score:.2f}")
     print(f"Adjusted Risk Score: {opportunity_risk.adjusted_risk_score:.2f}")
     print(f"Position Size Limit: {opportunity_risk.position_size_limit:.1%}")
@@ -565,7 +566,7 @@ if __name__ == "__main__":
     # Check circuit breakers
     circuit_triggered, emergency_stop, reason = risk_adjuster.check_circuit_breakers(risk_metrics, market_conditions)
 
-    print(f"\nCircuit Breaker Check:")
+    print("\nCircuit Breaker Check:")
     print(f"Circuit Breaker Active: {circuit_triggered}")
     print(f"Emergency Stop Active: {emergency_stop}")
     if reason:

@@ -3,20 +3,21 @@
 Integration tests for SovereignForge components
 """
 
-import pytest
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-import sys
 import os
+import sys
 import time
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
+from compliance import ComplianceViolationError, get_compliance_engine
 from data_integration_service import HybridDataIntegrationService, MarketData
-from realtime_inference import RealTimeInferenceService, ArbitrageOpportunity
 from live_arbitrage_pipeline import LiveArbitragePipeline
-from compliance import get_compliance_engine, ComplianceViolationError
+from realtime_inference import ArbitrageOpportunity, RealTimeInferenceService
 
 
 @pytest.mark.asyncio
@@ -25,7 +26,7 @@ async def test_data_integration_service_initialization():
     data_service = HybridDataIntegrationService()
     await data_service.initialize()
 
-    assert data_service.is_running == False  # Not started yet
+    assert not data_service.is_running  # Not started yet
     assert len(data_service.data_sources) == 5  # binance, coinbase, kraken, kucoin, okx
     assert 'binance' in data_service.data_sources
 
@@ -60,7 +61,7 @@ async def test_data_integration_service_market_data_callback():
 
     await data_service._handle_market_data(test_data)
 
-    assert callback_called == True
+    assert callback_called
     assert received_data == test_data
 
 
@@ -220,15 +221,15 @@ def test_compliance_engine():
     engine = get_compliance_engine()
 
     # Test asset compliance
-    assert engine.is_asset_compliant('BTC') == True
-    assert engine.is_asset_compliant('XRP') == True
-    assert engine.is_asset_compliant('SHIB') == False
+    assert engine.is_asset_compliant('BTC')
+    assert engine.is_asset_compliant('XRP')
+    assert not engine.is_asset_compliant('SHIB')
 
     # Test pair compliance - USDT pairs are now FORBIDDEN
-    assert engine.is_pair_compliant('BTC/USDT') == False  # USDT forbidden
-    assert engine.is_pair_compliant('XRP/USDC') == True   # USDC compliant
-    assert engine.is_pair_compliant('SHIB/USDT') == False  # SHIB not compliant, USDT forbidden
-    assert engine.is_pair_compliant('BTC/USDC') == True   # MiCA compliant
+    assert not engine.is_pair_compliant('BTC/USDT')  # USDT forbidden
+    assert engine.is_pair_compliant('XRP/USDC')   # USDC compliant
+    assert not engine.is_pair_compliant('SHIB/USDT')  # SHIB not compliant, USDT forbidden
+    assert engine.is_pair_compliant('BTC/USDC')   # MiCA compliant
 
 
 def test_compliance_filtering():

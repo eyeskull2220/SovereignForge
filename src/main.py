@@ -6,15 +6,16 @@ Production-ready arbitrage trading system with monitoring, database, and async p
 
 import argparse
 import asyncio
-import time
-import logging
-from datetime import datetime, timedelta
 import json
+import logging
 import os
-import sys
 import signal
+import sys
 import threading
-from typing import Optional, Dict, Any
+import time
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
+
 import numpy as np
 
 # Add src directory to path
@@ -41,11 +42,11 @@ except ImportError:
 
 # Core application imports
 from arbitrage_detector import ArbitrageDetector, LocalDatabase, create_sample_data
-from exchange_connector import create_demo_connector
-from risk_management import create_default_risk_manager, ArbitrageRiskAssessor
-from order_executor import create_demo_executor
 from backtester import ArbitrageBacktester, BacktestDataProvider
+from exchange_connector import create_demo_connector
+from order_executor import create_demo_executor
 from performance_analyzer import create_performance_analyzer
+from risk_management import ArbitrageRiskAssessor, create_default_risk_manager
 
 # Production persistence — use SQLite via aiosqlite (zero-config fallback)
 # Redis cache via cache_layer (falls back to in-memory LRU automatically)
@@ -189,7 +190,7 @@ class _NoOpAlertManager:
             logger.warning(f"ALERT [{level.upper()}] {title}: {message}")
             return
         try:
-            from multi_channel_alerts import AlertPriority, Alert
+            from multi_channel_alerts import Alert, AlertPriority
             pmap = {
                 "critical": AlertPriority.CRITICAL,
                 "error": AlertPriority.HIGH,
@@ -578,7 +579,7 @@ class ArbitrageCLI:
 
     def run_detection(self, symbol: str = 'BTC/USDC', continuous: bool = False, interval: int = 60):
         """Run arbitrage detection"""
-        print(f"SovereignForge Arbitrage Detector - Wave 1")
+        print("SovereignForge Arbitrage Detector - Wave 1")
         print(f"Symbol: {symbol}")
         print(f"Continuous mode: {continuous}")
         if continuous:
@@ -717,7 +718,7 @@ class ArbitrageCLI:
         print(f"Sharpe Ratio: {metrics['sharpe_ratio']:.3f}")
         print(f"Win Rate: {metrics['win_rate']:.1f}")
 
-        print(f"\nRisk Limits:")
+        print("\nRisk Limits:")
         limits = metrics['risk_limits']
         print(f"Daily Loss Limit: ${limits['daily_loss_limit']:.2f}")
         print(f"Single Trade Limit: ${limits['single_trade_limit']:.2f}")

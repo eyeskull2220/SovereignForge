@@ -5,18 +5,23 @@ Tests WebSocket connectivity, reconnection, and data streaming
 """
 
 import asyncio
-import pytest
 import logging
-import time
-from unittest.mock import Mock, patch, AsyncMock
-from typing import Dict, Any
-import sys
 import os
+import sys
+import time
+from typing import Any, Dict
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
 
 # Add src directory to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from exchange_connector import ExchangeConnector, MultiExchangeConnector, WEBSOCKET_AVAILABLE
+from exchange_connector import (
+    WEBSOCKET_AVAILABLE,
+    ExchangeConnector,
+    MultiExchangeConnector,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +36,7 @@ class TestWebSocketIntegration:
 
         connector = ExchangeConnector('binance', enable_websocket=True)
 
-        assert connector.enable_websocket == True
+        assert connector.enable_websocket
         assert connector.websocket_manager is not None
         assert connector.reconnect_manager is not None
         assert 'ticker' in connector.websocket_manager.message_handlers
@@ -66,7 +71,7 @@ class TestWebSocketIntegration:
 
         # Test connection status before connecting
         status = connector.get_websocket_status()
-        assert status['websocket_enabled'] == True
+        assert status['websocket_enabled']
         assert 'connection_status' in status
 
         # Mock the WebSocket connection to avoid actual network calls
@@ -103,15 +108,15 @@ class TestWebSocketIntegration:
 
                     # Test subscriptions
                     result = await connector.subscribe_to_ticker('BTC/USDT')
-                    assert result == True
+                    assert result
                     mock_ticker.assert_called_once_with('BTC/USDT')
 
                     result = await connector.subscribe_to_orderbook('BTC/USDT', 10)
-                    assert result == True
+                    assert result
                     mock_orderbook.assert_called_once_with('BTC/USDT', 10)
 
                     result = await connector.subscribe_to_trades('BTC/USDT')
-                    assert result == True
+                    assert result
                     mock_trades.assert_called_once_with('BTC/USDT')
 
     def test_message_handlers(self):
@@ -144,11 +149,11 @@ class TestWebSocketIntegration:
         # Verify connectors were created with WebSocket enabled
         assert len(multi_connector.connectors) == 2
         for connector in multi_connector.connectors.values():
-            assert connector.enable_websocket == True
+            assert connector.enable_websocket
 
         # Test WebSocket status
         status = multi_connector.get_websocket_status()
-        assert status['websocket_enabled'] == True
+        assert status['websocket_enabled']
         assert len(status['exchanges']) == 2
 
         # Test message handler addition
@@ -165,13 +170,13 @@ class TestWebSocketIntegration:
         # Test with WebSocket disabled
         connector = ExchangeConnector('binance', enable_websocket=False)
 
-        assert connector.enable_websocket == False
+        assert not connector.enable_websocket
         assert connector.websocket_manager is None
 
         # REST API should still work
         # Note: This would require mocking the exchange API in a real test
         status = connector.get_websocket_status()
-        assert status['websocket_enabled'] == False
+        assert not status['websocket_enabled']
 
     def test_websocket_disabled_gracefully(self):
         """Test graceful handling when WebSocket components are not available"""
@@ -184,7 +189,7 @@ class TestWebSocketIntegration:
             connector = ExchangeConnector('binance', enable_websocket=True)
 
             # Should fallback to REST-only mode
-            assert connector.enable_websocket == False
+            assert not connector.enable_websocket
             assert connector.websocket_manager is None
 
         finally:

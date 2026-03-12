@@ -7,18 +7,20 @@ and MiCA compliance constraints for arbitrage-enhanced portfolios.
 
 import asyncio
 import logging
-import numpy as np
-import pandas as pd
-from typing import Dict, List, Optional, Tuple, Any
+import time
+import warnings
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
-import time
-import cvxpy as cp
-from scipy.optimize import minimize
-import warnings
+from typing import Any, Dict, List, Optional, Tuple
 
-from risk_management import get_risk_management_engine, RiskManagementEngine
-from compliance import get_compliance_engine, MiCAComplianceEngine as ComplianceEngine
+import cvxpy as cp
+import numpy as np
+import pandas as pd
+from scipy.optimize import minimize
+
+from compliance import MiCAComplianceEngine as ComplianceEngine
+from compliance import get_compliance_engine
+from risk_management import RiskManagementEngine, get_risk_management_engine
 
 logger = logging.getLogger(__name__)
 

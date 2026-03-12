@@ -4,18 +4,19 @@ SovereignForge Backtester - Wave 3
 Historical backtesting framework for arbitrage strategies
 """
 
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
-import logging
+import asyncio
 import json
+import logging
 import os
 from concurrent.futures import ProcessPoolExecutor
-import asyncio
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
 
-from risk_management import create_default_risk_manager
+import numpy as np
+import pandas as pd
+
 from data_fetcher import RealDataFetcher
+from risk_management import create_default_risk_manager
 
 logger = logging.getLogger(__name__)
 

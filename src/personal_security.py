@@ -12,23 +12,24 @@ This module provides:
 - MiCA compliance for personal trading
 """
 
-import os
-import sys
-import logging
 import hashlib
+import logging
+import os
 import socket
+import sys
+
 try:
     import psutil
     _HAS_PSUTIL = True
 except ImportError:
     psutil = None
     _HAS_PSUTIL = False
+import json
 import threading
-from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-import json
+from typing import Any, Dict, List, Optional, Set
 
 # Add parent directory to path for imports
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -150,7 +151,7 @@ class PersonalSecurityManager:
                     local_ip = s.getsockname()[0]
                     s.close()
                     network_interfaces.append(f"local:{local_ip}")
-                except:
+                except Exception:
                     network_interfaces.append("unknown")
 
             # Check for external connections (simplified)
@@ -485,7 +486,7 @@ class PersonalSecurityManager:
             try:
                 from gpu_manager import shutdown_gpu_manager
                 shutdown_gpu_manager()
-            except:
+            except Exception:
                 pass
 
             logger.critical("Emergency shutdown completed")

@@ -2,6 +2,10 @@
 """
 SovereignForge - Live Arbitrage Pipeline
 End-to-end arbitrage detection and execution pipeline
+
+Supports two modes:
+  - "production": Requires real services (raises on import failure)
+  - "development": Allows mock fallbacks with clear warnings
 """
 
 import asyncio
@@ -21,6 +25,7 @@ MICA_COMPLIANT_PAIRS = [
     'LINK/RLUSD', 'IOTA/RLUSD', 'VET/RLUSD',
 ]
 
+
 @dataclass
 class ArbitrageOpportunity:
     """Represents a detected arbitrage opportunity"""
@@ -34,6 +39,7 @@ class ArbitrageOpportunity:
     volumes: Dict[str, float]
     risk_score: float
     profit_potential: float
+
 
 @dataclass
 class FilteredOpportunity:
@@ -52,6 +58,7 @@ class FilteredOpportunity:
             self.alerts = []
         if self.timestamp is None:
             self.timestamp = time.time()
+
 
 class OpportunityFilter:
     """Filters arbitrage opportunities based on risk and compliance"""
@@ -135,73 +142,52 @@ class OpportunityFilter:
             'total_processed': self.filtered_count + self.passed_count
         }
 
+
+class ServiceInitError(Exception):
+    """Raised when a required service fails to initialize in production mode."""
+
+
 class LiveArbitragePipeline:
     """
-    Live arbitrage detection and execution pipeline
+    Live arbitrage detection and execution pipeline.
+
+    Modes:
+      - "production": All core services must be available. Raises ServiceInitError
+        if HybridDataIntegrationService or RealTimeInferenceService cannot be imported.
+      - "development": Falls back to mock services with clear warnings.
     """
+
+    VALID_MODES = ("production", "development")
 
     def __init__(self, config: Dict[str, Any]):
         self.config = config
         self.is_running = False
+        self.mode = config.get('mode', 'development')
 
-        # Initialize components with Phase 2 integration
-        try:
-            from data_integration_service import HybridDataIntegrationService
-            self.data_service = HybridDataIntegrationService()
-        except ImportError:
-            logger.warning("DataIntegrationService not available, using mock")
-            self.data_service = MockDataService()
+        if self.mode not in self.VALID_MODES:
+            raise ValueError(f"Invalid pipeline mode '{self.mode}'. Must be one of {self.VALID_MODES}")
 
-        try:
-            from realtime_inference import (
-                RealTimeInferenceService,
-                get_inference_service,
-            )
-            self.inference_service = get_inference_service()  # Use singleton with GPU Manager
-        except ImportError:
-            logger.warning("RealTimeInferenceService not available, using mock")
-            self.inference_service = MockInferenceService()
+        if self.mode == 'development':
+            logger.warning("WARNING: Running in DEVELOPMENT mode with mock services. "
+                           "Data will be synthetic — do NOT trade real funds.")
 
-        try:
-            from risk_management import get_risk_manager
-            self.opportunity_filter = get_risk_manager()  # Use singleton with Kelly Criterion
-        except ImportError:
-            logger.warning("RiskManager not available, using mock")
-            self.opportunity_filter = MockRiskManager()
+        # ── Core services (data + inference) ──────────────────────────
+        self.data_service = self._init_data_service()
+        self.inference_service = self._init_inference_service()
 
-        try:
-            from telegram_alerts import get_telegram_alert_system
-            self.alert_system = get_telegram_alert_system()  # Use singleton with rate limiting
-        except ImportError:
-            logger.warning("TelegramAlertSystem not available, using mock")
-            self.alert_system = MockAlertSystem()
+        # ── Risk management ───────────────────────────────────────────
+        self.opportunity_filter = self._init_risk_manager()
 
-        # Cache layer (Redis + LRU in-memory fallback)
-        try:
-            from cache_layer import get_cache
-            self.cache = get_cache()
-            logger.info("CacheManager initialised (Redis + LRU fallback)")
-        except ImportError:
-            logger.warning("cache_layer not available — caching disabled")
-            self.cache = None
+        # ── Alerting ──────────────────────────────────────────────────
+        self.alert_system = self._init_alert_system()
 
-        # Per-exchange rate limiter (token bucket)
-        try:
-            from exchange_rate_limiter import get_rate_limiter
-            self.rate_limiter = get_rate_limiter()
-            logger.info("RateLimiterManager initialised")
-        except ImportError:
-            logger.warning("exchange_rate_limiter not available — rate limiting disabled")
-            self.rate_limiter = None
-
-        # Multi-channel alert router (Telegram primary + Email/SMS backup)
-        try:
-            from multi_channel_alerts import get_alert_router
-            self.alert_router = get_alert_router()
-            logger.info("AlertRouter initialised (multi-channel)")
-        except ImportError:
-            logger.warning("multi_channel_alerts not available — using Telegram-only alerts")
-            self.alert_router = None
+        # ── Optional services (degrade gracefully in all modes) ───────
+        self.cache = self._init_optional('cache_layer', 'get_cache',
+                                         "CacheManager initialised (Redis + LRU fallback)")
+        self.rate_limiter = self._init_optional('exchange_rate_limiter', 'get_rate_limiter',
+                                                "RateLimiterManager initialised")
+        self.alert_router = self._init_optional('multi_channel_alerts', 'get_alert_router',
+                                                "AlertRouter initialised (multi-channel)")
 
         # Pipeline statistics
         self.stats = {
@@ -211,7 +197,210 @@ class LiveArbitragePipeline:
             'start_time': time.time()
         }
 
-        logger.info("LiveArbitragePipeline initialized")
+        logger.info(f"LiveArbitragePipeline initialized (mode={self.mode})")
+
+    # ── Service initialization helpers ────────────────────────────────
+
+    def _init_data_service(self):
+        """Initialize data integration service."""
+        try:
+            from data_integration_service import HybridDataIntegrationService
+            svc = HybridDataIntegrationService()
+            logger.info("HybridDataIntegrationService loaded — real exchange data enabled")
+            return svc
+        except ImportError:
+            if self.mode == 'production':
+                raise ServiceInitError(
+                    "HybridDataIntegrationService is required in production mode. "
+                    "Ensure data_integration_service.py and its dependencies are installed."
+                )
+            logger.warning("HybridDataIntegrationService not available — using MockDataService")
+            return MockDataService()
+
+    def _init_inference_service(self):
+        """Initialize real-time inference service."""
+        try:
+            from realtime_inference import get_inference_service
+            svc = get_inference_service()
+            logger.info("RealTimeInferenceService loaded — GPU inference enabled")
+            return svc
+        except ImportError:
+            if self.mode == 'production':
+                raise ServiceInitError(
+                    "RealTimeInferenceService is required in production mode. "
+                    "Ensure realtime_inference.py, PyTorch, and GPU drivers are installed."
+                )
+            logger.warning("RealTimeInferenceService not available — using MockInferenceService")
+            return MockInferenceService()
+
+    def _init_risk_manager(self):
+        """Initialize risk manager."""
+        try:
+            from risk_management import get_risk_manager
+            svc = get_risk_manager()
+            logger.info("RiskManager loaded (Kelly Criterion)")
+            return svc
+        except ImportError:
+            if self.mode == 'production':
+                raise ServiceInitError(
+                    "RiskManager is required in production mode. "
+                    "Ensure risk_management.py is available."
+                )
+            logger.warning("RiskManager not available — using MockRiskManager")
+            return MockRiskManager()
+
+    def _init_alert_system(self):
+        """Initialize alert system."""
+        try:
+            from telegram_alerts import get_telegram_alert_system
+            svc = get_telegram_alert_system()
+            logger.info("TelegramAlertSystem loaded")
+            return svc
+        except ImportError:
+            logger.warning("TelegramAlertSystem not available — using MockAlertSystem")
+            return MockAlertSystem()
+
+    def _init_optional(self, module_name: str, factory_name: str, success_msg: str):
+        """Initialize an optional service that degrades gracefully in all modes."""
+        try:
+            mod = __import__(module_name)
+            factory = getattr(mod, factory_name)
+            svc = factory()
+            logger.info(success_msg)
+            return svc
+        except ImportError:
+            logger.warning(f"{module_name} not available — disabled")
+            return None
+
+    # ── Readiness check ───────────────────────────────────────────────
+
+    def get_readiness_check(self) -> Dict[str, Any]:
+        """Verify all services are properly initialized before starting.
+
+        Returns a dict with:
+          - ready (bool): True if the pipeline can start
+          - services (dict): Per-service status
+          - warnings (list): Non-fatal issues
+          - errors (list): Fatal issues (pipeline cannot start)
+        """
+        services = {}
+        warnings = []
+        errors = []
+
+        # Data service
+        is_mock_data = isinstance(self.data_service, MockDataService)
+        services['data_service'] = {
+            'type': 'mock' if is_mock_data else 'real',
+            'ready': True,
+        }
+        if is_mock_data:
+            warnings.append("Data service is mock — no real market data will be received")
+
+        # Inference service
+        is_mock_inference = isinstance(self.inference_service, MockInferenceService)
+        services['inference_service'] = {
+            'type': 'mock' if is_mock_inference else 'real',
+            'ready': True,
+        }
+        if is_mock_inference:
+            warnings.append("Inference service is mock — no ML predictions will be generated")
+
+        # Risk manager
+        is_mock_risk = isinstance(self.opportunity_filter, MockRiskManager)
+        services['risk_manager'] = {
+            'type': 'mock' if is_mock_risk else 'real',
+            'ready': True,
+        }
+        if is_mock_risk:
+            warnings.append("Risk manager is mock — all opportunities will pass validation")
+
+        # Alert system
+        is_mock_alert = isinstance(self.alert_system, MockAlertSystem)
+        services['alert_system'] = {
+            'type': 'mock' if is_mock_alert else 'real',
+            'ready': True,
+        }
+        if is_mock_alert:
+            warnings.append("Alert system is mock — no alerts will be sent")
+
+        # Optional services
+        services['cache'] = {'type': 'real' if self.cache else 'disabled', 'ready': True}
+        services['rate_limiter'] = {'type': 'real' if self.rate_limiter else 'disabled', 'ready': True}
+        services['alert_router'] = {'type': 'real' if self.alert_router else 'disabled', 'ready': True}
+
+        # In production, mock core services are errors
+        if self.mode == 'production':
+            if is_mock_data:
+                errors.append("Production mode requires real data service")
+            if is_mock_inference:
+                errors.append("Production mode requires real inference service")
+            if is_mock_risk:
+                errors.append("Production mode requires real risk manager")
+
+        ready = len(errors) == 0
+
+        return {
+            'ready': ready,
+            'mode': self.mode,
+            'services': services,
+            'warnings': warnings,
+            'errors': errors,
+        }
+
+    # ── Lifecycle ─────────────────────────────────────────────────────
+
+    async def start(self):
+        """Start the pipeline: connect components, initialize services, begin streaming."""
+        if self.is_running:
+            logger.warning("Pipeline is already running")
+            return
+
+        readiness = self.get_readiness_check()
+        if not readiness['ready']:
+            raise ServiceInitError(
+                f"Pipeline not ready: {'; '.join(readiness['errors'])}"
+            )
+
+        for w in readiness['warnings']:
+            logger.warning(w)
+
+        # Initialize data service (WebSocket connections)
+        if hasattr(self.data_service, 'initialize'):
+            await self.data_service.initialize()
+
+        if hasattr(self.data_service, 'start_websocket_connections'):
+            await self.data_service.start_websocket_connections()
+
+        # Load inference models
+        if hasattr(self.inference_service, 'load_models'):
+            self.inference_service.load_models(MICA_COMPLIANT_PAIRS)
+
+        # Wire callbacks
+        await self._connect_components()
+
+        self.is_running = True
+        self.stats['start_time'] = time.time()
+        logger.info(f"Pipeline STARTED (mode={self.mode})")
+
+    async def stop(self):
+        """Stop the pipeline gracefully."""
+        if not self.is_running:
+            logger.warning("Pipeline is not running")
+            return
+
+        self.is_running = False
+
+        # Disconnect data service
+        if hasattr(self.data_service, 'stop'):
+            await self.data_service.stop()
+        elif hasattr(self.data_service, 'close'):
+            await self.data_service.close()
+
+        # Stop inference service
+        if hasattr(self.inference_service, 'stop'):
+            await self.inference_service.stop()
+
+        logger.info("Pipeline STOPPED")
 
     async def _connect_components(self):
         """Connect pipeline components"""
@@ -304,55 +493,79 @@ class LiveArbitragePipeline:
         """Get pipeline status"""
         return {
             'is_running': self.is_running,
+            'mode': self.mode,
             'config': self.config,
             'stats': self.stats,
             'data_service': self.data_service.get_service_status() if hasattr(self.data_service, 'get_service_status') else {},
-            'inference_service': self.inference_service.get_service_status() if hasattr(self.inference_service, 'get_service_status') else {}
+            'inference_service': self.inference_service.get_service_status() if hasattr(self.inference_service, 'get_service_status') else {},
         }
 
-# Mock classes for when real implementations are not available
+
+# ── Mock classes (development mode only) ─────────────────────────────────
 
 class MockDataService:
-    """Mock data service"""
+    """Mock data service — used only in development mode."""
+
     def __init__(self):
         self.data_sources = ['binance', 'coinbase', 'kraken', 'kucoin', 'okx']
+        self._callbacks = []
 
     def add_data_callback(self, callback):
-        pass
+        self._callbacks.append(callback)
+
+    async def initialize(self):
+        logger.info("MockDataService.initialize() — no-op")
+
+    async def start_websocket_connections(self):
+        logger.info("MockDataService.start_websocket_connections() — no-op")
+
+    async def stop(self):
+        logger.info("MockDataService.stop() — no-op")
 
     def get_service_status(self):
-        return {'is_running': True, 'data_sources': 5, 'active_callbacks': 1}
+        return {'is_running': True, 'type': 'mock', 'data_sources': len(self.data_sources)}
+
 
 class MockInferenceService:
-    """Mock inference service (MiCA-compliant USDC pairs only)"""
+    """Mock inference service — used only in development mode."""
+
     def __init__(self):
-        self.pairs = [
-            'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
-            'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
-        ]
+        self.pairs = MICA_COMPLIANT_PAIRS[:10]
         self.models = {}
+        self._callbacks = []
 
     def add_opportunity_callback(self, callback):
-        pass
+        self._callbacks.append(callback)
+
+    def load_models(self, pairs):
+        logger.info(f"MockInferenceService.load_models({len(pairs)} pairs) — no-op")
 
     async def process_market_data(self, data):
         pass
 
+    async def stop(self):
+        logger.info("MockInferenceService.stop() — no-op")
+
     def get_service_status(self):
         return {
             'is_running': True,
+            'type': 'mock',
             'models_loaded': 0,
-            'pairs_monitored': 7,
+            'pairs_monitored': len(self.pairs),
             'gpu_available': False
         }
 
+
 class MockRiskManager:
-    """Mock risk manager"""
+    """Mock risk manager — approves all opportunities."""
+
     def validate_opportunity(self, opportunity):
         return True
 
+
 class MockAlertSystem:
-    """Mock alert system"""
+    """Mock alert system — silently discards alerts."""
+
     async def send_opportunity_alert(self, opportunity):
         pass
 

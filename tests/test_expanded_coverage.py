@@ -694,18 +694,162 @@ class TestLiveArbitragePipeline:
         rm = MockRiskManager()
         assert rm.validate_opportunity(None)
 
-    def test_pipeline_initialization(self):
+    def test_pipeline_initialization_development(self):
         from live_arbitrage_pipeline import LiveArbitragePipeline
-        pipeline = LiveArbitragePipeline({'mode': 'test'})
+        pipeline = LiveArbitragePipeline({'mode': 'development'})
         assert not pipeline.is_running
+        assert pipeline.mode == 'development'
         assert pipeline.stats['opportunities_detected'] == 0
 
     def test_pipeline_status(self):
         from live_arbitrage_pipeline import LiveArbitragePipeline
-        pipeline = LiveArbitragePipeline({'mode': 'test'})
+        pipeline = LiveArbitragePipeline({'mode': 'development'})
         status = pipeline.get_pipeline_status()
         assert 'is_running' in status
         assert 'stats' in status
+        assert status['mode'] == 'development'
+
+    def test_pipeline_invalid_mode_raises(self):
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+        with pytest.raises(ValueError, match="Invalid pipeline mode"):
+            LiveArbitragePipeline({'mode': 'invalid'})
+
+    def test_pipeline_default_mode_is_development(self):
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+        pipeline = LiveArbitragePipeline({})
+        assert pipeline.mode == 'development'
+
+
+class TestPipelineReadiness:
+    """Tests for pipeline readiness checks and production/development mode enforcement."""
+
+    def test_development_mode_readiness_with_mocks(self):
+        """Development mode should be ready even with mock services."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+        pipeline = LiveArbitragePipeline({'mode': 'development'})
+        check = pipeline.get_readiness_check()
+        assert check['ready']
+        assert check['mode'] == 'development'
+        assert len(check['errors']) == 0
+        # Should have warnings about mock services
+        assert len(check['warnings']) > 0
+
+    def test_development_mode_identifies_service_types(self):
+        """Readiness check should report service types correctly."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+        pipeline = LiveArbitragePipeline({'mode': 'development'})
+        check = pipeline.get_readiness_check()
+        # Every service should have a type field
+        for name, info in check['services'].items():
+            assert 'type' in info, f"Service {name} missing 'type'"
+            assert info['type'] in ('real', 'mock', 'disabled'), f"Unexpected type for {name}: {info['type']}"
+
+    def test_production_mode_rejects_missing_data_service(self):
+        """Production mode should raise if HybridDataIntegrationService is unavailable."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline, ServiceInitError
+        with patch.dict('sys.modules', {'data_integration_service': None}):
+            with pytest.raises(ServiceInitError, match="HybridDataIntegrationService"):
+                LiveArbitragePipeline({'mode': 'production'})
+
+    def test_production_mode_rejects_missing_inference(self):
+        """Production mode should raise if RealTimeInferenceService is unavailable."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline, ServiceInitError
+        # Mock the data service to pass, but block inference
+        with patch('live_arbitrage_pipeline.LiveArbitragePipeline._init_data_service') as mock_ds:
+            mock_ds.return_value = MagicMock()
+            with patch.dict('sys.modules', {'realtime_inference': None}):
+                with pytest.raises(ServiceInitError, match="RealTimeInferenceService"):
+                    LiveArbitragePipeline({'mode': 'production'})
+
+    def test_service_init_error_is_exception(self):
+        """ServiceInitError should be a proper exception."""
+        from live_arbitrage_pipeline import ServiceInitError
+        assert issubclass(ServiceInitError, Exception)
+        err = ServiceInitError("test error")
+        assert str(err) == "test error"
+
+
+class TestPipelineLifecycle:
+    """Tests for pipeline start/stop lifecycle."""
+
+    def test_start_stop_development_mode(self):
+        """Pipeline should start and stop cleanly in development mode."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+
+        async def run():
+            pipeline = LiveArbitragePipeline({'mode': 'development'})
+            assert not pipeline.is_running
+            await pipeline.start()
+            assert pipeline.is_running
+            await pipeline.stop()
+            assert not pipeline.is_running
+
+        asyncio.run(run())
+
+    def test_double_start_warns(self):
+        """Starting an already-running pipeline should warn, not crash."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+
+        async def run():
+            pipeline = LiveArbitragePipeline({'mode': 'development'})
+            await pipeline.start()
+            # Second start should just warn
+            await pipeline.start()
+            assert pipeline.is_running
+            await pipeline.stop()
+
+        asyncio.run(run())
+
+    def test_double_stop_warns(self):
+        """Stopping a non-running pipeline should warn, not crash."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+
+        async def run():
+            pipeline = LiveArbitragePipeline({'mode': 'development'})
+            # Stop without starting should just warn
+            await pipeline.stop()
+            assert not pipeline.is_running
+
+        asyncio.run(run())
+
+    def test_start_wires_callbacks(self):
+        """After start, mock services should have callbacks registered."""
+        from live_arbitrage_pipeline import (
+            LiveArbitragePipeline,
+            MockDataService,
+            MockInferenceService,
+        )
+
+        async def run():
+            pipeline = LiveArbitragePipeline({'mode': 'development'})
+            await pipeline.start()
+            # Check that callbacks were added
+            if isinstance(pipeline.data_service, MockDataService):
+                assert len(pipeline.data_service._callbacks) > 0
+            if isinstance(pipeline.inference_service, MockInferenceService):
+                assert len(pipeline.inference_service._callbacks) > 0
+            await pipeline.stop()
+
+        asyncio.run(run())
+
+    def test_handle_opportunity_increments_stats(self):
+        """_handle_opportunity should increment stats."""
+        from live_arbitrage_pipeline import ArbitrageOpportunity, LiveArbitragePipeline
+
+        async def run():
+            pipeline = LiveArbitragePipeline({'mode': 'development'})
+            opp = ArbitrageOpportunity(
+                pair='XRP/USDC', timestamp=time.time(), probability=0.8,
+                confidence=0.9, spread_prediction=0.005,
+                exchanges=['binance', 'coinbase'],
+                prices={'binance': 1.0, 'coinbase': 1.005},
+                volumes={'binance': 1000, 'coinbase': 1000},
+                risk_score=0.2, profit_potential=5.0,
+            )
+            await pipeline._handle_opportunity(opp)
+            assert pipeline.stats['opportunities_detected'] == 1
+
+        asyncio.run(run())
 
 
 # ── Order Executor ─────────────────────────────────────────────────────────

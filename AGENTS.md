@@ -56,7 +56,7 @@ Concise guide to every open issue. Fix these in priority order.
 
 | Problem | Where | Fix |
 |---------|-------|-----|
-| Mock services in prod pipeline | `src/live_arbitrage_pipeline.py:153,160` | Replace `MockDataService()` with `WebSocketConnector()`, `MockInferenceService()` with `RealtimeInferenceService()`. Delete mock classes at lines 311-356. |
+| ~~Mock services in prod pipeline~~ | `src/live_arbitrage_pipeline.py` | **RESOLVED** — Pipeline now has `mode` config: `"production"` requires real services (raises `ServiceInitError`), `"development"` allows mocks with warnings. Added `start()`/`stop()` lifecycle and `get_readiness_check()`. |
 | asyncio.run() in async context | `src/main.py:738` | Change `results = asyncio.run(run_async_backtest())` to `results = await run_async_backtest()` |
 | asyncio.run() in async context | `src/main.py:802` | Change `trade_result = asyncio.run(self.order_executor.execute_arbitrage_trade(opportunity))` to use await |
 | 4 models below 80% accuracy | `models/` metadata JSONs | Retrain via `gpu_train.py` with tuned hyperparams (see TODO_ENHANCEMENTS.md C3-C6) |
@@ -69,12 +69,12 @@ Concise guide to every open issue. Fix these in priority order.
 
 | Duplicate Pair | Keep | Delete/Merge |
 |---------------|------|-------------|
-| `risk_management.py` + `risk_manager.py` | Audit both, keep one | Redirect imports from deleted file |
+| ~~`risk_management.py` + `risk_manager.py`~~ | **RESOLVED** | Consolidated into `risk_management.py`, `risk_manager.py` deleted |
 | `compliance.py` + `mica_compliance.py` | `compliance.py` | Merge unique logic from `mica_compliance.py` |
 | `cache.py` + `cache_layer.py` | `cache_layer.py` | Delete `cache.py`, update imports |
 | `sovereignforge_real.py` + `sovereignforge_working.py` | Neither (use `main.py`) | Delete both |
 | 8 root `.tsx` files | `dashboard/src/components/*` | Delete root copies |
-| 3 stub `.pth` files (<200B) | None | Delete or train real models |
+| ~~3 stub `.pth` files (<200B)~~ | **RESOLVED** | Deleted + added to `.gitignore` |
 | `monitoring/dashboard/` scaffold | None | Delete dead Vite project |
 | `warm_start_state.json` (18MB) | Consider .gitignore | Lazy-load or compress |
 
@@ -93,7 +93,7 @@ python -m pytest tests/test_integration.py -v
 python test_cuda.py
 ```
 
-**Current: 71/73 passing (97.3%)**
+**Current: 155+ tests passing**
 
 Test markers (skipped in CI): `@pytest.mark.gpu`, `@pytest.mark.network`, `@pytest.mark.slow`
 

@@ -19,6 +19,12 @@ models/best_*.pth
 models/checkpoints/
 models/training_results/
 models/secure/
+models/strategies/dca_*.pth
+models/strategies/fib_*.pth
+models/strategies/grid_*.pth
+
+# Warm start state (large runtime artifact)
+warm_start_state.json
 
 # Environment files
 .env

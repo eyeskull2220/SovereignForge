@@ -247,20 +247,24 @@ def engineer_features(ohlcv: np.ndarray, seq_len: int = 24) -> Tuple[np.ndarray,
     # Feature 7: Bollinger Band position
     bb_pos = _compute_bb_position(close, period=20)
 
-    # Feature 8: Volume momentum (5-period)
-    vol_mom = np.zeros_like(volume)
-    for i in range(5, len(volume)):
-        vol_mom[i] = (volume[i] - np.mean(volume[i - 5:i])) / (np.mean(volume[i - 5:i]) + 1e-10)
+    # Feature 8: Volume momentum (5-period) — vectorized
+    vol_cumsum = np.cumsum(np.insert(volume, 0, 0))
+    vol_ma5 = np.zeros_like(volume)
+    vol_ma5[5:] = (vol_cumsum[5:] - vol_cumsum[:-5]) / 5.0
+    vol_mom = np.where(vol_ma5 > 1e-10, (volume - vol_ma5) / vol_ma5, 0.0)
 
-    # Feature 9: Price momentum (10-period)
+    # Feature 9: Price momentum (10-period) — vectorized
     price_mom = np.zeros_like(close)
-    for i in range(10, len(close)):
-        price_mom[i] = (close[i] - close[i - 10]) / (close[i - 10] + 1e-10)
+    price_mom[10:] = (close[10:] - close[:-10]) / (close[:-10] + 1e-10)
 
-    # Feature 10: Volatility (20-period rolling std of returns)
+    # Feature 10: Volatility (20-period rolling std of returns) — vectorized
+    ret_cumsum = np.cumsum(np.insert(returns, 0, 0))
+    ret_sq_cumsum = np.cumsum(np.insert(returns**2, 0, 0))
     volatility = np.zeros_like(close)
-    for i in range(20, len(close)):
-        volatility[i] = np.std(returns[i - 20:i])
+    n_win = 20
+    mean_r = (ret_cumsum[n_win:] - ret_cumsum[:-n_win]) / n_win
+    mean_r2 = (ret_sq_cumsum[n_win:] - ret_sq_cumsum[:-n_win]) / n_win
+    volatility[n_win:] = np.sqrt(np.maximum(mean_r2 - mean_r**2, 0))
 
     # Stack features
     features = np.column_stack([
@@ -268,11 +272,11 @@ def engineer_features(ohlcv: np.ndarray, seq_len: int = 24) -> Tuple[np.ndarray,
         rsi, macd, bb_pos, vol_mom, price_mom, volatility,
     ])
 
-    # Normalize each feature
-    for col in range(features.shape[1]):
-        col_std = np.std(features[:, col])
-        if col_std > 1e-10:
-            features[:, col] = (features[:, col] - np.mean(features[:, col])) / col_std
+    # Normalize each feature — vectorized
+    col_mean = features.mean(axis=0)
+    col_std = features.std(axis=0)
+    col_std[col_std < 1e-10] = 1.0  # Prevent division by zero
+    features = (features - col_mean) / col_std
 
     # Create sequences
     sequences = []
@@ -526,8 +530,15 @@ def train_strategy_model(
 
             train_dataset = StrategyDataset(train_features, train_labels)
             val_dataset = StrategyDataset(val_features, val_labels)
-            train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-            val_loader = DataLoader(val_dataset, batch_size=batch_size)
+            use_cuda = device.type == 'cuda'
+            train_loader = DataLoader(
+                train_dataset, batch_size=batch_size, shuffle=True,
+                pin_memory=use_cuda, num_workers=4 if use_cuda else 0,
+            )
+            val_loader = DataLoader(
+                val_dataset, batch_size=batch_size,
+                pin_memory=use_cuda, num_workers=2 if use_cuda else 0,
+            )
 
             # Create model
             output_size = 3  # signal, confidence, magnitude
@@ -536,24 +547,35 @@ def train_strategy_model(
             scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=epochs)
             criterion = nn.MSELoss()
 
-            # Training loop
+            # Training loop with mixed precision (AMP)
             best_val_loss = float('inf')
             patience_counter = 0
             patience = 20
             epoch_results = []
+            use_amp = use_cuda
+            scaler = torch.amp.GradScaler('cuda', enabled=use_amp) if use_amp else None
 
+            model.train()
             for epoch in range(epochs):
                 # Train
                 model.train()
                 train_loss = 0.0
                 for batch_x, batch_y in train_loader:
-                    batch_x, batch_y = batch_x.to(device), batch_y.to(device)
-                    optimizer.zero_grad()
-                    output = model(batch_x)
-                    loss = criterion(output, batch_y)
-                    loss.backward()
-                    torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                    optimizer.step()
+                    batch_x, batch_y = batch_x.to(device, non_blocking=True), batch_y.to(device, non_blocking=True)
+                    optimizer.zero_grad(set_to_none=True)
+                    with torch.amp.autocast('cuda', enabled=use_amp):
+                        output = model(batch_x)
+                        loss = criterion(output, batch_y)
+                    if scaler:
+                        scaler.scale(loss).backward()
+                        scaler.unscale_(optimizer)
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                        scaler.step(optimizer)
+                        scaler.update()
+                    else:
+                        loss.backward()
+                        torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+                        optimizer.step()
                     train_loss += loss.item()
 
                 train_loss /= max(len(train_loader), 1)
@@ -563,9 +585,10 @@ def train_strategy_model(
                 val_loss = 0.0
                 with torch.no_grad():
                     for batch_x, batch_y in val_loader:
-                        batch_x, batch_y = batch_x.to(device), batch_y.to(device)
-                        output = model(batch_x)
-                        val_loss += criterion(output, batch_y).item()
+                        batch_x, batch_y = batch_x.to(device, non_blocking=True), batch_y.to(device, non_blocking=True)
+                        with torch.amp.autocast('cuda', enabled=use_amp):
+                            output = model(batch_x)
+                            val_loss += criterion(output, batch_y).item()
 
                 val_loss /= max(len(val_loader), 1)
                 scheduler.step()

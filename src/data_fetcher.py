@@ -47,33 +47,37 @@ class RealDataFetcher:
         logger.info("Real Data Fetcher initialized")
 
     async def fetch_all_data(self, days: int = 90, timeframe: str = '1h') -> Dict:
-        """Fetch historical data for all MiCA pairs from all exchanges"""
+        """Fetch historical data for all MiCA pairs from all exchanges (parallel)"""
 
         logger.info(f"Fetching {days} days of {timeframe} data for {len(self.mica_pairs)} pairs")
 
-        all_data = {}
+        all_data = {pair: {} for pair in self.mica_pairs}
 
-        for pair in self.mica_pairs:
-            all_data[pair] = {}
-            logger.info(f"Fetching data for {pair}")
+        # Rate limit: max 2 concurrent requests per exchange
+        semaphore = asyncio.Semaphore(6)  # 2 per exchange × 3 exchanges
 
-            for exchange_name, exchange in self.exchanges.items():
+        async def _fetch_one(pair, exchange_name, exchange):
+            async with semaphore:
                 try:
                     data = await self._fetch_pair_data(exchange, pair, days, timeframe)
                     if data is not None:
                         all_data[pair][exchange_name] = data
-                        logger.info(f"  {exchange_name}: {len(data)} candles")
+                        logger.info(f"  {exchange_name}: {len(data)} candles for {pair}")
                     else:
                         logger.warning(f"  {exchange_name}: No data for {pair}")
-
                 except Exception as e:
                     logger.error(f"  {exchange_name} {pair}: {e}")
 
-                # Rate limiting
-                await asyncio.sleep(0.1)
+        # Launch all fetches concurrently with semaphore rate limiting
+        tasks = [
+            _fetch_one(pair, exchange_name, exchange)
+            for pair in self.mica_pairs
+            for exchange_name, exchange in self.exchanges.items()
+        ]
+        await asyncio.gather(*tasks, return_exceptions=True)
 
-        # Save to files
-        self._save_data(all_data)
+        # Save to files (in thread to avoid blocking)
+        await asyncio.to_thread(self._save_data, all_data)
 
         return all_data
 

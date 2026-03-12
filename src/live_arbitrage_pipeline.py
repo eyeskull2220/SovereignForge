@@ -11,9 +11,12 @@ Supports two modes:
 import asyncio
 import logging
 import time
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Deque, Dict, List, Optional
+
+import numpy as np
 
 logger = logging.getLogger(__name__)
 
@@ -171,9 +174,14 @@ class LiveArbitragePipeline:
             logger.warning("WARNING: Running in DEVELOPMENT mode with mock services. "
                            "Data will be synthetic — do NOT trade real funds.")
 
-        # ── Core services (data + inference) ──────────────────────────
+        # ── Core services (data + inference + ensemble) ───────────────
         self.data_service = self._init_data_service()
         self.inference_service = self._init_inference_service()
+        self.ensemble = self._init_ensemble()
+
+        # Market data buffer for ensemble predictions (pair → deque of OHLCV rows)
+        self._market_buffers: Dict[str, Deque[np.ndarray]] = {}
+        self._ensemble_min_agreement = config.get('ensemble_min_agreement', 0.6)
 
         # ── Risk management ───────────────────────────────────────────
         self.opportunity_filter = self._init_risk_manager()
@@ -232,6 +240,23 @@ class LiveArbitragePipeline:
                 )
             logger.warning("RealTimeInferenceService not available — using MockInferenceService")
             return MockInferenceService()
+
+    def _init_ensemble(self):
+        """Initialize the multi-strategy ensemble (collective brain)."""
+        try:
+            from strategy_ensemble import StrategyEnsemble
+            ensemble = StrategyEnsemble(config=self.config)
+            logger.info("StrategyEnsemble loaded — collective brain enabled")
+            return ensemble
+        except ImportError:
+            if self.mode == 'production':
+                logger.warning(
+                    "StrategyEnsemble not available in production — "
+                    "falling back to single-strategy inference only"
+                )
+            else:
+                logger.warning("StrategyEnsemble not available — ensemble signals disabled")
+            return None
 
     def _init_risk_manager(self):
         """Initialize risk manager."""
@@ -323,6 +348,14 @@ class LiveArbitragePipeline:
         if is_mock_alert:
             warnings.append("Alert system is mock — no alerts will be sent")
 
+        # Ensemble (collective brain)
+        services['ensemble'] = {
+            'type': 'real' if self.ensemble else 'disabled',
+            'ready': True,
+        }
+        if self.ensemble is None:
+            warnings.append("StrategyEnsemble not available — single-strategy inference only")
+
         # Optional services
         services['cache'] = {'type': 'real' if self.cache else 'disabled', 'ready': True}
         services['rate_limiter'] = {'type': 'real' if self.rate_limiter else 'disabled', 'ready': True}
@@ -375,6 +408,14 @@ class LiveArbitragePipeline:
         if hasattr(self.inference_service, 'load_models'):
             self.inference_service.load_models(MICA_COMPLIANT_PAIRS)
 
+        # Load ensemble models for all pairs
+        if self.ensemble is not None:
+            ensemble_results = self.ensemble.load_all_models(
+                [p for p in MICA_COMPLIANT_PAIRS if '/USDC' in p]
+            )
+            loaded = sum(1 for v in ensemble_results.values() if v)
+            logger.info(f"Ensemble: loaded {loaded}/{len(ensemble_results)} strategy models")
+
         # Wire callbacks
         await self._connect_components()
 
@@ -408,6 +449,9 @@ class LiveArbitragePipeline:
             # Connect data service to inference service
             self.data_service.add_data_callback(self.inference_service.process_market_data)
 
+            # Also buffer market data for ensemble predictions
+            self.data_service.add_data_callback(self._buffer_market_data)
+
             # Connect inference service to opportunity handler
             self.inference_service.add_opportunity_callback(self._handle_opportunity)
 
@@ -415,11 +459,61 @@ class LiveArbitragePipeline:
         except Exception as e:
             logger.error(f"Failed to connect pipeline components: {e}")
 
+    async def _buffer_market_data(self, data: Dict[str, Any]):
+        """Buffer OHLCV data for ensemble predictions."""
+        pair = data.get('pair')
+        if not pair:
+            return
+
+        if pair not in self._market_buffers:
+            self._market_buffers[pair] = deque(maxlen=100)
+
+        # Extract OHLCV row: [timestamp, open, high, low, close, volume]
+        row = np.array([
+            data.get('timestamp', time.time()),
+            data.get('open', data.get('price', 0.0)),
+            data.get('high', data.get('price', 0.0)),
+            data.get('low', data.get('price', 0.0)),
+            data.get('close', data.get('price', 0.0)),
+            data.get('volume', 0.0),
+        ], dtype=np.float64)
+        self._market_buffers[pair].append(row)
+
     async def _handle_opportunity(self, opportunity: ArbitrageOpportunity):
         """Handle detected arbitrage opportunity"""
         self.stats['opportunities_detected'] += 1
 
         try:
+            # ── Ensemble confirmation (collective brain) ──────────────
+            ensemble_signal = None
+            if self.ensemble is not None and opportunity.pair in self._market_buffers:
+                buf = self._market_buffers[opportunity.pair]
+                if len(buf) >= 24:
+                    market_data = np.array(list(buf), dtype=np.float64)
+                    ensemble_signal = self.ensemble.predict(opportunity.pair, market_data)
+
+                    # Gate: reject if strategies disagree
+                    if ensemble_signal.agreement_score < self._ensemble_min_agreement:
+                        logger.info(
+                            f"Ensemble disagreement for {opportunity.pair}: "
+                            f"agreement={ensemble_signal.agreement_score:.2f} "
+                            f"< threshold={self._ensemble_min_agreement:.2f} — skipping"
+                        )
+                        self.stats['opportunities_filtered'] += 1
+                        self.stats['ensemble_rejections'] = self.stats.get('ensemble_rejections', 0) + 1
+                        return
+
+                    # Boost/dampen confidence using ensemble
+                    opportunity.confidence = min(
+                        opportunity.confidence * ensemble_signal.confidence, 1.0
+                    )
+                    logger.debug(
+                        f"Ensemble confirmed {opportunity.pair}: "
+                        f"action={ensemble_signal.action} "
+                        f"agreement={ensemble_signal.agreement_score:.2f} "
+                        f"confidence={ensemble_signal.confidence:.2f}"
+                    )
+
             # Acquire rate limit token for the primary exchange before proceeding
             if self.rate_limiter and opportunity.exchanges:
                 allowed = await self.rate_limiter.acquire(
@@ -436,21 +530,9 @@ class LiveArbitragePipeline:
                     self.stats['opportunities_filtered'] += 1
                     return
 
-            # Cache the opportunity
+            # Cache the opportunity (fire-and-forget to avoid blocking)
             if self.cache is not None:
-                try:
-                    await self.cache.cache_opportunity(
-                        f"{opportunity.pair}:{opportunity.timestamp}",
-                        {
-                            'pair': opportunity.pair,
-                            'probability': opportunity.probability,
-                            'confidence': opportunity.confidence,
-                            'exchanges': opportunity.exchanges,
-                            'profit_potential': opportunity.profit_potential,
-                        }
-                    )
-                except Exception:
-                    pass  # Cache failure is non-fatal
+                asyncio.create_task(self._cache_opportunity_bg(opportunity))
 
             # Send alert via multi-channel router (primary), fall back to Telegram-only
             if self.alert_router is not None:
@@ -491,7 +573,7 @@ class LiveArbitragePipeline:
 
     def get_pipeline_status(self) -> Dict[str, Any]:
         """Get pipeline status"""
-        return {
+        status = {
             'is_running': self.is_running,
             'mode': self.mode,
             'config': self.config,
@@ -499,9 +581,29 @@ class LiveArbitragePipeline:
             'data_service': self.data_service.get_service_status() if hasattr(self.data_service, 'get_service_status') else {},
             'inference_service': self.inference_service.get_service_status() if hasattr(self.inference_service, 'get_service_status') else {},
         }
+        if self.ensemble is not None:
+            status['ensemble'] = self.ensemble.get_loaded_summary()
+        return status
 
 
 # ── Mock classes (development mode only) ─────────────────────────────────
+
+    async def _cache_opportunity_bg(self, opportunity: ArbitrageOpportunity):
+        """Background cache write — non-blocking."""
+        try:
+            await self.cache.cache_opportunity(
+                f"{opportunity.pair}:{opportunity.timestamp}",
+                {
+                    'pair': opportunity.pair,
+                    'probability': opportunity.probability,
+                    'confidence': opportunity.confidence,
+                    'exchanges': opportunity.exchanges,
+                    'profit_potential': opportunity.profit_potential,
+                }
+            )
+        except Exception:
+            pass  # Cache failure is non-fatal
+
 
 class MockDataService:
     """Mock data service — used only in development mode."""

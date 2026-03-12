@@ -439,10 +439,13 @@ def run_gpu_arbitrage_training(pairs: List[str],
         val_data = torch.stack(val_data)
         val_labels = torch.tensor(val_labels, dtype=torch.float32).to(model.device)  # Move to GPU
 
-        # Training loop with early stopping and learning rate scheduling
+        # Training loop with early stopping, LR scheduling, and mixed precision
         epoch_results = []
         best_val_acc = 0.0
+        use_amp = torch.cuda.is_available()
+        scaler = torch.amp.GradScaler('cuda', enabled=use_amp) if use_amp else None
 
+        model.model.train()
         for epoch in range(num_epochs):
             model.model.train()
             epoch_train_loss = 0.0
@@ -453,18 +456,24 @@ def run_gpu_arbitrage_training(pairs: List[str],
                 batch_data = train_data[i:i+batch_size]
                 batch_labels = train_labels[i:i+batch_size]
 
-                optimizer.zero_grad()
+                optimizer.zero_grad(set_to_none=True)
 
-                # Forward pass
-                arbitrage_signal, confidence, spread = model.model(batch_data)
+                # Forward pass with AMP
+                with torch.amp.autocast('cuda', enabled=use_amp):
+                    arbitrage_signal, confidence, spread = model.model(batch_data)
+                    loss = criterion(arbitrage_signal.squeeze(), batch_labels)
 
-                # Compute loss (only on arbitrage signal)
-                loss = criterion(arbitrage_signal.squeeze(), batch_labels)
-
-                # Backward pass
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.model.parameters(), 1.0)
-                optimizer.step()
+                # Backward pass with scaler
+                if scaler:
+                    scaler.scale(loss).backward()
+                    scaler.unscale_(optimizer)
+                    torch.nn.utils.clip_grad_norm_(model.model.parameters(), 1.0)
+                    scaler.step(optimizer)
+                    scaler.update()
+                else:
+                    loss.backward()
+                    torch.nn.utils.clip_grad_norm_(model.model.parameters(), 1.0)
+                    optimizer.step()
 
                 epoch_train_loss += loss.item()
 
@@ -482,8 +491,9 @@ def run_gpu_arbitrage_training(pairs: List[str],
                     batch_data = val_data[i:i+batch_size]
                     batch_labels = val_labels[i:i+batch_size]
 
-                    arbitrage_signal, confidence, spread = model.model(batch_data)
-                    loss = criterion(arbitrage_signal.squeeze(), batch_labels)
+                    with torch.amp.autocast('cuda', enabled=use_amp):
+                        arbitrage_signal, confidence, spread = model.model(batch_data)
+                        loss = criterion(arbitrage_signal.squeeze(), batch_labels)
 
                     val_loss += loss.item()
                     predictions = (arbitrage_signal.squeeze() > 0.5).float()

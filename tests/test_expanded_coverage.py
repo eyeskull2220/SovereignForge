@@ -1585,3 +1585,95 @@ class TestStrategyEnsemble:
         # Uses default config path — will use empty config if file doesn't exist
         ensemble = create_ensemble_from_config()
         assert ensemble is not None
+
+
+class TestPipelineEnsembleIntegration:
+    """Tests for StrategyEnsemble integration into LiveArbitragePipeline."""
+
+    def test_pipeline_has_ensemble_attribute(self):
+        """Pipeline should initialise ensemble (or None if deps missing)."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+        pipeline = LiveArbitragePipeline({'mode': 'development'})
+        assert hasattr(pipeline, 'ensemble')
+
+    def test_pipeline_has_market_buffers(self):
+        """Pipeline should have market data buffers dict."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+        pipeline = LiveArbitragePipeline({'mode': 'development'})
+        assert isinstance(pipeline._market_buffers, dict)
+
+    def test_pipeline_ensemble_min_agreement_default(self):
+        """Default ensemble agreement threshold should be 0.6."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+        pipeline = LiveArbitragePipeline({'mode': 'development'})
+        assert pipeline._ensemble_min_agreement == 0.6
+
+    def test_pipeline_ensemble_min_agreement_custom(self):
+        """Custom ensemble agreement threshold from config."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+        pipeline = LiveArbitragePipeline({
+            'mode': 'development',
+            'ensemble_min_agreement': 0.8,
+        })
+        assert pipeline._ensemble_min_agreement == 0.8
+
+    def test_readiness_check_includes_ensemble(self):
+        """Readiness check should include ensemble service info."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+        pipeline = LiveArbitragePipeline({'mode': 'development'})
+        check = pipeline.get_readiness_check()
+        assert 'ensemble' in check['services']
+        assert check['services']['ensemble']['ready']
+
+    def test_pipeline_status_includes_ensemble_when_available(self):
+        """Pipeline status should include ensemble summary when loaded."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+        pipeline = LiveArbitragePipeline({'mode': 'development'})
+        status = pipeline.get_pipeline_status()
+        # ensemble key present only if ensemble is not None
+        if pipeline.ensemble is not None:
+            assert 'ensemble' in status
+
+    @pytest.mark.asyncio
+    async def test_buffer_market_data(self):
+        """_buffer_market_data should populate market buffers."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+        pipeline = LiveArbitragePipeline({'mode': 'development'})
+        data = {
+            'pair': 'XRP/USDC',
+            'timestamp': 1710000000.0,
+            'open': 0.61, 'high': 0.62, 'low': 0.60,
+            'close': 0.615, 'volume': 1000.0,
+        }
+        await pipeline._buffer_market_data(data)
+        assert 'XRP/USDC' in pipeline._market_buffers
+        assert len(pipeline._market_buffers['XRP/USDC']) == 1
+
+    @pytest.mark.asyncio
+    async def test_buffer_market_data_no_pair_ignored(self):
+        """_buffer_market_data should ignore data without pair key."""
+        from live_arbitrage_pipeline import LiveArbitragePipeline
+        pipeline = LiveArbitragePipeline({'mode': 'development'})
+        await pipeline._buffer_market_data({'price': 100.0})
+        assert len(pipeline._market_buffers) == 0
+
+    @pytest.mark.asyncio
+    async def test_handle_opportunity_without_ensemble(self):
+        """Opportunity handling works when ensemble is None."""
+        from live_arbitrage_pipeline import (
+            ArbitrageOpportunity,
+            LiveArbitragePipeline,
+        )
+        pipeline = LiveArbitragePipeline({'mode': 'development'})
+        pipeline.ensemble = None  # Explicitly disable
+
+        opp = ArbitrageOpportunity(
+            pair='XRP/USDC', timestamp=1710000000.0,
+            probability=0.8, confidence=0.9, spread_prediction=0.002,
+            exchanges=['binance', 'coinbase'],
+            prices={'binance': 0.61, 'coinbase': 0.612},
+            volumes={'binance': 5000, 'coinbase': 4000},
+            risk_score=0.3, profit_potential=0.001,
+        )
+        await pipeline._handle_opportunity(opp)
+        assert pipeline.stats['opportunities_detected'] == 1

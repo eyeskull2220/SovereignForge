@@ -115,23 +115,15 @@ class OrderExecutor:
                 execution_result['errors'].append(balance_err)
                 return execution_result
 
-            # Execute buy order (long cheaper exchange)
-            buy_order = await self._execute_single_order(
+            # Execute buy and sell orders concurrently for lower latency
+            buy_coro = self._execute_single_order(
                 trade_params['buy_exchange'],
                 trade_params['symbol'],
                 'buy',
                 trade_params['quantity'],
                 trade_params['buy_price']
             )
-
-            if not buy_order['success']:
-                execution_result['errors'].append(f"Buy order failed: {buy_order['error']}")
-                return execution_result
-
-            execution_result['orders'].append(buy_order)
-
-            # Execute sell order (short expensive exchange)
-            sell_order = await self._execute_single_order(
+            sell_coro = self._execute_single_order(
                 trade_params['sell_exchange'],
                 trade_params['symbol'],
                 'sell',
@@ -139,9 +131,28 @@ class OrderExecutor:
                 trade_params['sell_price']
             )
 
+            buy_order, sell_order = await asyncio.gather(buy_coro, sell_coro, return_exceptions=True)
+
+            # Handle exceptions from gather
+            if isinstance(buy_order, Exception):
+                execution_result['errors'].append(f"Buy order failed: {buy_order}")
+                return execution_result
+            if isinstance(sell_order, Exception):
+                execution_result['errors'].append(f"Sell order failed: {sell_order}")
+                if buy_order.get('success') and buy_order.get('order_id'):
+                    await self._cancel_order(buy_order['order_id'], trade_params['buy_exchange'], trade_params['symbol'])
+                return execution_result
+
+            if not buy_order['success']:
+                execution_result['errors'].append(f"Buy order failed: {buy_order['error']}")
+                if sell_order['success'] and sell_order.get('order_id'):
+                    await self._cancel_order(sell_order['order_id'], trade_params['sell_exchange'], trade_params['symbol'])
+                return execution_result
+
+            execution_result['orders'].append(buy_order)
+
             if not sell_order['success']:
                 execution_result['errors'].append(f"Sell order failed: {sell_order['error']}")
-                # Attempt to cancel buy order
                 await self._cancel_order(buy_order['order_id'], trade_params['buy_exchange'], trade_params['symbol'])
                 return execution_result
 

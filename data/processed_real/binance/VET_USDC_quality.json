@@ -1,9 +1,9 @@
 {
   "exchange": "binance",
   "pair": "VET/USDC",
-  "total_records": 8028,
+  "total_records": 8031,
   "date_range": {
-    "start": "2025-04-08T12:00:00",
+    "start": "2025-04-08T09:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.006782,
       "max": 0.03298,
-      "mean": 0.018909296088689586,
-      "std": 0.006825109262469646
+      "mean": 0.01890964624579753,
+      "std": 0.0068239774830492865
     },
     "volume_stats": {
-      "total_volume": 10164613672.85,
-      "avg_volume": 1266145.2009030893,
-      "volume_std": 2102654.433845883
+      "total_volume": 10195143497.5,
+      "avg_volume": 1269473.7264973228,
+      "volume_std": 2187665.2366817156
     },
     "returns": {
-      "daily_returns_mean": -9.867689287589277e-05,
-      "daily_returns_std": 0.008990669943701601,
-      "sharpe_ratio": -0.20968619726295837
+      "daily_returns_mean": -9.441658619638786e-05,
+      "daily_returns_std": 0.00908542128466593,
+      "sharpe_ratio": -0.19854074896431448
     }
   },
   "technical_indicators": {

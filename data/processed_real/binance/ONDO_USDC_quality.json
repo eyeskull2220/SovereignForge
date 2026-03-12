@@ -1,9 +1,9 @@
 {
   "exchange": "binance",
   "pair": "ONDO/USDC",
-  "total_records": 7950,
+  "total_records": 7953,
   "date_range": {
-    "start": "2025-04-11T18:00:00",
+    "start": "2025-04-11T15:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.2245,
       "max": 1.1433,
-      "mean": 0.7072205283018869,
-      "std": 0.26536725590576254
+      "mean": 0.707279881805608,
+      "std": 0.26534594902432146
     },
     "volume_stats": {
-      "total_volume": 941699743.5,
-      "avg_volume": 118452.7979245283,
-      "volume_std": 151425.57344199502
+      "total_volume": 946914391.5,
+      "avg_volume": 119063.79875518673,
+      "volume_std": 160804.92210741586
     },
     "returns": {
-      "daily_returns_mean": -0.00011997964253530735,
-      "daily_returns_std": 0.009480891229584646,
-      "sharpe_ratio": -0.2417713479272456
+      "daily_returns_mean": -0.00011591203435794012,
+      "daily_returns_std": 0.009719742526907731,
+      "sharpe_ratio": -0.2278348732885269
     }
   },
   "technical_indicators": {
@@ -63,5 +63,5 @@
       "resistance_20"
     ]
   },
-  "mica_compliance": true
+  "mica_compliance": false
 }

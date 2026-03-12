@@ -1,9 +1,9 @@
 {
   "exchange": "coinbase",
   "pair": "XRP/USDC",
-  "total_records": 17514,
+  "total_records": 17517,
   "date_range": {
-    "start": "2024-03-09T04:00:00",
+    "start": "2024-03-09T01:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.3977,
       "max": 3.6588,
-      "mean": 1.7191492977046936,
-      "std": 0.9397704602008785
+      "mean": 1.7189622538105838,
+      "std": 0.9397986555290647
     },
     "volume_stats": {
-      "total_volume": 83842908519.95837,
-      "avg_volume": 4787193.589126321,
-      "volume_std": 6981093.3694957
+      "total_volume": 83850247962.67845,
+      "avg_volume": 4786792.713517066,
+      "volume_std": 6980572.10325096
     },
     "returns": {
-      "daily_returns_mean": 8.819461693911505e-05,
-      "daily_returns_std": 0.009461835265471313,
-      "sharpe_ratio": 0.17807917211470703
+      "daily_returns_mean": 8.84547107550539e-05,
+      "daily_returns_std": 0.009461201537684833,
+      "sharpe_ratio": 0.17861630675618964
     }
   },
   "technical_indicators": {

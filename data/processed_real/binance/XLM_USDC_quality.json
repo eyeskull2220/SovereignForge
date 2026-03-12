@@ -1,9 +1,9 @@
 {
   "exchange": "binance",
   "pair": "XLM/USDC",
-  "total_records": 11028,
+  "total_records": 11031,
   "date_range": {
-    "start": "2024-12-04T12:00:00",
+    "start": "2024-12-04T09:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.145,
       "max": 0.5186,
-      "mean": 0.30604724338048606,
-      "std": 0.0860300358202094
+      "mean": 0.3060994832744085,
+      "std": 0.08608644033800224
     },
     "volume_stats": {
-      "total_volume": 5825561875.0,
-      "avg_volume": 528251.8929089591,
-      "volume_std": 766971.2544915858
+      "total_volume": 5849539681.0,
+      "avg_volume": 530281.9038165171,
+      "volume_std": 798812.6469348788
     },
     "returns": {
-      "daily_returns_mean": -6.427343373219994e-05,
-      "daily_returns_std": 0.00968162052210403,
-      "sharpe_ratio": -0.12683230296890163
+      "daily_returns_mean": -6.428304565419647e-05,
+      "daily_returns_std": 0.009761221450468325,
+      "sharpe_ratio": -0.1258168221091235
     }
   },
   "technical_indicators": {

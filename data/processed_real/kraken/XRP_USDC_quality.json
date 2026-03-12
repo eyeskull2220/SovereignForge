@@ -1,9 +1,9 @@
 {
   "exchange": "kraken",
   "pair": "XRP/USDC",
-  "total_records": 717,
+  "total_records": 720,
   "date_range": {
-    "start": "2026-02-07T03:00:00",
+    "start": "2026-02-07T00:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 1.27875,
       "max": 1.64911,
-      "mean": 1.4070268898186888,
-      "std": 0.049266421080077644
+      "mean": 1.4072548055555554,
+      "std": 0.049290626983698876
     },
     "volume_stats": {
-      "total_volume": 31909162.91032704,
-      "avg_volume": 44503.713961404515,
-      "volume_std": 104808.61590200356
+      "total_volume": 32189557.815374218,
+      "avg_volume": 44707.71918801975,
+      "volume_std": 104881.60618556221
     },
     "returns": {
-      "daily_returns_mean": -9.240515504022547e-05,
-      "daily_returns_std": 0.007899735044307016,
-      "sharpe_ratio": -0.22347559738794265
+      "daily_returns_mean": -7.771291409751989e-05,
+      "daily_returns_std": 0.007898579531313003,
+      "sharpe_ratio": -0.18797090454843596
     }
   },
   "technical_indicators": {

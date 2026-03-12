@@ -1,9 +1,9 @@
 {
   "exchange": "coinbase",
   "pair": "ADA/USDC",
-  "total_records": 17514,
+  "total_records": 17517,
   "date_range": {
-    "start": "2024-03-09T04:00:00",
+    "start": "2024-03-09T01:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.2443,
       "max": 1.2982,
-      "mean": 0.5978843924860111,
-      "std": 0.227520818409234
+      "mean": 0.5979385796654678,
+      "std": 0.22755138685348678
     },
     "volume_stats": {
-      "total_volume": 35055518574.88786,
-      "avg_volume": 2001571.2330071863,
-      "volume_std": 2737210.3478835747
+      "total_volume": 35256327810.607506,
+      "avg_volume": 2012692.116835503,
+      "volume_std": 2951372.717500804
     },
     "returns": {
-      "daily_returns_mean": -1.0157280470126763e-05,
-      "daily_returns_std": 0.010108282097998689,
-      "sharpe_ratio": -0.019197581649061775
+      "daily_returns_mean": -5.339562353590398e-06,
+      "daily_returns_std": 0.010685507453247927,
+      "sharpe_ratio": -0.009546780625578611
     }
   },
   "technical_indicators": {

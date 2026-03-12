@@ -1,9 +1,9 @@
 {
   "exchange": "binance",
   "pair": "HBAR/USDC",
-  "total_records": 11316,
+  "total_records": 11319,
   "date_range": {
-    "start": "2024-11-22T12:00:00",
+    "start": "2024-11-22T09:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.07698,
       "max": 0.39292,
-      "mean": 0.1933736700247437,
-      "std": 0.06387892648380586
+      "mean": 0.19335662691050445,
+      "std": 0.06387767920281005
     },
     "volume_stats": {
-      "total_volume": 34536859622.0,
-      "avg_volume": 3052037.789148109,
-      "volume_std": 3226426.2389102215
+      "total_volume": 34580544644.0,
+      "avg_volume": 3055088.315575581,
+      "volume_std": 3254264.907832775
     },
     "returns": {
-      "daily_returns_mean": 3.3898992045355314e-05,
-      "daily_returns_std": 0.01164961919558139,
-      "sharpe_ratio": 0.0555931762916506
+      "daily_returns_mean": 3.561823488585584e-05,
+      "daily_returns_std": 0.011690976615105104,
+      "sharpe_ratio": 0.05820603739294389
     }
   },
   "technical_indicators": {

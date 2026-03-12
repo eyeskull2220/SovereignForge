@@ -148,7 +148,8 @@ class _NoOpDB:
 
 
 class _NoOpMetrics:
-    """No-op metrics collector — logs metrics at DEBUG level."""
+    """No-op metrics collector — logs metrics at DEBUG level.
+    Falls back to real MetricsCollector from monitoring.py when available."""
 
     async def initialize(self):
         pass
@@ -156,8 +157,21 @@ class _NoOpMetrics:
     async def record_metric(self, name: str, value, labels: dict = None):
         logger.debug(f"metric {name}={value} labels={labels}")
 
+    def get_metrics_text(self) -> str:
+        return ""
+
     async def close(self):
         pass
+
+
+def _create_metrics_collector():
+    """Create the best available metrics collector."""
+    try:
+        from monitoring import MetricsCollector
+        return MetricsCollector()
+    except (ImportError, Exception) as e:
+        logger.info(f"MetricsCollector not available ({e}), using no-op metrics")
+        return _NoOpMetrics()
 
 
 class _NoOpAlertManager:
@@ -259,7 +273,7 @@ class ProductionArbitrageSystem:
         # Production components (graceful no-ops when services unavailable)
         self.db_manager = _NoOpDB()
         self.cache_manager = _NoOpCacheManager()
-        self.metrics_collector = _NoOpMetrics()
+        self.metrics_collector = _create_metrics_collector()
         self.alert_manager = _NoOpAlertManager()
 
         # Trading state
@@ -729,13 +743,13 @@ class ArbitrageCLI:
         print(f"Backtesting {symbol_list}")
         print(f"Period: {start_date.date()} to {end_date.date()}")
 
-        import asyncio
-
-        async def run_async_backtest():
-            results = await self.backtester.run_backtest(symbol_list, start_date, end_date)
-            return results
-
-        results = asyncio.run(run_async_backtest())
+        loop = asyncio.new_event_loop()
+        try:
+            results = loop.run_until_complete(
+                self.backtester.run_backtest(symbol_list, start_date, end_date)
+            )
+        finally:
+            loop.close()
 
         # Display results
         print("\nBacktest Results:")
@@ -798,8 +812,13 @@ class ArbitrageCLI:
                         }
 
                         # Execute paper trade
-                        import asyncio
-                        trade_result = asyncio.run(self.order_executor.execute_arbitrage_trade(opportunity))
+                        loop = asyncio.new_event_loop()
+                        try:
+                            trade_result = loop.run_until_complete(
+                                self.order_executor.execute_arbitrage_trade(opportunity)
+                            )
+                        finally:
+                            loop.close()
 
                         timestamp = datetime.fromisoformat(result['timestamp'])
                         print(f"[{timestamp.strftime('%H:%M:%S')}] PAPER TRADE: "

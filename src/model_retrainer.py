@@ -94,6 +94,7 @@ class ModelRetrainer:
         # Background monitoring
         self.monitoring_thread: Optional[threading.Thread] = None
         self.monitoring_active = False
+        self._stop_event = threading.Event()
 
         # GPU management
         self.gpu_manager = get_gpu_manager()
@@ -563,6 +564,7 @@ class ModelRetrainer:
     def stop_monitoring(self):
         """Stop background monitoring"""
         self.monitoring_active = False
+        self._stop_event.set()
 
         if self.monitoring_thread:
             self.monitoring_thread.join(timeout=5)
@@ -585,7 +587,7 @@ class ModelRetrainer:
             except Exception as e:
                 logger.error(f"Monitoring loop error: {e}")
 
-            time.sleep(300)  # Check every 5 minutes
+            self._stop_event.wait(timeout=300)  # Check every 5 minutes
 
     def _check_scheduled_retraining(self):
         """Check for scheduled retraining"""

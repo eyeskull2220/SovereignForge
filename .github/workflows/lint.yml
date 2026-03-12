@@ -26,17 +26,15 @@ jobs:
         run: |
           ruff check src/ \
             --select E,W,F,I \
-            --ignore E501,W503,F401,E402,F841,E741 \
-            --output-format=github \
-            || true  # Advisory only until baseline is clean
+            --ignore E501,F401,E402,F841,E741 \
+            --output-format=github
 
       - name: Ruff lint — tests/
         run: |
           ruff check tests/ \
             --select E,W,F,I \
-            --ignore E501,W503,F401,E402 \
-            --output-format=github \
-            || true
+            --ignore E501,F401,E402 \
+            --output-format=github
 
       - name: Check for Windows line endings (CRLF) in Python files
         run: |

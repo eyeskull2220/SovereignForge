@@ -56,7 +56,7 @@ def test_gpu_max_config():
 
     print("\nGPU Max Configuration Test Complete!")
     print("   GPU Manager is functional for personal use!")
-    # Test passes if we reach here without exceptions
+    return True  # Explicitly signal success
 
 def estimate_parameters(config: ModelConfig) -> int:
     """Estimate model parameters"""

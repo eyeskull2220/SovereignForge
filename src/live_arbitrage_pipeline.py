@@ -436,21 +436,9 @@ class LiveArbitragePipeline:
                     self.stats['opportunities_filtered'] += 1
                     return
 
-            # Cache the opportunity
+            # Cache the opportunity (fire-and-forget to avoid blocking)
             if self.cache is not None:
-                try:
-                    await self.cache.cache_opportunity(
-                        f"{opportunity.pair}:{opportunity.timestamp}",
-                        {
-                            'pair': opportunity.pair,
-                            'probability': opportunity.probability,
-                            'confidence': opportunity.confidence,
-                            'exchanges': opportunity.exchanges,
-                            'profit_potential': opportunity.profit_potential,
-                        }
-                    )
-                except Exception:
-                    pass  # Cache failure is non-fatal
+                asyncio.create_task(self._cache_opportunity_bg(opportunity))
 
             # Send alert via multi-channel router (primary), fall back to Telegram-only
             if self.alert_router is not None:
@@ -502,6 +490,23 @@ class LiveArbitragePipeline:
 
 
 # ── Mock classes (development mode only) ─────────────────────────────────
+
+    async def _cache_opportunity_bg(self, opportunity: ArbitrageOpportunity):
+        """Background cache write — non-blocking."""
+        try:
+            await self.cache.cache_opportunity(
+                f"{opportunity.pair}:{opportunity.timestamp}",
+                {
+                    'pair': opportunity.pair,
+                    'probability': opportunity.probability,
+                    'confidence': opportunity.confidence,
+                    'exchanges': opportunity.exchanges,
+                    'profit_potential': opportunity.profit_potential,
+                }
+            )
+        except Exception:
+            pass  # Cache failure is non-fatal
+
 
 class MockDataService:
     """Mock data service — used only in development mode."""

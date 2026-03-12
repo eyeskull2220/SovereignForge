@@ -5,6 +5,7 @@ Combines signals from all strategy models into unified trading decisions.
 Uses confidence-weighted aggregation across arbitrage, fibonacci, grid, and DCA.
 """
 
+import gc
 import json
 import logging
 from dataclasses import dataclass, field
@@ -134,6 +135,8 @@ class StrategyEnsemble:
                     model.eval()
 
                     self.models[strategy][pair] = model
+                    del checkpoint  # Free checkpoint memory
+                    gc.collect()
                     results[key] = True
                     logger.info(f"Loaded {strategy.value} model for {pair}")
 
@@ -169,34 +172,35 @@ class StrategyEnsemble:
                 agreement_score=0.0,
             )
 
-        # Use the last sequence for prediction
+        # Use the last sequence for prediction — single tensor allocation
         input_tensor = torch.FloatTensor(features[-1:]).to(self.device)
 
-        for strategy in StrategyType:
-            if not self.strategy_enabled.get(strategy, True):
-                continue
+        with torch.no_grad():
+            for strategy in StrategyType:
+                if not self.strategy_enabled.get(strategy, True):
+                    continue
 
-            model = self.models.get(strategy, {}).get(pair)
-            if model is None:
-                continue
+                model = self.models.get(strategy, {}).get(pair)
+                if model is None:
+                    continue
 
-            try:
-                with torch.no_grad():
+                try:
+                    assert not model.training, f"{strategy.value} model not in eval mode"
                     output = model(input_tensor)  # [1, 3]: signal, confidence, magnitude
 
-                raw_signal = output[0, 0].item()  # [-1, 1]
-                model_confidence = torch.sigmoid(torch.tensor(output[0, 1].item())).item()
+                    raw_signal = output[0, 0].item()  # [-1, 1]
+                    model_confidence = float(torch.sigmoid(output[0, 1]).item())
 
-                strategy_signals[strategy.value] = raw_signal
-                strategy_confidences[strategy.value] = model_confidence
+                    strategy_signals[strategy.value] = raw_signal
+                    strategy_confidences[strategy.value] = model_confidence
 
-                # Effective weight = config_weight * model_confidence
-                effective_weight = self.strategy_weights[strategy] * model_confidence
-                weighted_signal += raw_signal * effective_weight
-                total_effective_weight += effective_weight
+                    # Effective weight = config_weight * model_confidence
+                    effective_weight = self.strategy_weights[strategy] * model_confidence
+                    weighted_signal += raw_signal * effective_weight
+                    total_effective_weight += effective_weight
 
-            except Exception as e:
-                logger.error(f"Prediction failed for {strategy.value}/{pair}: {e}")
+                except Exception as e:
+                    logger.error(f"Prediction failed for {strategy.value}/{pair}: {e}")
 
         # Determine action
         if total_effective_weight > 0:

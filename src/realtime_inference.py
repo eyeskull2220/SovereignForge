@@ -387,7 +387,8 @@ class RealTimeInferenceService:
         self.pairs = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
                       'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC']
         self.models = {}  # Will be populated by load_models
-        self.buffers = [[] for _ in self.pairs]  # Data buffers for each pair
+        from collections import deque
+        self.buffers = [deque(maxlen=24) for _ in self.pairs]  # Bounded data buffers
 
         # GPU optimization
         if torch.cuda.is_available():

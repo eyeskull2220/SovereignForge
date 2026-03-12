@@ -94,15 +94,17 @@ class HybridDataIntegrationService:
                 logger.warning(f"Non-compliant pair filtered: {data.pair}")
                 return
 
-        # Notify callbacks
-        for callback in self.data_callbacks:
+        # Notify callbacks in parallel
+        async def _invoke(cb, data):
             try:
-                if asyncio.iscoroutinefunction(callback):
-                    await callback(data)
+                if asyncio.iscoroutinefunction(cb):
+                    await cb(data)
                 else:
-                    callback(data)
+                    cb(data)
             except Exception as e:
                 logger.error(f"Error in data callback: {e}")
+
+        await asyncio.gather(*[_invoke(cb, data) for cb in self.data_callbacks])
 
     async def start_websocket_connections(self):
         """Start WebSocket connections for all exchanges"""

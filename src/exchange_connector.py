@@ -4,13 +4,14 @@ SovereignForge Exchange Connector - Wave 1
 Simple exchange API connector for arbitrage detection
 """
 
+import asyncio
+import logging
+import time
+from datetime import datetime, timedelta
+from typing import Any, Callable, Dict, List, Optional
+
 import ccxt
 import ccxt.async_support as ccxt_async
-import asyncio
-import time
-import logging
-from typing import Dict, List, Optional, Callable, Any
-from datetime import datetime, timedelta
 
 logger = logging.getLogger(__name__)
 

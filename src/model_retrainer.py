@@ -12,16 +12,17 @@ This module provides:
 """
 
 import asyncio
-import logging
-from typing import Dict, List, Optional, Any, Tuple
-from dataclasses import dataclass
-from datetime import datetime, timedelta
-import torch
-import numpy as np
 import json
-from pathlib import Path
+import logging
 import threading
 import time
+from dataclasses import dataclass
+from datetime import datetime, timedelta
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+import torch
 
 # Import existing components
 from gpu_arbitrage_model import GPUArbitrageModel, run_gpu_arbitrage_training
@@ -94,6 +95,7 @@ class ModelRetrainer:
         # Background monitoring
         self.monitoring_thread: Optional[threading.Thread] = None
         self.monitoring_active = False
+        self._stop_event = threading.Event()
 
         # GPU management
         self.gpu_manager = get_gpu_manager()
@@ -563,6 +565,7 @@ class ModelRetrainer:
     def stop_monitoring(self):
         """Stop background monitoring"""
         self.monitoring_active = False
+        self._stop_event.set()
 
         if self.monitoring_thread:
             self.monitoring_thread.join(timeout=5)
@@ -585,7 +588,7 @@ class ModelRetrainer:
             except Exception as e:
                 logger.error(f"Monitoring loop error: {e}")
 
-            time.sleep(300)  # Check every 5 minutes
+            self._stop_event.wait(timeout=300)  # Check every 5 minutes
 
     def _check_scheduled_retraining(self):
         """Check for scheduled retraining"""

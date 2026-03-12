@@ -11,16 +11,17 @@ This module provides:
 - Dynamic risk adjustment algorithms
 """
 
-import numpy as np
-import pandas as pd
-from typing import Dict, List, Optional, Tuple, Any
+import logging
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-import logging
-from scipy import stats
-from scipy.stats import norm, t
+from typing import Any, Dict, List, Optional, Tuple
+
+import numpy as np
+import pandas as pd
 import torch
 import torch.nn as nn
+from scipy import stats
+from scipy.stats import norm, t
 
 logger = logging.getLogger(__name__)
 

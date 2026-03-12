@@ -7,13 +7,14 @@ Real-time cryptocurrency data streaming from multiple exchanges
 import asyncio
 import json
 import logging
-import websockets
+import ssl
 import time
-from typing import Dict, List, Optional, Callable, Any
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional
+
 import aiohttp
-import ssl
+import websockets
 
 logger = logging.getLogger(__name__)
 

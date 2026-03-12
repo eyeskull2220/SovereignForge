@@ -11,15 +11,16 @@ This module provides:
 - Performance profiling and optimization
 """
 
+import logging
 import os
 import sys
-import torch
-import logging
 import threading
 import time
-from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+import torch
 
 # Optional imports with fallbacks
 try:
@@ -414,7 +415,7 @@ class GPUManager:
             try:
                 torch.cuda.set_device(gpu_id)
                 torch.cuda.empty_cache()
-            except:
+            except Exception:
                 pass
 
         logger.info("GPUManager shutdown complete")

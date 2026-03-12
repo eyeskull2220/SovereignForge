@@ -12,20 +12,22 @@ This module provides:
 """
 
 import asyncio
+import gc
 import logging
-from typing import Dict, List, Optional, Any, Tuple, Callable
-from dataclasses import dataclass
-from datetime import datetime
-import torch
-import torch.nn as nn
 import threading
 import time
-import gc
 from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Callable, Dict, List, Optional, Tuple
+
+import torch
+import torch.nn as nn
+
+from gpu_arbitrage_model import GPUArbitrageModel
 
 # Import existing components
-from gpu_manager import get_gpu_manager, GPUManager
-from gpu_arbitrage_model import GPUArbitrageModel
+from gpu_manager import GPUManager, get_gpu_manager
 
 logger = logging.getLogger(__name__)
 

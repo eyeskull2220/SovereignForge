@@ -4,16 +4,17 @@ SovereignForge Data Fetcher - Wave 3
 Real exchange data integration using CCXT
 """
 
-import ccxt
-import pandas as pd
-import numpy as np
+import asyncio
+import json
+import logging
+import os
+import time
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
-import logging
-import json
-import os
-import asyncio
-import time
+
+import ccxt
+import numpy as np
+import pandas as pd
 
 logger = logging.getLogger(__name__)
 

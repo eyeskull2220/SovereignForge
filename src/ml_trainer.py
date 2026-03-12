@@ -4,21 +4,22 @@ SovereignForge ML Trainer - Wave 2
 Advanced AI/ML training pipeline for arbitrage prediction
 """
 
+import json
+import logging
+import os
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional, Tuple
+
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import seaborn as sns
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-import numpy as np
-import pandas as pd
-from datetime import datetime, timedelta
-import logging
-import json
-import os
-from typing import Dict, List, Optional, Tuple
-import matplotlib.pyplot as plt
-import seaborn as sns
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.metrics import accuracy_score, f1_score, precision_score, recall_score
 from sklearn.model_selection import train_test_split
+from torch.utils.data import DataLoader, Dataset
 
 # Configure logging
 logging.basicConfig(
@@ -753,7 +754,7 @@ def main():
 
         # Save model
         print("\nSaving trained model...")
-        model_path = "E:\\SovereignForge\\models\\advanced_arbitrage_detector_v2.0.pth"
+        model_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "models", "advanced_arbitrage_detector_v2.0.pth")
         os.makedirs(os.path.dirname(model_path), exist_ok=True)
 
         torch.save({

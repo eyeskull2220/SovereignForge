@@ -5,10 +5,11 @@ Position sizing, stop-loss, and portfolio risk controls for MiCA compliance
 """
 
 import logging
-from typing import Dict, List, Optional, Any, Tuple
+import math
 from dataclasses import dataclass
 from datetime import datetime
-import math
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -29,7 +30,7 @@ def _fire_alert(title: str, message: str, level: str = "warning") -> None:
         else:
             # No running loop — use multi_channel_alerts synchronous path or just log
             try:
-                from multi_channel_alerts import get_alert_router, Alert, AlertPriority
+                from multi_channel_alerts import Alert, AlertPriority, get_alert_router
                 pmap = {"error": AlertPriority.HIGH, "warning": AlertPriority.MEDIUM,
                         "success": AlertPriority.LOW, "info": AlertPriority.LOW}
                 priority = pmap.get(level, AlertPriority.MEDIUM)
@@ -585,3 +586,377 @@ def get_risk_manager(initial_capital: float = 10000.0) -> RiskManager:
     if _risk_manager is None:
         _risk_manager = RiskManager(initial_capital=initial_capital)
     return _risk_manager
+
+
+# Alias for portfolio_optimization.py backwards compatibility
+RiskManagementEngine = RiskManager
+get_risk_management_engine = get_risk_manager
+
+
+# ---------------------------------------------------------------------------
+# TradingRiskManager — config-dict-based risk manager used by main.py
+# and backtester.py for position sizing, daily stats, and drawdown tracking.
+# (Formerly in risk_manager.py)
+# ---------------------------------------------------------------------------
+
+class TradingRiskManager:
+    """Config-dict-based risk manager for backtesting and CLI trading."""
+
+    def __init__(self, config: Dict = None):
+        self.config = config or self._default_config()
+
+        # Risk metrics
+        self.portfolio_value = self.config['initial_capital']
+        self.peak_portfolio_value = self.portfolio_value
+        self.current_drawdown = 0.0
+
+        # Position tracking
+        self.open_positions: Dict[str, Dict] = {}
+        self.position_history: List[Dict] = []
+        self.daily_stats = self._init_daily_stats()
+
+        # Trading state
+        self.daily_pnl = 0.0
+        self.daily_trades = 0
+        self.max_daily_loss = self.config['max_daily_loss']
+        self.max_single_trade = self.config['max_single_trade']
+        self.max_open_positions = self.config['max_open_positions']
+        self.max_drawdown = self.config['max_drawdown']
+
+        logger.info(f"TradingRiskManager initialized with ${self.portfolio_value} capital")
+
+    @staticmethod
+    def _default_config() -> Dict:
+        return {
+            'initial_capital': 10000.0,
+            'max_daily_loss': 0.05,
+            'max_single_trade': 0.02,
+            'max_open_positions': 3,
+            'max_drawdown': 0.10,
+            'kelly_fraction': 0.5,
+            'stop_loss_pct': 0.005,
+            'take_profit_pct': 0.01,
+            'min_arbitrage_spread': 0.001,
+            'max_slippage': 0.002,
+            'volatility_lookback': 20,
+            'risk_free_rate': 0.02,
+        }
+
+    def _init_daily_stats(self) -> Dict:
+        return {
+            'date': datetime.now().date(),
+            'starting_capital': self.portfolio_value,
+            'trades': 0,
+            'winning_trades': 0,
+            'losing_trades': 0,
+            'gross_profit': 0.0,
+            'gross_loss': 0.0,
+            'net_pnl': 0.0,
+            'max_drawdown': 0.0,
+            'sharpe_ratio': 0.0,
+            'win_rate': 0.0,
+        }
+
+    # ----- Asset config -----
+
+    _ASSET_CONFIGS = {
+        'BTC/USDC':  {'volatility': 0.03, 'min_order_size': 0.0001, 'volatility_multiplier': 1.0},
+        'ETH/USDC':  {'volatility': 0.04, 'min_order_size': 0.001,  'volatility_multiplier': 1.0},
+        'XRP/USDC':  {'volatility': 0.08, 'min_order_size': 1,      'volatility_multiplier': 1.5},
+        'XLM/USDC':  {'volatility': 0.07, 'min_order_size': 1,      'volatility_multiplier': 1.4},
+        'HBAR/USDC': {'volatility': 0.09, 'min_order_size': 10,     'volatility_multiplier': 1.6},
+        'ALGO/USDC': {'volatility': 0.10, 'min_order_size': 1,      'volatility_multiplier': 1.7},
+        'ADA/USDC':  {'volatility': 0.06, 'min_order_size': 1,      'volatility_multiplier': 1.2},
+    }
+
+    def _get_asset_config(self, symbol: str) -> Dict:
+        return self._ASSET_CONFIGS.get(symbol, {
+            'volatility': 0.05, 'min_order_size': 0.001, 'volatility_multiplier': 1.0,
+        })
+
+    # ----- Position sizing -----
+
+    def calculate_position_size(self, arbitrage_opportunity: Dict, asset_config: Dict = None) -> Dict:
+        """Calculate position size using Kelly criterion and risk limits."""
+        if not self._can_open_position():
+            return {'approved': False, 'reason': 'Risk limits exceeded'}
+
+        spread_pct = arbitrage_opportunity.get('spread_percentage', 0)
+        confidence = arbitrage_opportunity.get('confidence', 0)
+        symbol = arbitrage_opportunity.get('symbol', 'BTC/USDC')
+
+        if asset_config is None:
+            asset_config = self._get_asset_config(symbol)
+
+        volatility = asset_config.get('volatility', 0.03)
+        min_order_size = asset_config.get('min_order_size', 0.0001)
+        volatility_multiplier = asset_config.get('volatility_multiplier', 1.0)
+
+        if spread_pct < self.config['min_arbitrage_spread']:
+            return {'approved': False, 'reason': f'Spread {spread_pct:.4f} below minimum'}
+
+        kelly_size = self._kelly_criterion(spread_pct, confidence, volatility)
+        max_position_value = self.portfolio_value * self.config['max_single_trade']
+        kelly_position_value = self.portfolio_value * kelly_size
+        position_value = min(kelly_position_value, max_position_value)
+
+        vol_adjustment = 1.0 / (1.0 + volatility * volatility_multiplier)
+        position_value *= vol_adjustment
+
+        min_position = max(
+            self.portfolio_value * 0.001,
+            min_order_size * arbitrage_opportunity.get('entry_price', 50000),
+        )
+        position_value = max(position_value, min_position)
+
+        if position_value > max_position_value:
+            return {'approved': False, 'reason': 'Position exceeds max single trade limit'}
+
+        entry_price = arbitrage_opportunity.get('entry_price', 50000)
+        quantity = max(position_value / entry_price, min_order_size)
+
+        return {
+            'approved': True,
+            'position_value': position_value,
+            'quantity': quantity,
+            'position_size_pct': position_value / self.portfolio_value,
+            'kelly_size': kelly_size,
+            'volatility_adjustment': vol_adjustment,
+            'asset_volatility': volatility,
+            'min_order_size': min_order_size,
+            'stop_loss_price': self._calculate_stop_loss(arbitrage_opportunity),
+            'take_profit_price': self._calculate_take_profit(arbitrage_opportunity),
+        }
+
+    def _kelly_criterion(self, win_probability: float, win_amount: float, loss_amount: float = 1.0) -> float:
+        if win_probability <= 0 or win_probability >= 1:
+            return 0.0
+        b = win_amount / loss_amount
+        kelly = (win_probability * b - (1 - win_probability)) / b
+        kelly *= self.config['kelly_fraction']
+        return max(0.0, min(kelly, 0.1))
+
+    def _can_open_position(self) -> bool:
+        if self.daily_pnl < -self.portfolio_value * self.config['max_daily_loss']:
+            return False
+        if self.current_drawdown > self.config['max_drawdown']:
+            return False
+        if len(self.open_positions) >= self.config['max_open_positions']:
+            return False
+        return True
+
+    def _calculate_stop_loss(self, opportunity: Dict) -> float:
+        entry_price = opportunity.get('entry_price', 0)
+        return entry_price * (1 - self.config['stop_loss_pct'])
+
+    def _calculate_take_profit(self, opportunity: Dict) -> float:
+        entry_price = opportunity.get('entry_price', 0)
+        return entry_price * (1 + self.config['take_profit_pct'])
+
+    # ----- Position lifecycle -----
+
+    def open_position(self, position_details: Dict) -> Dict:
+        position_id = f"pos_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self.open_positions)}"
+        position = {
+            'id': position_id,
+            'symbol': position_details['symbol'],
+            'side': position_details['side'],
+            'quantity': position_details['quantity'],
+            'entry_price': position_details['entry_price'],
+            'position_value': position_details['position_value'],
+            'stop_loss': position_details['stop_loss'],
+            'take_profit': position_details['take_profit'],
+            'timestamp': datetime.now(),
+            'status': 'open',
+        }
+        self.open_positions[position_id] = position
+        self.daily_trades += 1
+        logger.info(f"Opened position {position_id}: {position['symbol']} {position['side']} @ ${position['entry_price']:.4f}")
+        return position
+
+    def close_position(self, position_id: str, exit_price: float, reason: str = 'manual') -> Optional[Dict]:
+        if position_id not in self.open_positions:
+            logger.error(f"Position {position_id} not found")
+            return None
+
+        position = self.open_positions[position_id]
+        if position['side'] == 'buy':
+            pnl = (exit_price - position['entry_price']) * position['quantity']
+        else:
+            pnl = (position['entry_price'] - exit_price) * position['quantity']
+
+        position.update({
+            'exit_price': exit_price, 'pnl': pnl,
+            'exit_timestamp': datetime.now(), 'exit_reason': reason, 'status': 'closed',
+        })
+
+        self.portfolio_value += pnl
+        self.daily_pnl += pnl
+
+        if self.portfolio_value > self.peak_portfolio_value:
+            self.peak_portfolio_value = self.portfolio_value
+            self.current_drawdown = 0.0
+        else:
+            self.current_drawdown = (self.peak_portfolio_value - self.portfolio_value) / self.peak_portfolio_value
+
+        self.position_history.append(position)
+        del self.open_positions[position_id]
+        self._update_daily_stats(position)
+
+        logger.info(f"Closed position {position_id}: P&L ${pnl:.2f}")
+        return position
+
+    def check_stop_loss_take_profit(self, current_prices: Dict) -> List[Dict]:
+        triggered = []
+        for position_id, position in list(self.open_positions.items()):
+            current_price = current_prices.get(position['symbol'])
+            if current_price is None:
+                continue
+            if position['side'] == 'buy' and current_price <= position['stop_loss']:
+                closed = self.close_position(position_id, current_price, 'stop_loss')
+            elif position['side'] == 'sell' and current_price >= position['stop_loss']:
+                closed = self.close_position(position_id, current_price, 'stop_loss')
+            elif position['side'] == 'buy' and current_price >= position['take_profit']:
+                closed = self.close_position(position_id, current_price, 'take_profit')
+            elif position['side'] == 'sell' and current_price <= position['take_profit']:
+                closed = self.close_position(position_id, current_price, 'take_profit')
+            else:
+                closed = None
+            if closed:
+                triggered.append(closed)
+        return triggered
+
+    # ----- Stats -----
+
+    def _update_daily_stats(self, closed_position: Dict):
+        pnl = closed_position['pnl']
+        self.daily_stats['trades'] += 1
+        if pnl > 0:
+            self.daily_stats['winning_trades'] += 1
+            self.daily_stats['gross_profit'] += pnl
+        else:
+            self.daily_stats['losing_trades'] += 1
+            self.daily_stats['gross_loss'] += abs(pnl)
+        self.daily_stats['net_pnl'] = self.daily_stats['gross_profit'] - self.daily_stats['gross_loss']
+        total = self.daily_stats['winning_trades'] + self.daily_stats['losing_trades']
+        if total > 0:
+            self.daily_stats['win_rate'] = self.daily_stats['winning_trades'] / total
+        self.daily_stats['max_drawdown'] = max(self.daily_stats['max_drawdown'], self.current_drawdown)
+
+    def get_risk_metrics(self) -> Dict:
+        returns = [pos['pnl'] / self.config['initial_capital'] for pos in self.position_history[-50:]]
+        if len(returns) > 1:
+            avg_return = np.mean(returns)
+            std_return = np.std(returns)
+            sharpe = (avg_return - self.config.get('risk_free_rate', 0.02) / 252) / std_return * np.sqrt(252) if std_return > 0 else 0.0
+        else:
+            sharpe = 0.0
+
+        return {
+            'portfolio_value': self.portfolio_value,
+            'daily_pnl': self.daily_pnl,
+            'daily_trades': self.daily_trades,
+            'open_positions': len(self.open_positions),
+            'current_drawdown': self.current_drawdown,
+            'sharpe_ratio': sharpe,
+            'win_rate': self.daily_stats['win_rate'],
+            'total_trades': len(self.position_history),
+            'risk_limits': {
+                'daily_loss_limit': self.portfolio_value * self.config['max_daily_loss'],
+                'single_trade_limit': self.portfolio_value * self.config['max_single_trade'],
+                'drawdown_limit': self.config['max_drawdown'],
+            },
+        }
+
+    def reset_daily_stats(self):
+        self.daily_pnl = 0.0
+        self.daily_trades = 0
+        self.daily_stats = self._init_daily_stats()
+        logger.info("Daily statistics reset")
+
+    def emergency_stop(self) -> List[Dict]:
+        logger.warning("EMERGENCY STOP — Closing all positions")
+        closed = []
+        for position_id in list(self.open_positions.keys()):
+            position = self.open_positions[position_id]
+            exit_price = position['entry_price'] * 0.999
+            result = self.close_position(position_id, exit_price, 'emergency_stop')
+            if result:
+                closed.append(result)
+        logger.warning(f"Emergency stop completed: {len(closed)} positions closed")
+        return closed
+
+
+class ArbitrageRiskAssessor:
+    """Specialized 5-factor risk assessment for arbitrage opportunities."""
+
+    def __init__(self, risk_manager: TradingRiskManager):
+        self.risk_manager = risk_manager
+
+    def assess_arbitrage_risk(self, arbitrage_signal: Dict, market_data: Dict) -> Dict:
+        factors = {
+            'spread_stability': self._assess_spread_stability(arbitrage_signal),
+            'volatility': self._assess_volatility_risk(market_data),
+            'liquidity': self._assess_liquidity_risk(market_data),
+            'execution': self._assess_execution_risk(arbitrage_signal),
+            'market_impact': self._assess_market_impact(arbitrage_signal, market_data),
+        }
+        weights = {'spread_stability': 0.3, 'volatility': 0.25, 'liquidity': 0.2, 'execution': 0.15, 'market_impact': 0.1}
+        overall = sum(factors[f] * weights[f] for f in factors)
+        return {
+            'overall_risk_score': overall,
+            'risk_factors': factors,
+            'recommendations': self._recommendations(factors),
+            'approved': overall < 0.6,
+        }
+
+    @staticmethod
+    def _assess_spread_stability(signal: Dict) -> float:
+        spread = signal.get('spread_percentage', 0)
+        if spread > 0.01:
+            return 0.8
+        return 0.4 if spread > 0.005 else 0.1
+
+    @staticmethod
+    def _assess_volatility_risk(market_data: Dict) -> float:
+        vol = market_data.get('volatility', 0.02)
+        if vol > 0.05:
+            return 0.9
+        return 0.6 if vol > 0.03 else 0.2
+
+    @staticmethod
+    def _assess_liquidity_risk(market_data: Dict) -> float:
+        total_volume = sum(e.get('volume', 0) for e in market_data.get('exchanges', {}).values())
+        if total_volume < 100:
+            return 0.9
+        return 0.6 if total_volume < 500 else 0.2
+
+    @staticmethod
+    def _assess_execution_risk(signal: Dict) -> float:
+        conf = signal.get('confidence', 0)
+        if conf < 0.5:
+            return 0.8
+        return 0.5 if conf < 0.7 else 0.1
+
+    def _assess_market_impact(self, signal: Dict, market_data: Dict) -> float:
+        pos_pct = signal.get('position_size_pct', 0)
+        total_vol = sum(e.get('volume', 0) for e in market_data.get('exchanges', {}).values())
+        if total_vol > 0 and pos_pct * self.risk_manager.portfolio_value > total_vol * 0.01:
+            return 0.8
+        return 0.6 if pos_pct > 0.05 else 0.2
+
+    @staticmethod
+    def _recommendations(factors: Dict) -> List[str]:
+        msgs = {
+            'spread_stability': "Reduce position size — spread may not persist",
+            'volatility': "Consider wider stop loss due to high volatility",
+            'liquidity': "Monitor order book depth — low liquidity detected",
+            'execution': "Wait for higher confidence signal",
+            'market_impact': "Reduce position size to minimize market impact",
+        }
+        return [msgs[k] for k, v in factors.items() if v > 0.6]
+
+
+def create_default_risk_manager(config: Dict = None) -> TradingRiskManager:
+    """Create a TradingRiskManager with default settings."""
+    return TradingRiskManager(config)

@@ -11,17 +11,17 @@ Covers:
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import sys
-import asyncio
 from pathlib import Path
 from typing import List
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import numpy as np
 import pytest
 import torch
-import numpy as np
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
@@ -96,7 +96,7 @@ class TestMiCAComplianceEnforcement:
 
     def test_validate_opportunity_raises_on_violation(self):
         """validate_opportunity must raise or return False for USDT pairs."""
-        from compliance import MiCAComplianceEngine, ComplianceViolationError
+        from compliance import ComplianceViolationError, MiCAComplianceEngine
         engine = MiCAComplianceEngine(personal_deployment=True)
         try:
             result = engine.validate_opportunity(
@@ -112,7 +112,7 @@ class TestMiCAComplianceEnforcement:
         expected = [f"{p}/USDC" for p in ALL_PAIRS]
         result = self.engine_personal.filter_compliant_pairs(expected)
         # Allow that some coins might not be in the personal whitelist (BTC/ETH edge cases)
-        non_usdt_pairs = [p for p in expected if "USDT" not in p]
+        [p for p in expected if "USDT" not in p]
         # At minimum VET, LINK, IOTA, XRP, ADA, XLM, HBAR, ALGO should pass
         core = ["XRP/USDC", "ADA/USDC", "XLM/USDC", "HBAR/USDC", "ALGO/USDC"]
         for pair in core:
@@ -280,7 +280,7 @@ class TestModelValidationPipeline:
     @pytest.mark.asyncio
     async def test_registry_populated_after_run(self):
         """ModelRegistry must contain entries for all requested pairs after run."""
-        from model_validation_pipeline import ModelValidationPipeline, ModelRegistry
+        from model_validation_pipeline import ModelRegistry, ModelValidationPipeline
         registry = ModelRegistry()
         pipeline = ModelValidationPipeline(root_dir=str(ROOT_DIR), auto_retrain=False)
         pipeline.registry = registry

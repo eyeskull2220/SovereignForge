@@ -3,16 +3,17 @@
 Test suite for Telegram alerts functionality
 """
 
-import pytest
 import asyncio
-from unittest.mock import AsyncMock, MagicMock, patch
-import sys
 import os
+import sys
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 # Add src directory to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-from telegram_alerts import TelegramAlertSystem, ArbitrageOpportunity, TelegramConfig
+from telegram_alerts import ArbitrageOpportunity, TelegramAlertSystem, TelegramConfig
 
 
 class TestTelegramAlertSystem:
@@ -135,8 +136,8 @@ class TestTelegramAlertSystem:
 
         status = alert_system.get_status()
 
-        assert status['enabled'] == True
-        assert status['running'] == False
+        assert status['enabled']
+        assert not status['running']
         assert status['alerts_sent'] == 5
         assert status['opportunities_alerted'] == 3
         assert status['errors'] == 1
@@ -170,13 +171,13 @@ class TestTelegramConfig:
 
         assert config.token == "test_token"
         assert config.chat_ids == [123, 456]
-        assert config.enabled == True
+        assert config.enabled
 
     def test_config_defaults(self):
         """Test configuration defaults"""
         config = TelegramConfig(token="test_token", chat_ids=[123])
 
-        assert config.enabled == True  # Default value
+        assert config.enabled  # Default value
 
 
 class TestGlobalFunctions:

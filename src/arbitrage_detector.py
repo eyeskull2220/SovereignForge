@@ -4,16 +4,17 @@ SovereignForge Arbitrage Detector - Wave 1
 Simple ML-based arbitrage opportunity detection for personal use
 """
 
-import torch
-import torch.nn as nn
+import json
+import logging
+import os
+import sqlite3
+from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple
+
 import numpy as np
 import pandas as pd
-from datetime import datetime
-import logging
-import json
-import os
-from typing import Dict, List, Optional, Tuple, Any
-import sqlite3
+import torch
+import torch.nn as nn
 
 # Import advanced model architecture
 try:
@@ -30,7 +31,7 @@ except ImportError:
     GrokReasoningWrapper = None
 
 # Import compliance engine
-from compliance import get_compliance_engine, ComplianceViolationError
+from compliance import ComplianceViolationError, get_compliance_engine
 
 # Configure logging
 logging.basicConfig(
@@ -216,10 +217,11 @@ class ArbitrageDetector:
             logger.info("🧠 Grok reasoning disabled or not available")
 
         # Try to load models in order of preference
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         model_paths = [
             model_path,
-            "E:\\Users\\Gino\\Downloads\\SovereignForge\\models\\advanced_arbitrage_detector_v2.0.pth",
-            "E:\\Users\\Gino\\Downloads\\SovereignForge\\models\\arbitrage_predictor_v1.0.pth"
+            os.path.join(base_dir, "models", "advanced_arbitrage_detector_v2.0.pth"),
+            os.path.join(base_dir, "models", "arbitrage_predictor_v1.0.pth"),
         ]
 
         loaded = False

@@ -11,15 +11,15 @@ This module provides:
 - Alert system for training issues
 """
 
+import json
+import logging
 import os
 import sys
-import logging
 import threading
 import time
-from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass
 from datetime import datetime
-import json
+from typing import Any, Callable, Dict, List, Optional
 
 # Optional imports with fallbacks
 try:
@@ -252,7 +252,7 @@ class TrainingMonitor:
                         metrics['gpu_memory_total'] = memory_info[1] / (1024**2)  # MB
                         # Utilization not available from PyTorch
                         metrics['gpu_utilization'] = 0.0
-                except:
+                except Exception:
                     metrics['gpu_utilization'] = 0.0
                     metrics['gpu_memory_used'] = 0.0
                     metrics['gpu_memory_total'] = 0.0

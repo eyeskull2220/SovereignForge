@@ -6,15 +6,16 @@ Production-ready arbitrage trading system with monitoring, database, and async p
 
 import argparse
 import asyncio
-import time
-import logging
-from datetime import datetime, timedelta
 import json
+import logging
 import os
-import sys
 import signal
+import sys
 import threading
-from typing import Optional, Dict, Any
+import time
+from datetime import datetime, timedelta
+from typing import Any, Dict, Optional
+
 import numpy as np
 
 # Add src directory to path
@@ -41,11 +42,11 @@ except ImportError:
 
 # Core application imports
 from arbitrage_detector import ArbitrageDetector, LocalDatabase, create_sample_data
-from exchange_connector import create_demo_connector
-from risk_manager import create_default_risk_manager, ArbitrageRiskAssessor
-from order_executor import create_demo_executor
 from backtester import ArbitrageBacktester, BacktestDataProvider
+from exchange_connector import create_demo_connector
+from order_executor import create_demo_executor
 from performance_analyzer import create_performance_analyzer
+from risk_management import ArbitrageRiskAssessor, create_default_risk_manager
 
 # Production persistence — use SQLite via aiosqlite (zero-config fallback)
 # Redis cache via cache_layer (falls back to in-memory LRU automatically)
@@ -148,7 +149,8 @@ class _NoOpDB:
 
 
 class _NoOpMetrics:
-    """No-op metrics collector — logs metrics at DEBUG level."""
+    """No-op metrics collector — logs metrics at DEBUG level.
+    Falls back to real MetricsCollector from monitoring.py when available."""
 
     async def initialize(self):
         pass
@@ -156,8 +158,21 @@ class _NoOpMetrics:
     async def record_metric(self, name: str, value, labels: dict = None):
         logger.debug(f"metric {name}={value} labels={labels}")
 
+    def get_metrics_text(self) -> str:
+        return ""
+
     async def close(self):
         pass
+
+
+def _create_metrics_collector():
+    """Create the best available metrics collector."""
+    try:
+        from monitoring import MetricsCollector
+        return MetricsCollector()
+    except (ImportError, Exception) as e:
+        logger.info(f"MetricsCollector not available ({e}), using no-op metrics")
+        return _NoOpMetrics()
 
 
 class _NoOpAlertManager:
@@ -175,7 +190,7 @@ class _NoOpAlertManager:
             logger.warning(f"ALERT [{level.upper()}] {title}: {message}")
             return
         try:
-            from multi_channel_alerts import AlertPriority, Alert
+            from multi_channel_alerts import Alert, AlertPriority
             pmap = {
                 "critical": AlertPriority.CRITICAL,
                 "error": AlertPriority.HIGH,
@@ -259,7 +274,7 @@ class ProductionArbitrageSystem:
         # Production components (graceful no-ops when services unavailable)
         self.db_manager = _NoOpDB()
         self.cache_manager = _NoOpCacheManager()
-        self.metrics_collector = _NoOpMetrics()
+        self.metrics_collector = _create_metrics_collector()
         self.alert_manager = _NoOpAlertManager()
 
         # Trading state
@@ -564,7 +579,7 @@ class ArbitrageCLI:
 
     def run_detection(self, symbol: str = 'BTC/USDC', continuous: bool = False, interval: int = 60):
         """Run arbitrage detection"""
-        print(f"SovereignForge Arbitrage Detector - Wave 1")
+        print("SovereignForge Arbitrage Detector - Wave 1")
         print(f"Symbol: {symbol}")
         print(f"Continuous mode: {continuous}")
         if continuous:
@@ -703,7 +718,7 @@ class ArbitrageCLI:
         print(f"Sharpe Ratio: {metrics['sharpe_ratio']:.3f}")
         print(f"Win Rate: {metrics['win_rate']:.1f}")
 
-        print(f"\nRisk Limits:")
+        print("\nRisk Limits:")
         limits = metrics['risk_limits']
         print(f"Daily Loss Limit: ${limits['daily_loss_limit']:.2f}")
         print(f"Single Trade Limit: ${limits['single_trade_limit']:.2f}")
@@ -729,13 +744,13 @@ class ArbitrageCLI:
         print(f"Backtesting {symbol_list}")
         print(f"Period: {start_date.date()} to {end_date.date()}")
 
-        import asyncio
-
-        async def run_async_backtest():
-            results = await self.backtester.run_backtest(symbol_list, start_date, end_date)
-            return results
-
-        results = asyncio.run(run_async_backtest())
+        loop = asyncio.new_event_loop()
+        try:
+            results = loop.run_until_complete(
+                self.backtester.run_backtest(symbol_list, start_date, end_date)
+            )
+        finally:
+            loop.close()
 
         # Display results
         print("\nBacktest Results:")
@@ -798,8 +813,13 @@ class ArbitrageCLI:
                         }
 
                         # Execute paper trade
-                        import asyncio
-                        trade_result = asyncio.run(self.order_executor.execute_arbitrage_trade(opportunity))
+                        loop = asyncio.new_event_loop()
+                        try:
+                            trade_result = loop.run_until_complete(
+                                self.order_executor.execute_arbitrage_trade(opportunity)
+                            )
+                        finally:
+                            loop.close()
 
                         timestamp = datetime.fromisoformat(result['timestamp'])
                         print(f"[{timestamp.strftime('%H:%M:%S')}] PAPER TRADE: "

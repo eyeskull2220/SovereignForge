@@ -6,9 +6,9 @@ Handles real-time arbitrage opportunity alerts and system notifications
 
 import asyncio
 import logging
-from typing import List, Dict, Any, Optional, Callable
-from dataclasses import dataclass
 import os
+from dataclasses import dataclass
+from typing import Any, Callable, Dict, List, Optional
 
 # Telegram imports - with fallbacks for testing
 try:

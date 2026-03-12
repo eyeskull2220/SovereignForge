@@ -3,13 +3,19 @@
 
 import asyncio
 import logging
-import time
-from typing import Dict, Any, Optional
 import os
+import time
 from datetime import datetime
+from typing import Any, Dict, Optional
 
 try:
-    from prometheus_client import Counter, Gauge, Histogram, CollectorRegistry, generate_latest
+    from prometheus_client import (
+        CollectorRegistry,
+        Counter,
+        Gauge,
+        Histogram,
+        generate_latest,
+    )
     _HAS_PROMETHEUS = True
 except ImportError:
     Counter = Gauge = Histogram = CollectorRegistry = generate_latest = None
@@ -412,8 +418,8 @@ Message:
 
         try:
             import smtplib
-            from email.mime.text import MIMEText
             from email.mime.multipart import MIMEMultipart
+            from email.mime.text import MIMEText
 
             smtp_server = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
             smtp_port = int(os.getenv('SMTP_PORT', '587'))

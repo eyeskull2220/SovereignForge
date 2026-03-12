@@ -6,10 +6,10 @@ End-to-end arbitrage detection and execution pipeline
 
 import asyncio
 import logging
-from typing import Dict, List, Optional, Any, Callable
+import time
 from dataclasses import dataclass
 from datetime import datetime
-import time
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -153,7 +153,10 @@ class LiveArbitragePipeline:
             self.data_service = MockDataService()
 
         try:
-            from realtime_inference import RealTimeInferenceService, get_inference_service
+            from realtime_inference import (
+                RealTimeInferenceService,
+                get_inference_service,
+            )
             self.inference_service = get_inference_service()  # Use singleton with GPU Manager
         except ImportError:
             logger.warning("RealTimeInferenceService not available, using mock")
@@ -263,7 +266,8 @@ class LiveArbitragePipeline:
             # Send alert via multi-channel router (primary), fall back to Telegram-only
             if self.alert_router is not None:
                 try:
-                    from multi_channel_alerts import AlertPriority, Alert as MCAlert
+                    from multi_channel_alerts import Alert as MCAlert
+                    from multi_channel_alerts import AlertPriority
                     priority = (
                         AlertPriority.HIGH if opportunity.probability >= 0.8
                         else AlertPriority.MEDIUM

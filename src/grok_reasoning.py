@@ -7,8 +7,9 @@ Uses xAI's Grok model for advanced trading decision reasoning
 import asyncio
 import json
 import logging
-from typing import Dict, List, Optional, Any
 from datetime import datetime
+from typing import Any, Dict, List, Optional
+
 try:
     import xai_sdk
     _HAS_XAI = True

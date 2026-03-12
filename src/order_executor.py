@@ -4,17 +4,19 @@ SovereignForge Order Executor - Wave 3
 Order execution engine for arbitrage trading
 """
 
-import ccxt
-import time
-import logging
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Any
 import asyncio
 import json
+import logging
 import os
 
 # Add parent directory to path for imports
 import sys
+import time
+from datetime import datetime, timedelta
+from typing import Any, Dict, List, Optional, Tuple
+
+import ccxt
+
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Setup logging first
@@ -22,7 +24,7 @@ logger = logging.getLogger(__name__)
 
 # Import Phase 2 components
 try:
-    from risk_management import get_risk_manager, RiskManager
+    from risk_management import RiskManager, get_risk_manager
     RISK_MANAGER_AVAILABLE = True
     logger.info("Phase 2 Risk Management integrated successfully")
 except ImportError as e:

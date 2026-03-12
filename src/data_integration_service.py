@@ -5,13 +5,14 @@ Multi-exchange market data aggregation with MiCA compliance
 """
 
 import asyncio
+import json
 import logging
-from typing import Dict, List, Optional, Any, Callable
+import time
 from dataclasses import dataclass
 from datetime import datetime
-import time
+from typing import Any, Callable, Dict, List, Optional
+
 import websockets
-import json
 
 logger = logging.getLogger(__name__)
 

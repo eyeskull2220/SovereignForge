@@ -1,174 +1,91 @@
-# SovereignForge Working Context
+# SovereignForge — Working Context
 
-## 📅 Current Date: March 8, 2026
+## Current Date: March 12, 2026
 
-## 🎯 Current Priorities (Phase 6 Implementation)
+## Current Status
 
-### **HIGH PRIORITY - Phase 6D Go-Live & Monitoring (Days 1-2, ~3K tokens)**
-- **Production Validation**: Comprehensive pre-deployment checks ✅
-- **Monitoring System**: Real-time metrics, alerting, dashboards ✅
-- **Documentation**: Complete deployment and troubleshooting guides ✅
-- **Go-Live Automation**: Automated checklists and validation ✅
-- **Remaining**: Final testing, production deployment
+- **Tests**: 71/73 passing (97.3%)
+- **MiCA Compliance**: Clean — 0 USDT violations in src/
+- **Models**: 5/10 above 80% accuracy threshold, 4 need retraining, 1 missing (VET/USDC)
+- **Dashboard**: Functional — 6 components wired in `dashboard/src/components/`
+- **CI/CD**: 3 workflows active (test, lint, build)
+- **Infrastructure**: Docker/K8s manifests ready, deps not installed in current env
 
-### **LOW PRIORITY - Context Optimization**
-- Implement warm_start.py for session persistence
-- WORKING.md/AGENTS.md maintenance
-- Research Claude mem alternatives
+## What's Broken
 
-## ✅ Recently Shipped (Last 24h)
+### Must Fix
 
-### **Phase 12: Advanced Arbitrage & Smart Money Integration (COMPLETED)**
-- ✅ **Smart Money Concepts Integration**: Full SMC library with FVG, BOS/CHOCH, Order Blocks, Liquidity analysis
-- ✅ **Enhanced Arbitrage Detector**: `enhanced_arbitrage_detector.py` with SMC-enhanced arbitrage detection
-- ✅ **Kraken Exchange Support**: MiCA-compliant pairs (XRP/USDC, XLM/USDC, ADA/USDC, etc.)
-- ✅ **Market Bias Analysis**: Real-time market direction analysis using SMC indicators
-- ✅ **Risk-Adjusted Arbitrage**: SMC confidence scoring for position sizing and execution
-- ✅ **Cross-Exchange Arbitrage**: Multi-exchange price discovery with smart money filters
+| Issue | Location | Quick Fix |
+|-------|----------|-----------|
+| Mock services in production pipeline | `src/live_arbitrage_pipeline.py:153,160` | Wire real `WebSocketConnector` and `RealtimeInferenceService` instead of mocks |
+| `asyncio.run()` in async context | `src/main.py:738,802` | Replace with `await` calls |
+| 4 models below 80% threshold | ADA 76.9%, XLM 78.1%, ETH 79.5%, IOTA 79.8% | Retrain with tuned hyperparams via `gpu_train.py` |
+| VET/USDC model missing | `models/` — no file or metadata | Fetch data, train fresh model |
+| `time.sleep(300)` blocking | `src/model_retrainer.py:588` | Use `asyncio.sleep(300)` |
+| monitoring.py has pass stubs | `src/monitoring.py` | Implement stubs, wire into `src/main.py` |
 
-### **Phase 11: Personal Use Enhancements (COMPLETED)**
-- ✅ **CLI Wrapper**: `sovereignforge.bat` command with start/stop/status/health/logs/backup/dashboard/update
-- ✅ **Personal Mode Config**: Resource optimization flags and personal settings in personal_config.json
-- ✅ **Auto-Recovery System**: Automatic service restart and health monitoring (auto_recovery.py)
-- ✅ **Windows Compatibility**: Batch file wrapper for Windows CMD environment
-- ✅ **One-Command Operations**: Simple CLI for all daily operations (start, stop, status, health, backup)
+### Should Fix (Cleanup)
 
-### **Phase 10: Production Deployment & Final Integration (COMPLETED)**
-- ✅ **Live Testing Validation**: Micro-position testing system with gradual scaling ($1 → $10 → $100)
-- ✅ **Production Deployment**: Docker Compose with security hardening and secrets management
-- ✅ **Monitoring Enhancement**: Advanced metrics (VaR, stress tests, correlation matrix) + multi-channel alerts
-- ✅ **Documentation Suite**: Complete user manuals, troubleshooting guides, and compliance documentation
-- ✅ **Integration Testing**: End-to-end system testing with 100% MiCA compliance validation
+| Issue | Location |
+|-------|----------|
+| 5 duplicate file pairs in src/ | See AGENTS.md cleanup table |
+| 8 orphaned .tsx files in repo root | Delete — real copies exist in `dashboard/src/components/` |
+| 3 stub .pth files (<200 bytes) | `models/strategies/dca_*`, `fib_*`, `grid_*` — not real models |
+| Dead Vite project | `monitoring/dashboard/` — scaffolded, no real code |
+| 18MB `warm_start_state.json` | Consider .gitignore or lazy-loading |
 
-### **Phase 9: Advanced Strategy Optimization & Monitoring (COMPLETED)**
-- ✅ **Paper Trading Engine**: Real-time WebSocket integration with live market data
-- ✅ **React Dashboard**: Professional trading interface with P&L charts and risk metrics
-- ✅ **Strategy Optimization**: Parameter tuning with walk-forward analysis and ML integration
-- ✅ **Advanced Risk Management**: Kelly Criterion, dynamic stops, correlation limits, circuit breakers
-- ✅ **Cross-Exchange Arbitrage**: Multi-exchange price monitoring and opportunity detection
+### Not Broken (Confirmed Working)
 
-### **MiCA Compliance Enforcement**
-- ✅ **Critical Fix**: Removed all USDT references from codebase
-- ✅ **Config Updates**: .env.example, cli.py, personal_config.json
-- ✅ **Strict Whitelist**: Only USDC/RLUSD pairs allowed
-- ✅ **Context Management**: WORKING.md, AGENTS.md, warm_start.py
-- ✅ **Compliance Documentation**: Guardrails in AGENTS.md
+- Dashboard `App.tsx` — real implementation, not CRA stub
+- `useWebSocket.ts` — full hook with reconnect/backoff
+- All 6 dashboard components — in correct location
+- CI workflows — all 3 exist and functional
+- `tests/test_wave2.py` — exists in tests/
+- MiCA compliance — zero USDT violations, CI enforced
+- 9 real arbitrage models (73MB each) in `models/strategies/`
 
-### **Phase 3 Performance Optimizations**
-- ✅ GPU training fixes (batch size validation, async prediction)
-- ✅ Data ingestion rate limiting (100 concurrent, 500MB memory bounds)
-- ✅ WebSocket circuit breaker (exponential backoff, jitter)
-- ✅ Model inference batching infrastructure
-- ✅ Memory cleanup automation (50% reduction when limit exceeded)
+## Completed Phases
 
-### **Phase 2 Infrastructure**
-- ✅ 7-pair model loading (LINK/IOTA added, file paths fixed)
-- ✅ WebSocket reconnect with circuit breaker
-- ✅ Risk management Telegram alerts
-- ✅ MiCA whitelist dynamic pair generation
+| Phase | Status |
+|-------|--------|
+| Phase 2: Infrastructure | Done — model loading, WebSocket, risk alerts |
+| Phase 3: Performance | Done — GPU fixes, rate limiting, circuit breaker, batching |
+| Phase 6: Production | Done — Docker hardening, dashboard, CLI, installer |
+| Phase 9: Strategy | Done — paper trading, dashboard, risk management |
+| Phase 10: Deployment | Done — live testing, Docker Compose, monitoring, docs |
+| Phase 11: Personal Use | Done — CLI wrapper, auto-recovery, Windows compat |
+| Phase 12: Smart Money | Done — SMC library, enhanced arbitrage, Kraken support |
 
-## ❌ Currently Broken
+## Next Priorities
 
-### **Critical Issues**
-- **Test Status**: ✅ FIXED - 71/73 tests passing (97.3%)
-- **MiCA Violations**: ✅ FIXED - USDT pairs removed from personal deployment, only USDC/RLUSD allowed
-- **Context Degradation**: Long sessions lose project context
+1. **Fix mock services** in `src/live_arbitrage_pipeline.py` — replace with real inference/data services
+2. **Fix asyncio.run()** in `src/main.py:738,802` — use await
+3. **Retrain failing models** — IOTA (0.2% gap), ETH (0.5%), XLM (1.9%), ADA (3.1%)
+4. **Train VET/USDC** model from scratch
+5. **Consolidate duplicates** — merge risk_management/risk_manager, compliance/mica_compliance, cache/cache_layer
+6. **Delete orphaned files** — root .tsx copies, dead monitoring/dashboard, stub .pth files
+7. **Wire monitoring** — implement pass stubs, connect to main.py
+8. **Expand test coverage** — write tests for main.py, order_executor, backtester (target >85%)
 
-### **Post-Audit Findings**
-- **Model Accuracy**: 5/9 models passing 80% threshold (55.6% success rate) - improved from 33%
-- **WebSocket Live Testing**: ✅ COMPLETED - Live Binance WebSocket working, real ticker data received
-- **Infrastructure**: Docker/K8s ready, config/ directory populated
-- **Compliance**: Full MiCA enforcement verified, no USDT references found
+## Test Commands
 
-### **Backtesting Issues**
-- **✅ FIXED**: Pandas boolean indexing error resolved with proper NaN handling
-- **✅ FIXED**: Position sizing corrected (was calculating wrong units)
-- **✅ IMPROVED**: Added momentum and grid trading strategies
-- **Data Quality Filtering**: Some exchanges have insufficient data for certain pairs
-- **Strategy Validation**: XRP/USDC showing 31.7% returns, 100% win rate (credible)
-
-### **Non-Critical Issues**
-- **Pylance Errors**: Type annotations incomplete (non-blocking)
-- **Model Validation**: Skipped for Phase 5 compatibility (expected)
-- **WebSocket Reconnect**: Implemented but needs live testing verification
-
-## 🧪 Test Command
 ```bash
-# Run all tests
+# All tests
 python -m pytest tests/ -v --tb=short
 
-# Run specific test suites
-python -m pytest test_arbitrage_detector.py -v
-python -m pytest test_telegram_alerts.py -v
-python -m pytest test_integration.py -v
-python -m pytest test_personal_security.py -v
+# MiCA compliance check
+grep -rn "USDT" src/ --include="*.py" | grep -v "NO USDT\|USDT ALLOWED\|USDT PAIRS\|compliance.py:3[89]\|gpu_accelerated"
 
-# GPU tests
-python test_cuda.py
-python gpu_status_check.py
+# Dashboard build
+cd dashboard && npm run build
+
+# Docker
+docker-compose up
 ```
 
-## 📊 Project Metrics
+## Guardrails
 
-### **Code Quality**
-- **Lines of Code**: ~15,000
-- **Test Coverage**: 97.3% (71/73 tests passing)
-- **Pylance Errors**: ~50 (mostly type annotations)
-- **Performance**: 10x faster inference with batching
-
-### **Architecture Status**
-- **Core Components**: 100% functional
-- **Infrastructure**: Production-ready (K8s + Docker)
-- **Security**: Phase 5 personal security implemented
-- **Compliance**: MiCA-ready (USDC/RLUSD enforcement needed)
-
-## 🔄 Next Session Priorities
-
-1. **MiCA Compliance Fix**: Remove all USDT references, enforce USDC/RLUSD only
-2. **Context Management**: Implement warm_start.py and WORKING.md/AGENTS.md
-3. **Complete Audit**: Finish 24 tasks assessment, document 5 failing tests
-4. **Production Deployment**: Docker /health endpoint, web dashboard
-5. **Personal Deployment**: USDC/RLUSD pairs only, one-click installer
-
-## 🚨 Guardrails (NEVER VIOLATE)
-
-### **MiCA Compliance**
-- **ONLY** these pairs: XRP/USDC, XLM/USDC, HBAR/USDC, ALGO/USDC, ADA/USDC, LINK/USDC, IOTA/USDC, XDC/USDC, ONDO/USDC, VET/USDC, XRP/RLUSD, XLM/RLUSD, ADA/RLUSD
-- **NO** USDT pairs (not MiCA compliant)
-- **NO** BTC/ETH in personal deployment (only for institutional)
-- **Local-only execution**: No external APIs, no custody
-
-### **Technical Standards**
-- **Async everywhere**: All I/O operations async
-- **Type hints**: Full type annotation coverage
-- **Error handling**: Comprehensive try/catch with logging
-- **Security first**: Non-root containers, secrets management
-- **Performance**: GPU optimization, memory bounds
-
-### **Development Workflow**
-- **Test before commit**: All changes tested
-- **Documentation**: Update WORKING.md after changes
-- **Git hygiene**: Small commits, clear messages
-- **Context preservation**: Use warm_start.py for sessions
-
-## 📝 Session Notes
-
-### **Today's Progress**
-- ✅ **Phase 6A Complete**: Critical fixes (tests, models, WebSocket) ✅
-- ✅ **Phase 6B Complete**: Personal deployment (Docker, dashboard, CLI, installer) ✅
-- ✅ **Subagent Parallel Execution**: 4 subagents completed all Phase 6B tasks
-- ✅ **MiCA Compliance**: STRICT ENFORCEMENT - USDC/RLUSD only ✅
-- ✅ **Production Ready**: Docker hardened, web dashboard, CLI tools, one-click installer
-- ✅ **Architecture**: RAG→Agents→MCP→A2A stack implemented
-
-### **Blockers**
-- WebSocket reconnect needs live testing verification
-- PyTorch model loading verification completed
-- Context degradation in long sessions (needs warm_start.py enhancement)
-
-### **Decisions Made**
-- Phase 6 implementation plan with comprehensive TODO list
-- Subagent parallel execution for efficiency
-- Strict MiCA enforcement (USDC/RLUSD only)
-- Context optimization via warm_start.py
-- Personal deployment limited to compliant pairs only
+- **MiCA**: Only USDC/RLUSD pairs. No USDT. No BTC/ETH in personal deployment.
+- **Async**: Never use blocking I/O. No `time.sleep()` in async code.
+- **Security**: No hardcoded secrets. `weights_only=True` in all torch.load calls.
+- **Tests**: Must pass before committing. Update this file after changes.

@@ -4,7 +4,7 @@
 
 ## Current Status
 
-- **Tests**: 193 passing, 2 skipped (GPU markers)
+- **Tests**: 193 passing, 19 skipped (GPU/torch markers)
 - **Lint**: Clean — ruff passes on both src/ and tests/
 - **MiCA Compliance**: Clean — 0 USDT violations in src/
 - **Models**: 5/10 above 80% accuracy threshold, 4 need retraining, 1 missing (VET/USDC)
@@ -33,6 +33,11 @@
 
 | Fix | Commit |
 |-----|--------|
+| Multi-strategy training pipeline | pending — 4 model architectures (LSTM, GRU, Transformer, Attention), factory functions, `StrategyType` enum |
+| Collective brain ensemble | pending — `StrategyEnsemble` with confidence-weighted signal aggregation across all strategies |
+| GPU trainer `--strategy` flag | pending — `gpu_train.py` supports `--strategy arbitrage/fibonacci/grid/dca/all` |
+| Strategy config in trading_config.json | pending — per-strategy weights and parameters |
+| 17 new strategy tests | pending — multi-strategy training + ensemble tests (torch-gated) |
 | `asyncio.run()` in async context | `93ed347` — replaced with `loop.run_until_complete()` |
 | `time.sleep(300)` blocking | `93ed347` — replaced with `threading.Event.wait(timeout=300)` |
 | Monitoring wired into main.py | `93ed347` — factory function with no-op fallback |
@@ -73,10 +78,12 @@
 
 ## Next Priorities
 
-1. **Retrain failing models** — IOTA (0.2% gap), ETH (0.5%), XLM (1.9%), ADA (3.1%) — needs GPU
-2. **Train VET/USDC** model from scratch — needs GPU
-3. **Wire real services** in `src/live_arbitrage_pipeline.py` — replace mocks with real inference/data
-4. **Continue expanding test coverage** — target >85%
+1. **Train all strategies on GPU** — `python gpu_train.py --strategy all --all-pairs --epochs 100 --gpu-monitor`
+2. **Retrain failing models** — IOTA (0.2% gap), ETH (0.5%), XLM (1.9%), ADA (3.1%) — needs GPU
+3. **Train VET/USDC** model from scratch — needs GPU
+4. **Wire real services** in `src/live_arbitrage_pipeline.py` — replace mocks with real inference/data
+5. **Wire StrategyEnsemble** into pipeline — collective brain produces unified signals
+6. **Continue expanding test coverage** — target >85%
 
 ## Test Commands
 

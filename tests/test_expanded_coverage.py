@@ -1372,3 +1372,216 @@ class TestHybridDataIntegrationService:
         assert engine.is_pair_compliant('BTC/USDC')
         compliant = engine.filter_compliant_pairs(['BTC/USDC', 'UNKNOWN/USDC'])
         assert 'BTC/USDC' in compliant
+
+
+# ── Multi-Strategy Training ─────────────────────────────────────────────────
+
+try:
+    import torch as _torch
+    _torch_available = True
+except ImportError:
+    _torch_available = False
+
+
+@pytest.mark.skipif(not _torch_available, reason="torch not installed")
+class TestMultiStrategyTraining:
+    """Tests for src/multi_strategy_training.py — requires torch"""
+
+    def test_strategy_type_enum(self):
+        """All 4 strategy types should be defined"""
+        from multi_strategy_training import StrategyType
+        assert StrategyType.ARBITRAGE.value == 'arbitrage'
+        assert StrategyType.FIBONACCI.value == 'fibonacci'
+        assert StrategyType.GRID.value == 'grid'
+        assert StrategyType.DCA.value == 'dca'
+        assert len(StrategyType) == 4
+
+    def test_strategy_models_registry(self):
+        """STRATEGY_MODELS should map each StrategyType to a callable factory"""
+        from multi_strategy_training import STRATEGY_MODELS, StrategyType
+        assert len(STRATEGY_MODELS) == 4
+        for st in StrategyType:
+            assert st in STRATEGY_MODELS
+            assert callable(STRATEGY_MODELS[st])
+
+    def test_factory_functions_importable(self):
+        """All 4 factory functions should be importable"""
+        from multi_strategy_training import (
+            create_attention_model,
+            create_gru_model,
+            create_lstm_model,
+            create_transformer_model,
+        )
+        assert callable(create_lstm_model)
+        assert callable(create_gru_model)
+        assert callable(create_transformer_model)
+        assert callable(create_attention_model)
+
+    def test_engineer_features_importable(self):
+        """engineer_features function should be importable"""
+        from multi_strategy_training import engineer_features
+        assert callable(engineer_features)
+
+    def test_generate_labels_importable(self):
+        """generate_labels function should be importable"""
+        from multi_strategy_training import generate_labels
+        assert callable(generate_labels)
+
+    def test_engineer_features_with_data(self):
+        """engineer_features should produce 10-feature vectors from OHLCV"""
+        from multi_strategy_training import engineer_features
+        # Create fake OHLCV data: [timestamp, open, high, low, close, volume]
+        rng = np.random.default_rng(42)
+        prices = 100 + np.cumsum(rng.normal(0, 1, 100))
+        ohlcv = np.column_stack([
+            np.arange(100),           # timestamp
+            prices,                    # open
+            prices + rng.uniform(0, 2, 100),  # high
+            prices - rng.uniform(0, 2, 100),  # low
+            prices + rng.normal(0, 0.5, 100), # close
+            rng.uniform(1000, 5000, 100),     # volume
+        ])
+        features, labels = engineer_features(ohlcv, seq_len=10)
+        assert len(features) > 0
+        # Each feature vector should have 10 features
+        assert features.shape[-1] == 10
+
+    def test_generate_labels_arbitrage(self):
+        """Arbitrage labels should be based on forward returns"""
+        from multi_strategy_training import StrategyType, generate_labels
+        rng = np.random.default_rng(42)
+        prices = 100 + np.cumsum(rng.normal(0, 1, 50))
+        ohlcv = np.column_stack([
+            np.arange(50),
+            prices, prices + 1, prices - 1, prices + 0.5,
+            rng.uniform(1000, 5000, 50),
+        ])
+        labels = generate_labels(ohlcv, StrategyType.ARBITRAGE)
+        assert len(labels) == len(ohlcv)
+
+    def test_generate_labels_all_strategies(self):
+        """All 4 strategy types should produce labels without error"""
+        from multi_strategy_training import StrategyType, generate_labels
+        rng = np.random.default_rng(42)
+        prices = 100 + np.cumsum(rng.normal(0, 1, 50))
+        ohlcv = np.column_stack([
+            np.arange(50),
+            prices, prices + 1, prices - 1, prices + 0.5,
+            rng.uniform(1000, 5000, 50),
+        ])
+        for st in StrategyType:
+            labels = generate_labels(ohlcv, st)
+            assert len(labels) == len(ohlcv), f"Labels length mismatch for {st.value}"
+
+
+# ── Strategy Ensemble ────────────────────────────────────────────────────────
+
+@pytest.mark.skipif(not _torch_available, reason="torch not installed")
+class TestStrategyEnsemble:
+    """Tests for src/strategy_ensemble.py — requires torch"""
+
+    def test_ensemble_signal_dataclass(self):
+        """EnsembleSignal should have all required fields"""
+        from strategy_ensemble import EnsembleSignal
+        signal = EnsembleSignal(
+            pair='XRP/USDC',
+            action='buy',
+            confidence=0.85,
+            agreement_score=1.0,
+            strategy_signals={'arbitrage': 0.6, 'fibonacci': 0.4},
+            strategy_confidences={'arbitrage': 0.9, 'fibonacci': 0.7},
+        )
+        assert signal.pair == 'XRP/USDC'
+        assert signal.action == 'buy'
+        assert signal.confidence == 0.85
+        assert signal.agreement_score == 1.0
+        assert 'arbitrage' in signal.strategy_signals
+        assert signal.timestamp is not None
+
+    def test_ensemble_init_default_weights(self):
+        """StrategyEnsemble with no config should use equal weights"""
+        from strategy_ensemble import StrategyEnsemble
+        ensemble = StrategyEnsemble(config={})
+        from multi_strategy_training import StrategyType
+        # All strategies should be enabled
+        for st in StrategyType:
+            assert ensemble.strategy_enabled[st] is True
+        # Weights should sum to 1.0
+        total = sum(
+            w for st, w in ensemble.strategy_weights.items()
+            if ensemble.strategy_enabled[st]
+        )
+        assert abs(total - 1.0) < 0.01
+
+    def test_ensemble_init_custom_weights(self):
+        """StrategyEnsemble should respect config weights"""
+        from strategy_ensemble import StrategyEnsemble
+        config = {
+            'strategies': {
+                'arbitrage': {'enabled': True, 'weight': 0.6},
+                'fibonacci': {'enabled': True, 'weight': 0.2},
+                'grid': {'enabled': True, 'weight': 0.1},
+                'dca': {'enabled': True, 'weight': 0.1},
+            }
+        }
+        ensemble = StrategyEnsemble(config=config)
+        from multi_strategy_training import StrategyType
+        # Arbitrage should have the highest normalized weight
+        assert ensemble.strategy_weights[StrategyType.ARBITRAGE] > ensemble.strategy_weights[StrategyType.DCA]
+
+    def test_ensemble_disabled_strategy(self):
+        """Disabled strategies should not be loaded"""
+        from strategy_ensemble import StrategyEnsemble
+        config = {
+            'strategies': {
+                'fibonacci': {'enabled': False, 'weight': 0.2},
+            }
+        }
+        ensemble = StrategyEnsemble(config=config)
+        from multi_strategy_training import StrategyType
+        assert ensemble.strategy_enabled[StrategyType.FIBONACCI] is False
+
+    def test_ensemble_agreement_all_agree(self):
+        """Agreement score should be 1.0 when all strategies point same direction"""
+        from strategy_ensemble import StrategyEnsemble
+        ensemble = StrategyEnsemble(config={})
+        signals = {'arbitrage': 0.5, 'fibonacci': 0.3, 'grid': 0.6, 'dca': 0.4}
+        agreement = ensemble._calculate_agreement(signals)
+        assert agreement == 1.0
+
+    def test_ensemble_agreement_split(self):
+        """Agreement score should be < 1.0 when strategies disagree"""
+        from strategy_ensemble import StrategyEnsemble
+        ensemble = StrategyEnsemble(config={})
+        signals = {'arbitrage': 0.5, 'fibonacci': -0.3, 'grid': 0.6, 'dca': -0.4}
+        agreement = ensemble._calculate_agreement(signals)
+        assert agreement == 0.5  # 2 out of 4 agree
+
+    def test_ensemble_agreement_all_neutral(self):
+        """Agreement score should be 0.5 when all signals are neutral"""
+        from strategy_ensemble import StrategyEnsemble
+        ensemble = StrategyEnsemble(config={})
+        signals = {'arbitrage': 0.01, 'fibonacci': -0.02, 'grid': 0.0, 'dca': 0.03}
+        agreement = ensemble._calculate_agreement(signals)
+        assert agreement == 0.5
+
+    def test_ensemble_loaded_summary(self):
+        """get_loaded_summary should report status for all strategies"""
+        from strategy_ensemble import StrategyEnsemble
+        ensemble = StrategyEnsemble(config={})
+        summary = ensemble.get_loaded_summary()
+        assert 'arbitrage' in summary
+        assert 'fibonacci' in summary
+        assert 'grid' in summary
+        assert 'dca' in summary
+        for st_info in summary.values():
+            assert 'enabled' in st_info
+            assert 'weight' in st_info
+            assert 'count' in st_info
+
+    def test_create_ensemble_from_config(self):
+        """Factory function should create ensemble from config file"""
+        from strategy_ensemble import create_ensemble_from_config
+        # Uses default config path — will use empty config if file doesn't exist
+        ensemble = create_ensemble_from_config()
+        assert ensemble is not None

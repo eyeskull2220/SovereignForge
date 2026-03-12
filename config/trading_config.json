@@ -19,5 +19,11 @@
     "telegram_bot_token": "",
     "telegram_chat_ids": [],
     "min_alert_spread": 1.0
+  },
+  "strategies": {
+    "arbitrage": {"enabled": true, "weight": 0.4},
+    "fibonacci": {"enabled": true, "weight": 0.2, "levels": [0.236, 0.382, 0.5, 0.618, 0.786]},
+    "grid": {"enabled": true, "weight": 0.2, "grid_spacing_pct": 2.0, "num_levels": 5},
+    "dca": {"enabled": true, "weight": 0.2, "dip_threshold_pct": 5.0}
   }
 }

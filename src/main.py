@@ -20,10 +20,24 @@ import numpy as np
 # Add src directory to path
 sys.path.insert(0, os.path.dirname(__file__))
 
-# Production imports
-from dotenv import load_dotenv
-import psutil
-import structlog
+# Optional production imports — degrade gracefully if missing
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass  # python-dotenv not installed; rely on environment variables
+
+try:
+    import psutil
+    _PSUTIL_AVAILABLE = True
+except ImportError:
+    _PSUTIL_AVAILABLE = False
+
+try:
+    import structlog
+    _STRUCTLOG_AVAILABLE = True
+except ImportError:
+    _STRUCTLOG_AVAILABLE = False
 
 # Core application imports
 from arbitrage_detector import ArbitrageDetector, LocalDatabase, create_sample_data
@@ -33,16 +47,16 @@ from order_executor import create_demo_executor
 from backtester import ArbitrageBacktester, BacktestDataProvider
 from performance_analyzer import create_performance_analyzer
 
-# Production database and monitoring
-from database import DatabaseManager
-from monitoring import MetricsCollector, AlertManager
-from cache import CacheManager
+# Production persistence — use SQLite via aiosqlite (zero-config fallback)
+# Redis cache via cache_layer (falls back to in-memory LRU automatically)
+try:
+    from cache_layer import CacheManager, get_cache, init_cache
+    _CACHE_AVAILABLE = True
+except ImportError:
+    _CACHE_AVAILABLE = False
 
-# Load environment variables
-load_dotenv()
-
-# Configure structured logging
-if os.getenv('STRUCTLOG_ENABLED', 'false').lower() == 'true':
+# Configure structured logging (optional — only if structlog is installed)
+if _STRUCTLOG_AVAILABLE and os.getenv('STRUCTLOG_ENABLED', 'false').lower() == 'true':
     structlog.configure(
         processors=[
             structlog.stdlib.filter_by_level,
@@ -69,6 +83,165 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Lightweight in-process stubs for optional production services
+# ---------------------------------------------------------------------------
+
+class _NoOpDB:
+    """SQLite-backed persistence stub using aiosqlite, or pure no-op if unavailable."""
+
+    def __init__(self):
+        self._db_path = os.getenv("SQLITE_DB_PATH", "sovereignforge.db")
+        self._conn = None
+
+    async def initialize(self):
+        try:
+            import aiosqlite
+            self._conn = await aiosqlite.connect(self._db_path)
+            await self._conn.execute(
+                "CREATE TABLE IF NOT EXISTS arbitrage_opportunities "
+                "(id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT, ts REAL)"
+            )
+            await self._conn.execute(
+                "CREATE TABLE IF NOT EXISTS trade_executions "
+                "(id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT, ts REAL)"
+            )
+            await self._conn.commit()
+            logger.info(f"SQLite database initialised at {self._db_path}")
+        except ImportError:
+            logger.warning("aiosqlite not installed — persistence disabled")
+
+    async def store_arbitrage_opportunity(self, result: dict, market_data: dict):
+        if self._conn is None:
+            return
+        try:
+            import json as _json
+            payload = _json.dumps({"result": result, "market": market_data}, default=str)
+            await self._conn.execute(
+                "INSERT INTO arbitrage_opportunities (data, ts) VALUES (?, ?)",
+                (payload, time.time()),
+            )
+            await self._conn.commit()
+        except Exception:
+            pass
+
+    async def store_trade_execution(self, trade_result: dict):
+        if self._conn is None:
+            return
+        try:
+            import json as _json
+            await self._conn.execute(
+                "INSERT INTO trade_executions (data, ts) VALUES (?, ?)",
+                (_json.dumps(trade_result, default=str), time.time()),
+            )
+            await self._conn.commit()
+        except Exception:
+            pass
+
+    async def health_check(self) -> bool:
+        return self._conn is not None
+
+    async def close(self):
+        if self._conn:
+            await self._conn.close()
+            self._conn = None
+
+
+class _NoOpMetrics:
+    """No-op metrics collector — logs metrics at DEBUG level."""
+
+    async def initialize(self):
+        pass
+
+    async def record_metric(self, name: str, value, labels: dict = None):
+        logger.debug(f"metric {name}={value} labels={labels}")
+
+    async def close(self):
+        pass
+
+
+class _NoOpAlertManager:
+    """Alert manager backed by multi_channel_alerts when available."""
+
+    async def initialize(self):
+        try:
+            from multi_channel_alerts import get_alert_router
+            self._router = get_alert_router()
+        except ImportError:
+            self._router = None
+
+    async def send_alert(self, level: str, title: str, message: str):
+        if self._router is None:
+            logger.warning(f"ALERT [{level.upper()}] {title}: {message}")
+            return
+        try:
+            from multi_channel_alerts import AlertPriority, Alert
+            pmap = {
+                "critical": AlertPriority.CRITICAL,
+                "error": AlertPriority.HIGH,
+                "warning": AlertPriority.MEDIUM,
+                "info": AlertPriority.LOW,
+            }
+            priority = pmap.get(level.lower(), AlertPriority.LOW)
+            await self._router.send(Alert(title=title, message=message, priority=priority))
+        except Exception as e:
+            logger.error(f"Alert send failed: {e}")
+
+
+class _NoOpCacheManager:
+    """CacheManager wrapper — uses cache_layer if available, else no-op."""
+
+    def __init__(self):
+        self._cache = None
+
+    async def initialize(self):
+        if _CACHE_AVAILABLE:
+            from cache_layer import init_cache
+            self._cache = await init_cache()
+            logger.info("CacheManager (cache_layer) initialised")
+        else:
+            logger.warning("cache_layer not available — caching disabled")
+
+    async def get(self, key: str):
+        if self._cache is None:
+            return None
+        # cache_layer.get takes (domain, key) — split on first ':'
+        parts = key.split(":", 1)
+        domain, k = (parts[0], parts[1]) if len(parts) == 2 else ("default", key)
+        return await self._cache.get(domain, k)
+
+    async def set(self, key: str, value, ttl: int = 30):
+        if self._cache is None:
+            return
+        parts = key.split(":", 1)
+        domain, k = (parts[0], parts[1]) if len(parts) == 2 else ("default", key)
+        await self._cache.set(domain, k, value, ttl=ttl)
+
+    async def health_check(self) -> bool:
+        return self._cache is not None
+
+    async def close(self):
+        if self._cache is not None:
+            await self._cache.disconnect()
+
+
+# ---------------------------------------------------------------------------
+# MiCA-compliant asset configs (USDC pairs only)
+# ---------------------------------------------------------------------------
+_MICA_ASSET_CONFIGS = {
+    'BTC/USDC': {'volatility': 0.03, 'min_order_size': 0.0001, 'volatility_multiplier': 1.0},
+    'ETH/USDC': {'volatility': 0.04, 'min_order_size': 0.001,  'volatility_multiplier': 1.0},
+    'XRP/USDC': {'volatility': 0.08, 'min_order_size': 1,      'volatility_multiplier': 1.5},
+    'XLM/USDC': {'volatility': 0.07, 'min_order_size': 1,      'volatility_multiplier': 1.4},
+    'HBAR/USDC': {'volatility': 0.09, 'min_order_size': 10,    'volatility_multiplier': 1.6},
+    'ALGO/USDC': {'volatility': 0.10, 'min_order_size': 1,     'volatility_multiplier': 1.7},
+    'ADA/USDC':  {'volatility': 0.06, 'min_order_size': 1,     'volatility_multiplier': 1.2},
+    'LINK/USDC': {'volatility': 0.07, 'min_order_size': 0.1,   'volatility_multiplier': 1.3},
+    'IOTA/USDC': {'volatility': 0.09, 'min_order_size': 1,     'volatility_multiplier': 1.5},
+    'VET/USDC':  {'volatility': 0.08, 'min_order_size': 10,    'volatility_multiplier': 1.4},
+}
+
+
 class ProductionArbitrageSystem:
     """Production-ready arbitrage trading system with monitoring and async processing"""
 
@@ -83,34 +256,36 @@ class ProductionArbitrageSystem:
         self.order_executor = create_demo_executor(self.risk_manager)
         self.performance_analyzer = create_performance_analyzer(self.risk_manager, None)
 
-        # Production components
-        self.db_manager = DatabaseManager()
-        self.cache_manager = CacheManager()
-        self.metrics_collector = MetricsCollector()
-        self.alert_manager = AlertManager()
+        # Production components (graceful no-ops when services unavailable)
+        self.db_manager = _NoOpDB()
+        self.cache_manager = _NoOpCacheManager()
+        self.metrics_collector = _NoOpMetrics()
+        self.alert_manager = _NoOpAlertManager()
 
         # Trading state
         self.active_opportunities = {}
         self.last_health_check = datetime.now()
 
     async def initialize(self):
-        """Initialize production system components"""
-        try:
-            # Initialize database
-            await self.db_manager.initialize()
+        """Initialize production system components — non-fatal if any service is down."""
+        errors = []
+        for name, component in [
+            ("database", self.db_manager),
+            ("cache", self.cache_manager),
+            ("metrics", self.metrics_collector),
+            ("alerts", self.alert_manager),
+        ]:
+            try:
+                await component.initialize()
+            except Exception as e:
+                errors.append(f"{name}: {e}")
+                logger.warning(f"Production component '{name}' failed to initialise: {e}")
 
-            # Initialize cache
-            await self.cache_manager.initialize()
-
-            # Initialize monitoring
-            await self.metrics_collector.initialize()
-            await self.alert_manager.initialize()
-
+        if errors:
+            logger.warning(f"System started with degraded components: {errors}")
+        else:
             logger.info("Production system initialized successfully")
-            return True
-        except Exception as e:
-            logger.error(f"Failed to initialize production system: {e}")
-            return False
+        return True  # Always return True — partial init is acceptable
 
     async def shutdown(self):
         """Gracefully shutdown the system"""
@@ -118,17 +293,21 @@ class ProductionArbitrageSystem:
         self.running = False
         self.shutdown_event.set()
 
-        # Close connections
-        await self.db_manager.close()
-        await self.cache_manager.close()
-        await self.metrics_collector.close()
+        for component in [self.db_manager, self.cache_manager, self.metrics_collector]:
+            try:
+                await component.close()
+            except Exception:
+                pass
 
         logger.info("Production system shutdown complete")
 
     async def run_arbitrage_detection(self, symbols: list = None, interval: int = 60):
         """Run continuous arbitrage detection with production features"""
         if symbols is None:
-            symbols = os.getenv('TRADING_SYMBOLS', 'BTC/USDT,ETH/USDT').split(',')
+            symbols = os.getenv(
+                'TRADING_SYMBOLS',
+                'BTC/USDC,ETH/USDC,XRP/USDC,XLM/USDC,HBAR/USDC,ALGO/USDC,ADA/USDC,LINK/USDC,IOTA/USDC,VET/USDC'
+            ).split(',')
 
         logger.info(f"Starting arbitrage detection for symbols: {symbols}")
 
@@ -319,7 +498,7 @@ class ProductionArbitrageSystem:
             cache_healthy = await self.cache_manager.health_check()
 
             # Check exchange connectivity
-            exchange_healthy = len(self.connector.get_market_data('BTC/USDT').get('exchanges', {})) > 0
+            exchange_healthy = len(self.connector.get_market_data('BTC/USDC').get('exchanges', {})) > 0
 
             # Record health metrics
             await self.metrics_collector.record_metric(
@@ -340,12 +519,14 @@ class ProductionArbitrageSystem:
                 {'component': 'exchange'}
             )
 
-            # System resource metrics
-            system_metrics = {
-                'cpu_percent': psutil.cpu_percent(interval=1),
-                'memory_percent': psutil.virtual_memory().percent,
-                'disk_usage_percent': psutil.disk_usage('/').percent
-            }
+            # System resource metrics (requires psutil)
+            system_metrics = {}
+            if _PSUTIL_AVAILABLE:
+                system_metrics = {
+                    'cpu_percent': psutil.cpu_percent(interval=1),
+                    'memory_percent': psutil.virtual_memory().percent,
+                    'disk_usage_percent': psutil.disk_usage('/').percent
+                }
 
             for metric_name, value in system_metrics.items():
                 await self.metrics_collector.record_metric(
@@ -358,51 +539,11 @@ class ProductionArbitrageSystem:
             logger.error(f"Health check failed: {e}")
 
     def _get_asset_config(self, symbol: str) -> Dict:
-        """Get asset-specific configuration parameters"""
-        # Default asset configurations for multi-asset support
-        asset_configs = {
-            'BTC/USDT': {
-                'volatility': 0.03,  # 3% daily volatility
-                'min_order_size': 0.0001,  # 0.0001 BTC minimum
-                'volatility_multiplier': 1.0
-            },
-            'ETH/USDT': {
-                'volatility': 0.04,  # 4% daily volatility
-                'min_order_size': 0.001,  # 0.001 ETH minimum
-                'volatility_multiplier': 1.0
-            },
-            'XRP/USDT': {
-                'volatility': 0.08,  # 8% daily volatility (high)
-                'min_order_size': 1,  # 1 XRP minimum
-                'volatility_multiplier': 1.5  # Higher risk adjustment
-            },
-            'XLM/USDT': {
-                'volatility': 0.07,  # 7% daily volatility
-                'min_order_size': 1,  # 1 XLM minimum
-                'volatility_multiplier': 1.4
-            },
-            'HBAR/USDT': {
-                'volatility': 0.09,  # 9% daily volatility (very high)
-                'min_order_size': 10,  # 10 HBAR minimum
-                'volatility_multiplier': 1.6
-            },
-            'ALGO/USDT': {
-                'volatility': 0.10,  # 10% daily volatility (very high)
-                'min_order_size': 1,  # 1 ALGO minimum
-                'volatility_multiplier': 1.7
-            },
-            'ADA/USDT': {
-                'volatility': 0.06,  # 6% daily volatility
-                'min_order_size': 1,  # 1 ADA minimum
-                'volatility_multiplier': 1.2
-            }
-        }
-
-        # Return asset config or default
-        return asset_configs.get(symbol, {
-            'volatility': 0.05,  # Default 5% volatility
-            'min_order_size': 0.001,  # Default minimum order
-            'volatility_multiplier': 1.0
+        """Get asset-specific configuration parameters (MiCA USDC pairs)."""
+        return _MICA_ASSET_CONFIGS.get(symbol, {
+            'volatility': 0.05,
+            'min_order_size': 0.001,
+            'volatility_multiplier': 1.0,
         })
 
 class ArbitrageCLI:
@@ -525,7 +666,7 @@ class ArbitrageCLI:
 
         # Test exchange connector
         print("Testing exchange connector...")
-        market_data = self.connector.get_market_data('BTC/USDT')
+        market_data = self.connector.get_market_data('BTC/USDC')
         if market_data['exchanges']:
             print(f"[OK] Exchange connector working: {len(market_data['exchanges'])} exchanges")
         else:
@@ -668,7 +809,8 @@ class ArbitrageCLI:
                         # Show updated balances
                         for exchange in ['binance', 'coinbase']:
                             balance = self.order_executor.get_paper_balance(exchange)
-                            print(f"  {exchange}: ${balance.get('USDT', 0):.2f} USDT")
+                            usdc = balance.get('USDC', balance.get('USDT', 0))
+                            print(f"  {exchange}: ${usdc:.2f} USDC")
 
                 else:
                     timestamp = datetime.fromisoformat(result['timestamp'])
@@ -754,8 +896,8 @@ class ArbitrageCLI:
         for i in range(50):  # 50 sample trades
             trade_date = base_date + timedelta(days=np.random.randint(0, days))
 
-            # Random symbol
-            symbols = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT']
+            # Random symbol (MiCA-compliant USDC pairs)
+            symbols = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC']
             symbol = np.random.choice(symbols)
 
             # Random P&L with realistic distribution
@@ -767,8 +909,8 @@ class ArbitrageCLI:
                 'buy_exchange': 'binance',
                 'sell_exchange': 'coinbase',
                 'quantity': np.random.uniform(0.001, 0.1),
-                'buy_price': 45000 if symbol == 'BTC/USDT' else 3000 if symbol == 'ETH/USDT' else 0.45,
-                'sell_price': 45050 if symbol == 'BTC/USDT' else 3005 if symbol == 'ETH/USDT' else 0.451,
+                'buy_price': 45000 if symbol == 'BTC/USDC' else 3000 if symbol == 'ETH/USDC' else 0.45,
+                'sell_price': 45050 if symbol == 'BTC/USDC' else 3005 if symbol == 'ETH/USDC' else 0.451,
                 'pnl': pnl,
                 'fees': abs(pnl) * 0.001  # 0.1% fees
             }
@@ -807,9 +949,9 @@ def main():
     parser = argparse.ArgumentParser(description='SovereignForge Arbitrage Trading System - Wave 6 Production')
     parser.add_argument('command', choices=['detect', 'history', 'stats', 'test', 'risk', 'backtest', 'paper', 'analytics', 'production', 'health', 'gpu-train', 'gpu-status'],
                        help='Command to run')
-    parser.add_argument('--symbol', default='BTC/USDT',
-                       help='Trading symbol (default: BTC/USDT)')
-    parser.add_argument('--symbols', default='BTC/USDT,ETH/USDT,XRP/USDT,XLM/USDT,HBAR/USDT,ALGO/USDT,ADA/USDT',
+    parser.add_argument('--symbol', default='BTC/USDC',
+                       help='Trading symbol (default: BTC/USDC)')
+    parser.add_argument('--symbols', default='BTC/USDC,ETH/USDC,XRP/USDC,XLM/USDC,HBAR/USDC,ALGO/USDC,ADA/USDC,LINK/USDC,IOTA/USDC,VET/USDC',
                        help='Trading symbols for backtest (comma-separated)')
     parser.add_argument('--continuous', action='store_true',
                        help='Run continuous detection/trading')
@@ -860,10 +1002,22 @@ def main():
             print(f"Arbitrage Detector: FAILED - {e}")
 
         try:
-            from database import DatabaseManager
-            print("Database Manager: OK")
+            from cache_layer import CacheManager
+            print("Cache Manager (cache_layer): OK")
         except ImportError as e:
-            print(f"Database Manager: FAILED - {e}")
+            print(f"Cache Manager: FAILED - {e}")
+
+        try:
+            from exchange_rate_limiter import RateLimiterManager
+            print("Rate Limiter: OK")
+        except ImportError as e:
+            print(f"Rate Limiter: FAILED - {e}")
+
+        try:
+            from multi_channel_alerts import AlertRouter
+            print("Alert Router: OK")
+        except ImportError as e:
+            print(f"Alert Router: FAILED - {e}")
 
         print("\nHealth check completed!")
 

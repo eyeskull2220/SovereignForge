@@ -58,6 +58,8 @@ Concise guide to every open issue. Fix these in priority order.
 |---------|-------|-----|
 | ~~Mock services in prod pipeline~~ | `src/live_arbitrage_pipeline.py` | **RESOLVED** — Pipeline now has `mode` config: `"production"` requires real services (raises `ServiceInitError`), `"development"` allows mocks with warnings. Added `start()`/`stop()` lifecycle and `get_readiness_check()`. |
 | ~~asyncio event loop in sync methods~~ | `src/main.py` | **RESOLVED** — Replaced `new_event_loop()` / `run_until_complete()` with `asyncio.run()` in `run_backtest()` and `run_paper_trading()` |
+| ~~Model weights not loaded~~ | `src/realtime_inference.py:233` | **RESOLVED** — `_create_model_from_metadata()` now imports `AdvancedArbitrageDetector` (LSTM+attention) matching trained `.pth` files. `load_state_dict()` uncommented with `strict=False` + error handling. `_weights_status` dict tracks which models have real vs random weights. |
+| ~~No pre-trade balance check~~ | `src/order_executor.py` | **RESOLVED** — Added `_check_sufficient_balance()` that verifies quote currency on buy exchange and base currency on sell exchange before placing orders. `PaperTradingExecutor` overrides with paper balance checks. Post-trade balance audit logging added. |
 | 4 models below 80% accuracy | `models/` metadata JSONs | Retrain via `gpu_train.py` with tuned hyperparams (see TODO_ENHANCEMENTS.md C3-C6) |
 | VET/USDC model missing entirely | `models/` | Fetch data with `src/data_fetcher.py`, train with `gpu_train.py` |
 | ~~time.sleep(300) blocks thread~~ | `src/model_retrainer.py` | **NOT A BUG** — `_stop_event.wait(timeout=300)` in daemon thread is correct; interruptible via `stop_monitoring()` |
@@ -92,7 +94,7 @@ python -m pytest tests/test_integration.py -v
 python test_cuda.py
 ```
 
-**Current: 155+ tests passing**
+**Current: 170+ tests passing**
 
 Test markers (skipped in CI): `@pytest.mark.gpu`, `@pytest.mark.network`, `@pytest.mark.slow`
 

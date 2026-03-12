@@ -999,3 +999,136 @@ class TestMiCACompliantPairs:
         for pair in MICA_COMPLIANT_PAIRS:
             quote = pair.split('/')[1]
             assert quote in ('USDC', 'RLUSD'), f"Unexpected quote currency in {pair}"
+
+
+# ── Pre-Trade Balance Checks ─────────────────────────────────────────────
+
+class TestPreTradeBalanceCheck:
+    """Tests for order_executor.py pre-trade balance validation."""
+
+    def test_balance_check_passes_sufficient_funds(self):
+        """Should pass when both exchanges have enough funds."""
+        from order_executor import OrderExecutor
+
+        executor = OrderExecutor.__new__(OrderExecutor)
+        executor.exchanges = {'binance': Mock(), 'coinbase': Mock()}
+
+        # Mock get_account_balance
+        executor.get_account_balance = Mock(side_effect=lambda name: {
+            'total': {}, 'used': {},
+            'free': {'USDC': 50000.0, 'BTC': 1.0},
+            'timestamp': None,
+        })
+
+        trade_params = {
+            'symbol': 'BTC/USDC', 'buy_exchange': 'binance',
+            'sell_exchange': 'coinbase', 'quantity': 0.1,
+            'buy_price': 50000.0, 'sell_price': 50250.0,
+        }
+
+        async def run():
+            ok, err = await executor._check_sufficient_balance(trade_params)
+            assert ok
+            assert err == ''
+
+        asyncio.run(run())
+
+    def test_balance_check_fails_insufficient_quote(self):
+        """Should fail when buy exchange lacks quote currency."""
+        from order_executor import OrderExecutor
+
+        executor = OrderExecutor.__new__(OrderExecutor)
+        executor.exchanges = {'binance': Mock(), 'coinbase': Mock()}
+
+        executor.get_account_balance = Mock(side_effect=lambda name: {
+            'total': {}, 'used': {},
+            'free': {'USDC': 100.0, 'BTC': 1.0},  # Only $100 USDC
+            'timestamp': None,
+        })
+
+        trade_params = {
+            'symbol': 'BTC/USDC', 'buy_exchange': 'binance',
+            'sell_exchange': 'coinbase', 'quantity': 0.1,
+            'buy_price': 50000.0, 'sell_price': 50250.0,
+        }
+
+        async def run():
+            ok, err = await executor._check_sufficient_balance(trade_params)
+            assert not ok
+            assert 'Insufficient USDC' in err
+
+        asyncio.run(run())
+
+    def test_balance_check_fails_insufficient_base(self):
+        """Should fail when sell exchange lacks base currency."""
+        from order_executor import OrderExecutor
+
+        executor = OrderExecutor.__new__(OrderExecutor)
+        executor.exchanges = {'binance': Mock(), 'coinbase': Mock()}
+
+        def mock_balance(name):
+            if name == 'binance':
+                return {'total': {}, 'used': {}, 'free': {'USDC': 50000.0}, 'timestamp': None}
+            return {'total': {}, 'used': {}, 'free': {'BTC': 0.001}, 'timestamp': None}
+
+        executor.get_account_balance = Mock(side_effect=mock_balance)
+
+        trade_params = {
+            'symbol': 'BTC/USDC', 'buy_exchange': 'binance',
+            'sell_exchange': 'coinbase', 'quantity': 0.1,
+            'buy_price': 50000.0, 'sell_price': 50250.0,
+        }
+
+        async def run():
+            ok, err = await executor._check_sufficient_balance(trade_params)
+            assert not ok
+            assert 'Insufficient BTC' in err
+
+        asyncio.run(run())
+
+    def test_paper_trading_balance_check_insufficient_base(self):
+        """PaperTradingExecutor should fail when sell exchange has no base asset."""
+        from order_executor import PaperTradingExecutor
+
+        with patch('order_executor.OrderExecutor._init_exchanges'):
+            executor = PaperTradingExecutor(
+                {'binance': {}, 'coinbase': {}}, initial_balance=10000.0
+            )
+
+        trade_params = {
+            'symbol': 'XRP/USDC', 'buy_exchange': 'binance',
+            'sell_exchange': 'coinbase', 'quantity': 100,
+            'buy_price': 1.0, 'sell_price': 1.005,
+        }
+
+        async def run():
+            # coinbase has 0 XRP, so sell-side check fails
+            ok, err = await executor._check_sufficient_balance(trade_params)
+            assert not ok
+            assert 'Insufficient paper XRP' in err
+
+        asyncio.run(run())
+
+    def test_paper_trading_balance_check_sufficient(self):
+        """PaperTradingExecutor should pass when both sides have funds."""
+        from order_executor import PaperTradingExecutor
+
+        with patch('order_executor.OrderExecutor._init_exchanges'):
+            executor = PaperTradingExecutor(
+                {'binance': {}, 'coinbase': {}}, initial_balance=10000.0
+            )
+            # Give coinbase some XRP
+            executor.paper_balances['coinbase']['XRP'] = 500.0
+
+        trade_params = {
+            'symbol': 'XRP/USDC', 'buy_exchange': 'binance',
+            'sell_exchange': 'coinbase', 'quantity': 100,
+            'buy_price': 1.0, 'sell_price': 1.005,
+        }
+
+        async def run():
+            ok, err = await executor._check_sufficient_balance(trade_params)
+            assert ok
+            assert err == ''
+
+        asyncio.run(run())

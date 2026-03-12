@@ -14,7 +14,7 @@ import os
 from concurrent.futures import ProcessPoolExecutor
 import asyncio
 
-from risk_manager import create_default_risk_manager
+from risk_management import create_default_risk_manager
 from data_fetcher import RealDataFetcher
 
 logger = logging.getLogger(__name__)

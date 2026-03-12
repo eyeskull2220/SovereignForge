@@ -42,7 +42,7 @@ except ImportError:
 # Core application imports
 from arbitrage_detector import ArbitrageDetector, LocalDatabase, create_sample_data
 from exchange_connector import create_demo_connector
-from risk_manager import create_default_risk_manager, ArbitrageRiskAssessor
+from risk_management import create_default_risk_manager, ArbitrageRiskAssessor
 from order_executor import create_demo_executor
 from backtester import ArbitrageBacktester, BacktestDataProvider
 from performance_analyzer import create_performance_analyzer

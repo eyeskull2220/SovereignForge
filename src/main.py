@@ -422,7 +422,7 @@ class ProductionArbitrageSystem:
             if len(exchanges) < 2:
                 return
 
-            symbol = result.get('symbol', 'BTC/USDT')
+            symbol = result.get('symbol', 'BTC/USDC')
             opportunity_id = f"{symbol}_{result['timestamp']}"
 
             # Check if already processing this opportunity
@@ -562,7 +562,7 @@ class ArbitrageCLI:
         # Wave 4 components
         self.performance_analyzer = create_performance_analyzer(self.risk_manager, self.backtester)
 
-    def run_detection(self, symbol: str = 'BTC/USDT', continuous: bool = False, interval: int = 60):
+    def run_detection(self, symbol: str = 'BTC/USDC', continuous: bool = False, interval: int = 60):
         """Run arbitrage detection"""
         print(f"SovereignForge Arbitrage Detector - Wave 1")
         print(f"Symbol: {symbol}")
@@ -709,7 +709,7 @@ class ArbitrageCLI:
         print(f"Single Trade Limit: ${limits['single_trade_limit']:.2f}")
         print(f"Drawdown Limit: {limits['drawdown_limit']:.1f}")
 
-    def run_backtest(self, symbols: str = 'BTC/USDT,ETH/USDT', days: int = 30):
+    def run_backtest(self, symbols: str = 'BTC/USDC,ETH/USDC', days: int = 30):
         """Run backtest"""
         print("SovereignForge Backtester - Wave 3")
         print("-" * 35)
@@ -757,7 +757,7 @@ class ArbitrageCLI:
 
         return results
 
-    def run_paper_trading(self, symbol: str = 'BTC/USDT', continuous: bool = False, interval: int = 60):
+    def run_paper_trading(self, symbol: str = 'BTC/USDC', continuous: bool = False, interval: int = 60):
         """Run paper trading simulation"""
         print("SovereignForge Paper Trading - Wave 3")
         print("-" * 38)
@@ -838,7 +838,7 @@ class ArbitrageCLI:
             for position in self.risk_manager.position_history:
                 trade = {
                     'timestamp': position.get('timestamp', datetime.now()),
-                    'symbol': position.get('symbol', 'BTC/USDT'),
+                    'symbol': position.get('symbol', 'BTC/USDC'),
                     'buy_exchange': 'binance',  # Default
                     'sell_exchange': 'coinbase',  # Default
                     'quantity': position.get('quantity', 0),

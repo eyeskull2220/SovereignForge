@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 class BacktestDataProvider:
     """Provides historical market data for backtesting"""
 
-    def __init__(self, data_directory: str = "E:\\SovereignForge\\data"):
-        self.data_directory = data_directory
+    def __init__(self, data_directory: str = None):
+        self.data_directory = data_directory or os.path.join(os.path.dirname(__file__), '..', 'data')
         self.price_data = {}
         self._load_available_data()
 

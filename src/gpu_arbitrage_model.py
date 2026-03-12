@@ -1,4 +1,4 @@
-#!/usr/ evrything is ON E:\Users\Gino\Downloads\SovereignForgebin/env python3
+#!/usr/bin/env python3
 """
 SovereignForge - GPU Arbitrage Model
 PyTorch-based transformer model for arbitrage opportunity detection

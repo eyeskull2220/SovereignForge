@@ -245,7 +245,7 @@ class ArbitrageDetector:
     def load_model(self, model_path: str) -> bool:
         """Load trained model and determine architecture"""
         try:
-            checkpoint = torch.load(model_path, map_location=self.device)
+            checkpoint = torch.load(model_path, map_location=self.device, weights_only=True)
             state_dict = checkpoint['model_state_dict']
 
             # Determine model type from state_dict keys

@@ -1,7 +1,7 @@
 # SovereignForge — Enhancement Tracker & Audit Report
 
-> **Last Updated**: 2026-03-12
-> **Audit Method**: Full codebase scan (43 Python modules, 20,918 lines, 12 .pth models, 9 metadata files, 7 test files, dashboard)
+> **Last Updated**: 2026-03-12 (Audit v2 — dual-agent scan: main + Explore/opus)
+> **Audit Method**: Full codebase scan (43 Python modules, 20,918 lines, 12 .pth models, 9 metadata files, 8 test files, dashboard, docker, k8s)
 > **Overall Health**: 68% production-ready — core ML + risk engine solid, dashboard stub, deps uninstalled, 4 models below accuracy threshold
 
 ---
@@ -14,8 +14,11 @@ These are **hard blockers** — the system cannot run at all until resolved.
 |---|-------|------|--------|-----------------|
 | B1 | Python dependencies not installed (torch, numpy, pandas, ccxt, websockets, redis, aiosqlite, etc.) | `requirements.txt` | ❌ BLOCKING | haiku — `pip install -r requirements.txt` |
 | B2 | Exchange API keys are all empty strings | `config/api_keys.json` | ❌ BLOCKING | human — fill in real keys |
-| B3 | Model metadata paths use Windows backslashes and wrong filenames | `models/*USDC_metadata.json` | ❌ BLOCKING | sonnet — fix paths to match actual `.pth` locations |
-| B4 | `models/final_BTC_USDC.pth` etc. don't exist — actual files are `models/strategies/arbitrage_btc_usdc_binance.pth` | `src/realtime_inference.py` | ❌ BLOCKING | sonnet — align loader paths with actual filenames |
+| B3 | Model metadata paths use Windows backslashes and wrong filenames | `models/*USDC_metadata.json` | ✅ FIXED | Fixed all 9 paths to `models/strategies/arbitrage_*_usdc_binance.pth` |
+| B4 | `models/final_BTC_USDC.pth` etc. don't exist — actual files are `models/strategies/arbitrage_btc_usdc_binance.pth` | `src/realtime_inference.py` | ✅ FIXED | Metadata paths now match actual `.pth` file locations |
+| B5 | `Dockerfile CMD` references `--mode api --gpu --production` flags that **do not exist** in argparse | `Dockerfile` line 102 | ✅ FIXED | Changed to `CMD ["python3", "src/main.py", "production"]` |
+| B6 | `portfolio_optimization.py` imports `ComplianceEngine` which does not exist in `compliance.py` | `src/portfolio_optimization.py` line 21 | ✅ FIXED | Aliased to `MiCAComplianceEngine as ComplianceEngine` |
+| B7 | `gpu_arbitrage_model.py` shebang corrupted with Windows path junk | `src/gpu_arbitrage_model.py` line 1 | ✅ FIXED | Restored to `#!/usr/bin/env python3` |
 
 ---
 
@@ -23,16 +26,44 @@ These are **hard blockers** — the system cannot run at all until resolved.
 
 | # | Issue | File | Lines | Status | Agent Suggestion |
 |---|-------|------|-------|--------|-----------------|
-| C1 | Dashboard is default React stub — App.tsx is the CRA boilerplate | `dashboard/src/App.tsx` | 1–26 | ❌ NOT DONE | sonnet — rewrite with real components |
-| C2 | Dashboard component .tsx files are in the **repo root** not in `dashboard/src/components/` | `AlertsPanel.tsx`, `Header.tsx`, `PnlChart.tsx`, `PositionsTable.tsx`, `RiskGauges.tsx`, `RiskMetrics.tsx` | root | ❌ MISPLACED | haiku — mkdir + move + update App.tsx |
-| C3 | ADA/USDC model at 76.9% accuracy — below 80% threshold | `models/ADAUSDC_metadata.json` | — | ❌ BELOW THRESHOLD | opus — retrain with extended epochs |
-| C4 | ETH/USDC model at 79.5% accuracy — just below threshold | `models/ETHUSDC_metadata.json` | — | ❌ BELOW THRESHOLD | opus — retrain with tuning |
-| C5 | XLM/USDC model at 78.1% accuracy — below threshold | `models/XLMUSDC_metadata.json` | — | ❌ BELOW THRESHOLD | opus — retrain |
-| C6 | IOTA/USDC model at 79.8% accuracy — just below threshold | `models/IOTAUSDC_metadata.json` | — | ❌ BELOW THRESHOLD | opus — retrain |
-| C7 | VET/USDC 10th pair has no model file or metadata at all | `models/` | — | ❌ MISSING | opus — train new model |
-| C8 | LINK/IOTA metadata checksums are hex placeholder strings `a1b2c3...` | `models/LINKUSDC_metadata.json`, `models/IOTAUSDC_metadata.json` | — | ❌ FAKE CHECKSUMS | haiku — compute real SHA-256 of .pth files |
-| C9 | `tests/test_wave2.py` was written in root but never committed into `tests/` | root `test_wave2.py`? | — | ❌ NOT IN TESTS | haiku — move/create in tests/ |
+| C1 | Dashboard is default React stub — App.tsx is the CRA boilerplate | `dashboard/src/App.tsx` | 1–26 | ✅ FIXED | Rewritten to import all 6 components from ./components/* |
+| C2 | Dashboard component .tsx files are in the **repo root** not in `dashboard/src/components/` | `AlertsPanel.tsx`, `Header.tsx`, `PnlChart.tsx`, `PositionsTable.tsx`, `RiskGauges.tsx`, `RiskMetrics.tsx` | root | ✅ FIXED | Created `dashboard/src/components/` and copied all 6 files |
+| C3 | ADA/USDC model at 76.9% accuracy — below 80% threshold | `models/ADAUSDC_metadata.json` | ❌ BELOW THRESHOLD | opus — retrain with extended epochs + data augmentation |
+| C4 | ETH/USDC model at 79.5% accuracy — just below threshold | `models/ETHUSDC_metadata.json` | ❌ BELOW THRESHOLD | sonnet — retrain with LR warmup + cosine schedule |
+| C5 | XLM/USDC model at 78.1% accuracy — below threshold | `models/XLMUSDC_metadata.json` | ❌ BELOW THRESHOLD | sonnet — retrain with dropout tuning |
+| C6 | IOTA/USDC model at 79.8% accuracy — just below threshold | `models/IOTAUSDC_metadata.json` | ❌ BELOW THRESHOLD | sonnet — retrain (only 0.2% gap) |
+| C7 | VET/USDC 10th pair has no model file or metadata at all | `models/` | ❌ MISSING | opus — fetch historical data + train fresh model |
+| C8 | LINK/IOTA metadata checksums were hex placeholders `a1b2c3...` | `models/LINKUSDC_metadata.json`, `models/IOTAUSDC_metadata.json` | ✅ FIXED | Real SHA-256 checksums computed from actual .pth files |
+| C9 | `tests/test_wave2.py` was created but never in `tests/` directory | — | ✅ FIXED | Created at `tests/test_wave2.py` (42 tests) |
 | C10 | MockInferenceService/MockDataService callbacks are `pass` stubs — pipeline uses mocks in production | `src/live_arbitrage_pipeline.py` | 317–356 | ⚠️ MOCK IN PROD | sonnet — wire real `RealtimeInferenceService` & `WebSocketConnector` |
+| C11 | `torch.load(..., weights_only=False)` in 3 files — arbitrary code execution via pickle | `realtime_inference.py:219`, `arbitrage_detector.py:248`, `model_ensemble.py:540` | ✅ FIXED | Changed all to `weights_only=True` |
+| C12 | 60+ USDT references remain in src/ — MiCA violation | `backtester.py`, `data_fetcher.py`, `exchange_connector.py`, `main.py`, `xactions.py` + 5 more | ❌ REMAINING | sonnet — systematic replace across all remaining files |
+| C13 | `asyncio.run()` called at `main.py:738,802` — will crash if called from async context | `src/main.py` lines 738, 802 | ⚠️ RISK | sonnet — refactor to use `loop.run_until_complete()` or convert callers to async |
+| C14 | `gpu_max_test.py` return value bug — never returned True | `gpu_max_test.py` line 59 | ✅ FIXED | Added `return True` before function end |
+
+---
+
+## 🟠 ADDITIONAL FINDINGS FROM DEEP AUDIT (Explore/opus agent)
+
+These were discovered in the second-pass audit and are not yet tracked above.
+
+| # | Finding | File | Severity | Action |
+|---|---------|------|----------|--------|
+| A1 | `data_integration_service.py` hardcodes USDT pairs at line 166 | `src/data_integration_service.py:166` | HIGH | Fix USDT→USDC |
+| A2 | `exchange_connector.py` all `get_*` methods default to `BTC/USDT` | `src/exchange_connector.py:261,280,296,405,424` | HIGH | Fix USDT→USDC |
+| A3 | `grok_reasoning.py` has USDT at lines 399,420 + requires non-standard `xai_sdk` | `src/grok_reasoning.py` | MEDIUM | Fix USDT; wrap import as optional |
+| A4 | `backtester.py` hardcodes Windows path `E:\SovereignForge\data` at line 25 | `src/backtester.py:25` | HIGH | Replace with `os.path.join(os.path.dirname(__file__), '..', 'data')` |
+| A5 | `data_fetcher.py` hardcodes Windows path `E:\SovereignForge\data` at line 23 | `src/data_fetcher.py:23` | HIGH | Same fix as above |
+| A6 | `database.py` hard-imports `asyncpg` at top level — crashes on import if not installed | `src/database.py` | HIGH | Wrap in try/except ImportError |
+| A7 | `monitoring.py` hard-imports `prometheus_client`, `aiohttp`, `structlog` — crashes on import | `src/monitoring.py` | HIGH | Wrap in try/except ImportError |
+| A8 | `personal_security.py` hard-imports `psutil` at top level — crashes on import | `src/personal_security.py` | MEDIUM | Wrap in try/except ImportError |
+| A9 | `docker-compose.yml` port 9090 conflict — both sovereignforge and prometheus mapped to 9090 | `docker-compose.yml` | MEDIUM | Change sovereignforge internal port or remove duplicate |
+| A10 | `warm_start_state.json` is 18MB — loaded entirely into memory on startup | root | LOW | Lazy-load or paginate |
+| A11 | `model_retrainer.py:588` has `time.sleep(300)` blocking the main retraining loop thread | `src/model_retrainer.py:588` | LOW | Use `asyncio.sleep` or `threading.Event.wait(timeout=300)` |
+| A12 | 3 tiny placeholder `.pth` files in `models/strategies/` (125-117 bytes each) — not real models | `models/strategies/dca_eth_usdc_coinbase.pth`, `fib_btc_usdc_binance.pth`, `grid_xrp_usdc_kraken.pth` | MEDIUM | Train real strategy models or remove stubs |
+| A13 | `useWebSocket.ts` in root is a stub (56 bytes) — WebSocket hook not implemented | `useWebSocket.ts` | HIGH | Implement WebSocket hook for live dashboard data |
+| A14 | `monitoring/dashboard/` is a scaffolded Vite project with no source components | `monitoring/dashboard/` | LOW | Either implement or remove the dead project |
+| A15 | `main.py` ArbitrageCLI still has `BTC/USDT` defaults in 3 places | `src/main.py:565,712,760` | MEDIUM | Fix USDT→USDC |
 
 ---
 

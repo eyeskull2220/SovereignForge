@@ -18,7 +18,7 @@ from scipy.optimize import minimize
 import warnings
 
 from risk_management import get_risk_management_engine, RiskManagementEngine
-from compliance import get_compliance_engine, ComplianceEngine
+from compliance import get_compliance_engine, MiCAComplianceEngine as ComplianceEngine
 
 logger = logging.getLogger(__name__)
 

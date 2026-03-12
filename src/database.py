@@ -8,10 +8,19 @@ from datetime import datetime
 import json
 import os
 
-import asyncpg
-from sqlalchemy import create_engine, text
-from sqlalchemy.pool import QueuePool
-import pandas as pd
+try:
+    import asyncpg
+    from sqlalchemy import create_engine, text
+    from sqlalchemy.pool import QueuePool
+    _HAS_POSTGRES = True
+except ImportError:
+    asyncpg = None
+    _HAS_POSTGRES = False
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 logger = logging.getLogger(__name__)
 

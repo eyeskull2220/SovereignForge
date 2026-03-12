@@ -216,7 +216,7 @@ class SecureModelLoader:
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
                 # Load checkpoint and extract model_state_dict
-                checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+                checkpoint = torch.load(model_path, map_location=device, weights_only=True)
 
                 # Extract model_state_dict from checkpoint
                 if 'model_state_dict' in checkpoint:

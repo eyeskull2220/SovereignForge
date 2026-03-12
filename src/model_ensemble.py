@@ -537,7 +537,7 @@ class ModelEnsemble:
                 logger.warning(f"Ensemble file not found: {load_path}")
                 return False
 
-            ensemble_state = torch.load(load_path, map_location='cpu')
+            ensemble_state = torch.load(load_path, map_location='cpu', weights_only=True)
 
             self.model_weights = ensemble_state.get("model_weights", {})
             self.ensemble_method = ensemble_state.get("ensemble_method", "weighted_average")

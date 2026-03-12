@@ -456,12 +456,12 @@ class PaperTradingExecutor(OrderExecutor):
         self.paper_balances = {}
         for exchange_name in exchange_configs.keys():
             self.paper_balances[exchange_name] = {
-                'USDT': initial_balance,
+                'USDC': initial_balance,
                 'BTC': 0.0,
                 'ETH': 0.0,
                 'XRP': 0.0,
                 'ADA': 0.0,
-                'SOL': 0.0
+                'LINK': 0.0
             }
 
         self.paper_orders = []
@@ -507,11 +507,11 @@ class PaperTradingExecutor(OrderExecutor):
 
         balance = self.paper_balances[exchange_name]
 
-        # Parse symbol (e.g., 'BTC/USDT' -> base='BTC', quote='USDT')
+        # Parse symbol (e.g., 'BTC/USDC' -> base='BTC', quote='USDC')
         if '/' in symbol:
             base, quote = symbol.split('/')
         else:
-            base, quote = symbol, 'USDT'
+            base, quote = symbol, 'USDC'
 
         if side == 'buy':
             # Buy base currency with quote currency
@@ -564,7 +564,7 @@ if __name__ == "__main__":
 
     async def test_execution():
         arbitrage_opp = {
-            'symbol': 'BTC/USDT',
+            'symbol': 'BTC/USDC',
             'buy_exchange': 'binance',
             'sell_exchange': 'coinbase',
             'spread_percentage': 0.003,

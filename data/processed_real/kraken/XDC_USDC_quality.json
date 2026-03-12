@@ -1,9 +1,9 @@
 {
   "exchange": "kraken",
   "pair": "XDC/USDC",
-  "total_records": 711,
+  "total_records": 714,
   "date_range": {
-    "start": "2026-02-07T03:00:00",
+    "start": "2026-02-07T00:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.03158,
       "max": 0.03804,
-      "mean": 0.035116884669479605,
-      "std": 0.0015114433724282524
+      "mean": 0.03512551120448179,
+      "std": 0.0015141356720464164
     },
     "volume_stats": {
-      "total_volume": 69726614.115514,
-      "avg_volume": 98068.37428342334,
-      "volume_std": 200539.80229217195
+      "total_volume": 70076736.302774,
+      "avg_volume": 98146.68949968347,
+      "volume_std": 200179.12911296205
     },
     "returns": {
-      "daily_returns_mean": -0.00020212527036077207,
-      "daily_returns_std": 0.007378913860385905,
-      "sharpe_ratio": -0.523328763718324
+      "daily_returns_mean": -0.00019283812067638254,
+      "daily_returns_std": 0.0073832057972353605,
+      "sharpe_ratio": -0.4989928797502937
     }
   },
   "technical_indicators": {

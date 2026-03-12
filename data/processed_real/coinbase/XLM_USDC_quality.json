@@ -1,9 +1,9 @@
 {
   "exchange": "coinbase",
   "pair": "XLM/USDC",
-  "total_records": 17514,
+  "total_records": 17517,
   "date_range": {
-    "start": "2024-03-09T04:00:00",
+    "start": "2024-03-09T01:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.07679,
       "max": 0.601685,
-      "mean": 0.23893638711887633,
-      "std": 0.12235527857817885
+      "mean": 0.2389198668150939,
+      "std": 0.1223513120525542
     },
     "volume_stats": {
-      "total_volume": 67996536322.98599,
-      "avg_volume": 3882410.4329671115,
-      "volume_std": 6466834.161925096
+      "total_volume": 68002733943.77963,
+      "avg_volume": 3882099.328867936,
+      "volume_std": 6466327.698143649
     },
     "returns": {
-      "daily_returns_mean": 5.1831241030073564e-05,
-      "daily_returns_std": 0.010002152984986298,
-      "sharpe_ratio": 0.09900213193791438
+      "daily_returns_mean": 5.2552964125825584e-05,
+      "daily_returns_std": 0.010001482356981183,
+      "sharpe_ratio": 0.10038741598796952
     }
   },
   "technical_indicators": {

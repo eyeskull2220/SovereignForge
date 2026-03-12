@@ -1,9 +1,9 @@
 {
   "exchange": "coinbase",
   "pair": "VET/USDC",
-  "total_records": 17513,
+  "total_records": 17516,
   "date_range": {
-    "start": "2024-03-09T04:00:00",
+    "start": "2024-03-09T01:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.00678,
       "max": 0.07828,
-      "mean": 0.02671128892006754,
-      "std": 0.011658592821576143
+      "mean": 0.02671490196718103,
+      "std": 0.011660862827292638
     },
     "volume_stats": {
-      "total_volume": 67821908118.71429,
-      "avg_volume": 3872660.7730665384,
-      "volume_std": 5635808.34595523
+      "total_volume": 67832925854.71429,
+      "avg_volume": 3872626.504608032,
+      "volume_std": 5635350.623822866
     },
     "returns": {
-      "daily_returns_mean": -5.6501575310112585e-05,
-      "daily_returns_std": 0.010468530914829402,
-      "sharpe_ratio": -0.10311485817842683
+      "daily_returns_mean": -5.5940476680492865e-05,
+      "daily_returns_std": 0.010467793909258047,
+      "sharpe_ratio": -0.10209804621838463
     }
   },
   "technical_indicators": {

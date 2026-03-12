@@ -1,9 +1,9 @@
 {
   "exchange": "binance",
   "pair": "ADA/USDC",
-  "total_records": 17516,
+  "total_records": 17519,
   "date_range": {
-    "start": "2024-03-09T04:00:00",
+    "start": "2024-03-09T01:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.2437,
       "max": 1.2983,
-      "mean": 0.5979320164421101,
-      "std": 0.22754645941427584
+      "mean": 0.5979480735201781,
+      "std": 0.2275319483422287
     },
     "volume_stats": {
-      "total_volume": 26709241766.600002,
-      "avg_volume": 1524848.239700845,
-      "volume_std": 2386721.5412862063
+      "total_volume": 26773909498.6,
+      "avg_volume": 1528278.4119299045,
+      "volume_std": 2456279.632311667
     },
     "returns": {
-      "daily_returns_mean": -7.926803401242551e-06,
-      "daily_returns_std": 0.010394778652198209,
-      "sharpe_ratio": -0.014568984237926788
+      "daily_returns_mean": -6.959352787422829e-06,
+      "daily_returns_std": 0.010432526618108102,
+      "sharpe_ratio": -0.012744587498594303
     }
   },
   "technical_indicators": {

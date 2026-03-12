@@ -1,5 +1,5 @@
 {
-  "model_path": "models\\final_ETH_USDC.pth",
+  "model_path": "models/strategies/arbitrage_eth_usdc_binance.pth",
   "architecture_hash": "legacy_lstm_model",
   "parameters_count": 18922499,
   "expected_input_shape": [

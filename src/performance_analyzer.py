@@ -595,7 +595,7 @@ if __name__ == "__main__":
     sample_trades = [
         {
             'timestamp': datetime.now() - timedelta(days=30),
-            'symbol': 'BTC/USDT',
+            'symbol': 'BTC/USDC',
             'buy_exchange': 'binance',
             'sell_exchange': 'coinbase',
             'quantity': 0.01,
@@ -606,7 +606,7 @@ if __name__ == "__main__":
         },
         {
             'timestamp': datetime.now() - timedelta(days=25),
-            'symbol': 'ETH/USDT',
+            'symbol': 'ETH/USDC',
             'buy_exchange': 'kraken',
             'sell_exchange': 'binance',
             'quantity': 0.1,

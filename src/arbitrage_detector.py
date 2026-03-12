@@ -245,7 +245,7 @@ class ArbitrageDetector:
     def load_model(self, model_path: str) -> bool:
         """Load trained model and determine architecture"""
         try:
-            checkpoint = torch.load(model_path, map_location=self.device)
+            checkpoint = torch.load(model_path, map_location=self.device, weights_only=True)
             state_dict = checkpoint['model_state_dict']
 
             # Determine model type from state_dict keys
@@ -463,7 +463,7 @@ class ArbitrageDetector:
 
         # Prepare opportunity data for Grok
         grok_data = {
-            'pair': 'BTC/USDT',  # Default pair
+            'pair': 'BTC/USDC',  # Default pair
             'exchanges': list(exchanges.keys()),
             'spread': spread,
             'probability': detection_result.get('confidence', 0.0),
@@ -532,7 +532,7 @@ class ArbitrageDetector:
         # Exchange IDs tensor
         exchange_ids_tensor = torch.tensor(exchange_ids, dtype=torch.long).unsqueeze(0)
 
-        # Pair ID (default to 0 for BTC/USDT)
+        # Pair ID (default to 0 for BTC/USDC)
         pair_ids = torch.tensor([0], dtype=torch.long)
 
         return {

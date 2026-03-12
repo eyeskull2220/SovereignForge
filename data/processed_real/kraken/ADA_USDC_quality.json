@@ -1,9 +1,9 @@
 {
   "exchange": "kraken",
   "pair": "ADA/USDC",
-  "total_records": 717,
+  "total_records": 720,
   "date_range": {
-    "start": "2026-02-07T03:00:00",
+    "start": "2026-02-07T00:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.24871,
       "max": 0.309079,
-      "mean": 0.2726755320781032,
-      "std": 0.011120786100098751
+      "mean": 0.27267806875,
+      "std": 0.011097742029436771
     },
     "volume_stats": {
-      "total_volume": 27081144.02672922,
-      "avg_volume": 37770.07535108678,
-      "volume_std": 81346.84517765694
+      "total_volume": 27102196.72862384,
+      "avg_volume": 37641.93990086645,
+      "volume_std": 81202.10293618731
     },
     "returns": {
-      "daily_returns_mean": -9.77884554399289e-05,
-      "daily_returns_std": 0.008217391207543244,
-      "sharpe_ratio": -0.22735266835596663
+      "daily_returns_mean": -8.341443006711962e-05,
+      "daily_returns_std": 0.008219102478728941,
+      "sharpe_ratio": -0.1938934881182485
     }
   },
   "technical_indicators": {

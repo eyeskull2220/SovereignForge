@@ -258,7 +258,7 @@ class BinanceWebSocket(WebSocketConnector):
             data = json.loads(message)
             if 'stream' in data and '@ticker' in data['stream']:
                 ticker_data = data['data']
-                pair = ticker_data['s'].replace('USDT', '/USDT')
+                pair = ticker_data['s'].replace('USDC', '/USDC')
 
                 return MarketData(
                     exchange='binance',
@@ -281,7 +281,7 @@ class BinanceWebSocket(WebSocketConnector):
             data = json.loads(message)
             if 'stream' in data and '@depth' in data['stream']:
                 depth_data = data['data']
-                pair = depth_data['s'].replace('USDT', '/USDT')
+                pair = depth_data['s'].replace('USDC', '/USDC')
 
                 return {
                     'exchange': 'binance',
@@ -476,7 +476,7 @@ class OKXWebSocket(WebSocketConnector):
         # Convert pairs to OKX format
         okx_pairs = []
         for pair in pairs:
-            # OKX uses format like "BTC-USDT"
+            # OKX uses format like "BTC-USDC"
             okx_pair = pair.replace('/', '-')
             okx_pairs.append(okx_pair)
 
@@ -630,7 +630,7 @@ class MultiExchangeConnector:
 async def test_exchange_connections():
     """Test connections to all exchanges"""
     connector = MultiExchangeConnector()
-    pairs = ['BTC/USDT', 'ETH/USDT']
+    pairs = ['BTC/USDC', 'ETH/USDC']
 
     print("Testing exchange connections...")
     success = await connector.connect_all_exchanges(pairs)

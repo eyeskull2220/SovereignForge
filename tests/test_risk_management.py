@@ -10,10 +10,10 @@ from unittest.mock import Mock, patch
 import sys
 import os
 
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Add src directory to path
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'src'))
 
-from src.realtime_inference import ArbitrageOpportunity
+from live_arbitrage_pipeline import ArbitrageOpportunity
 
 class TestRiskManagement:
     """Test Phase 2 Risk Management components"""
@@ -46,7 +46,7 @@ class TestRiskManagement:
 
         # Test profitable opportunity
         opportunity = ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=1640995200.0,  # 2022-01-01
             probability=0.7,
             confidence=0.8,
@@ -74,7 +74,7 @@ class TestRiskManagement:
 
         # Valid opportunity
         valid_opportunity = ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=1640995200.0,
             probability=0.8,
             confidence=0.9,
@@ -90,7 +90,7 @@ class TestRiskManagement:
 
         # Invalid opportunity - too risky
         risky_opportunity = ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=1640995200.0,
             probability=0.5,  # 50/50 chance
             confidence=0.6,
@@ -114,7 +114,7 @@ class TestRiskManagement:
         opportunities = []
         for i in range(5):
             opp = ArbitrageOpportunity(
-                pair=f"PAIR{i}/USDT",
+                pair=f"PAIR{i}/USDC",
                 timestamp=1640995200.0 + i * 3600,
                 probability=0.75,
                 confidence=0.85,
@@ -144,7 +144,7 @@ class TestRiskManagement:
 
         # Test VaR for a position
         opportunity = ArbitrageOpportunity(
-            pair="ETH/USDT",
+            pair="ETH/USDC",
             timestamp=1640995200.0,
             probability=0.7,
             confidence=0.8,
@@ -172,7 +172,7 @@ class TestRiskManagement:
             pytest.skip("Risk management not available")
 
         opportunity = ArbitrageOpportunity(
-            pair="ADA/USDT",
+            pair="ADA/USDC",
             timestamp=1640995200.0,
             probability=0.75,
             confidence=0.85,
@@ -219,7 +219,7 @@ class TestRiskManagement:
 
         # Test with zero probability
         bad_opportunity = ArbitrageOpportunity(
-            pair="TEST/USDT",
+            pair="TEST/USDC",
             timestamp=1640995200.0,
             probability=0.0,  # Impossible
             confidence=0.5,
@@ -235,7 +235,7 @@ class TestRiskManagement:
 
         # Test with negative spread
         negative_spread = ArbitrageOpportunity(
-            pair="TEST/USDT",
+            pair="TEST/USDC",
             timestamp=1640995200.0,
             probability=0.6,
             confidence=0.7,

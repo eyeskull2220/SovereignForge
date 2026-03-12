@@ -8,9 +8,22 @@ from typing import Dict, Any, Optional
 import os
 from datetime import datetime
 
-from prometheus_client import Counter, Gauge, Histogram, CollectorRegistry, generate_latest
-import aiohttp
-import structlog
+try:
+    from prometheus_client import Counter, Gauge, Histogram, CollectorRegistry, generate_latest
+    _HAS_PROMETHEUS = True
+except ImportError:
+    Counter = Gauge = Histogram = CollectorRegistry = generate_latest = None
+    _HAS_PROMETHEUS = False
+
+try:
+    import aiohttp
+except ImportError:
+    aiohttp = None
+
+try:
+    import structlog
+except ImportError:
+    structlog = None
 
 logger = logging.getLogger(__name__)
 

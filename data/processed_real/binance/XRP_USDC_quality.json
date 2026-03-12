@@ -1,9 +1,9 @@
 {
   "exchange": "binance",
   "pair": "XRP/USDC",
-  "total_records": 17516,
+  "total_records": 17519,
   "date_range": {
-    "start": "2024-03-09T04:00:00",
+    "start": "2024-03-09T01:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.3946,
       "max": 3.6567,
-      "mean": 1.7193146865722768,
-      "std": 0.9398228262659122
+      "mean": 1.719128112335179,
+      "std": 0.9398512375546456
     },
     "volume_stats": {
-      "total_volume": 36732100499.2,
-      "avg_volume": 2097059.8595113037,
-      "volume_std": 4032163.8219553125
+      "total_volume": 36711192790.0,
+      "avg_volume": 2095507.3229065586,
+      "volume_std": 4019622.1511368426
     },
     "returns": {
-      "daily_returns_mean": 8.799354418458284e-05,
-      "daily_returns_std": 0.009447446130906232,
-      "sharpe_ratio": 0.17794378267792707
+      "daily_returns_mean": 8.818959112366731e-05,
+      "daily_returns_std": 0.009446809455141049,
+      "sharpe_ratio": 0.17835225540350494
     }
   },
   "technical_indicators": {

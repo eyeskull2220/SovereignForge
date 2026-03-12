@@ -537,7 +537,7 @@ class ModelEnsemble:
                 logger.warning(f"Ensemble file not found: {load_path}")
                 return False
 
-            ensemble_state = torch.load(load_path, map_location='cpu')
+            ensemble_state = torch.load(load_path, map_location='cpu', weights_only=True)
 
             self.model_weights = ensemble_state.get("model_weights", {})
             self.ensemble_method = ensemble_state.get("ensemble_method", "weighted_average")
@@ -597,7 +597,7 @@ if __name__ == "__main__":
             batch_size, seq_len, input_dim = 1, 50, 10
             test_data = torch.randn(batch_size, seq_len, input_dim)
 
-            prediction = await ensemble.predict_ensemble(test_data, "BTC/USDT")
+            prediction = await ensemble.predict_ensemble(test_data, "BTC/USDC")
             logger.info(f"Ensemble prediction: signal={prediction.arbitrage_signal:.3f}, "
                        f"confidence={prediction.confidence_score:.3f}")
 

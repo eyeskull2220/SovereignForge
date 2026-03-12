@@ -163,7 +163,7 @@ class HybridDataIntegrationService:
         """Subscribe to trading pairs for an exchange"""
         # This would be implemented with exchange-specific subscription messages
         # For now, subscribe to MiCA compliant pairs
-        compliant_pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'ADA/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'DOGE/USDT']
+        compliant_pairs = ['XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC', 'BTC/USDC', 'ETH/USDC']
 
         subscription_message = self._create_subscription_message(exchange, compliant_pairs)
         if subscription_message:
@@ -203,7 +203,7 @@ class HybridDataIntegrationService:
             # Simplified parsing - would need exchange-specific implementations
             if exchange == 'binance' and 'stream' in data:
                 ticker_data = data.get('data', {})
-                pair = ticker_data.get('s', '').replace('USDT', '/USDT')
+                pair = ticker_data.get('s', '').replace('USDC', '/USDC')
 
                 return MarketData(
                     exchange=exchange,

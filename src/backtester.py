@@ -22,8 +22,8 @@ logger = logging.getLogger(__name__)
 class BacktestDataProvider:
     """Provides historical market data for backtesting"""
 
-    def __init__(self, data_directory: str = "E:\\SovereignForge\\data"):
-        self.data_directory = data_directory
+    def __init__(self, data_directory: str = None):
+        self.data_directory = data_directory or os.path.join(os.path.dirname(__file__), '..', 'data')
         self.price_data = {}
         self._load_available_data()
 
@@ -37,7 +37,7 @@ class BacktestDataProvider:
     def _generate_synthetic_data(self):
         """Generate synthetic historical data for backtesting"""
 
-        symbols = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'ADA/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT']
+        symbols = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'ADA/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC']
         exchanges = ['binance', 'coinbase', 'kraken']
 
         # Generate 90 days of hourly data
@@ -59,13 +59,13 @@ class BacktestDataProvider:
 
         # Base prices for different assets
         base_prices = {
-            'BTC/USDT': 45000,
-            'ETH/USDT': 3000,
-            'XRP/USDT': 0.50,
-            'ADA/USDT': 0.45,
-            'XLM/USDT': 0.12,
-            'HBAR/USDT': 0.08,
-            'ALGO/USDT': 0.15
+            'BTC/USDC': 45000,
+            'ETH/USDC': 3000,
+            'XRP/USDC': 0.50,
+            'ADA/USDC': 0.45,
+            'XLM/USDC': 0.12,
+            'HBAR/USDC': 0.08,
+            'ALGO/USDC': 0.15
         }
 
         base_price = base_prices.get(symbol, 100)
@@ -88,13 +88,13 @@ class BacktestDataProvider:
         # - Mean reversion to base price
         # - Realistic volatility by asset
         volatility_multipliers = {
-            'BTC/USDT': 0.02,   # 2% daily volatility
-            'ETH/USDT': 0.025,  # 2.5% daily volatility
-            'XRP/USDT': 0.04,   # 4% daily volatility
-            'ADA/USDT': 0.035,  # 3.5% daily volatility
-            'XLM/USDT': 0.045,  # 4.5% daily volatility
-            'HBAR/USDT': 0.05,  # 5% daily volatility
-            'ALGO/USDT': 0.04   # 4% daily volatility
+            'BTC/USDC': 0.02,   # 2% daily volatility
+            'ETH/USDC': 0.025,  # 2.5% daily volatility
+            'XRP/USDC': 0.04,   # 4% daily volatility
+            'ADA/USDC': 0.035,  # 3.5% daily volatility
+            'XLM/USDC': 0.045,  # 4.5% daily volatility
+            'HBAR/USDC': 0.05,  # 5% daily volatility
+            'ALGO/USDC': 0.04   # 4% daily volatility
         }
 
         volatility = volatility_multipliers.get(symbol, 0.03) / 16  # Hourly volatility
@@ -118,13 +118,13 @@ class BacktestDataProvider:
 
             # Generate volume (correlated with price volatility)
             base_volume = {
-                'BTC/USDT': 100,
-                'ETH/USDT': 500,
-                'XRP/USDT': 50000,
-                'ADA/USDT': 30000,
-                'XLM/USDT': 25000,
-                'HBAR/USDT': 15000,
-                'ALGO/USDT': 20000
+                'BTC/USDC': 100,
+                'ETH/USDC': 500,
+                'XRP/USDC': 50000,
+                'ADA/USDC': 30000,
+                'XLM/USDC': 25000,
+                'HBAR/USDC': 15000,
+                'ALGO/USDC': 20000
             }.get(symbol, 1000)
 
             volume_multiplier = 1 + abs(random_return) * 5  # Volume increases with volatility
@@ -577,7 +577,7 @@ class WalkForwardOptimizer:
 
             # Run backtest
             results = self.backtester.run_backtest(
-                symbols=['BTC/USDT'],
+                symbols=['BTC/USDC'],
                 start_date=datetime.now() - timedelta(days=30),
                 end_date=datetime.now()
             )
@@ -604,7 +604,7 @@ async def run_demo_backtest():
     backtester = ArbitrageBacktester(data_provider, risk_manager)
 
     # Use MiCA compliant pairs that have data
-    symbols = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT']
+    symbols = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC']
     start_date = datetime.now() - timedelta(days=7)  # Use 7 days since we fetched 7 days
     end_date = datetime.now()
 

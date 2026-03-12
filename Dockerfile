@@ -99,4 +99,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 EXPOSE 8000 9090
 
 # Default command
-CMD ["python3", "main.py", "--mode", "api", "--gpu", "--production"]
+CMD ["python3", "src/main.py", "production"]

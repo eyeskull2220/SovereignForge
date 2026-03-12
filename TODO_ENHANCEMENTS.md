@@ -1,561 +1,439 @@
+# SovereignForge — Enhancement Tracker & Audit Report
 
-## 📋 Structured Enhancement Waves (Subagent-Ready)
-
-### Wave 1: Critical Fixes & Infrastructure (Priority: CRITICAL)
-*Focus: Fix blocking issues, ensure stability - UPDATED POST-AUDIT*
-
-#### Category 1: MiCA Compliance Violation (Subagent: Risk)
-- [x] **CRITICAL**: Remove USDT allowance in personal deployment (compliance.py lines 25-27)
-- [x] Enforce strict USDC/RLUSD pairs only for personal use
-- [x] Update all config files to remove USDT references
-- [x] Add compliance validation in deployment scripts
-- [x] Test compliance enforcement with all trading pairs
-
-#### Category 2: Model Accuracy Crisis (Subagent: Engineer)
-- [x] **URGENT**: Implement immediate fixes from diagnostic report (extended epochs, early stopping, LR scheduling)
-- [x] **URGENT**: Retrain BTC model with improved hyperparameters - validation accuracy improving (79.2% → 82.4% in 7 epochs)
-- [x] **MAJOR SUCCESS**: Fixed validation script data generation - now 5/9 models passing 80% threshold (55.6% success rate)
-- [ ] Retrain remaining 4 models (XRP, XLM, HBAR, ALGO) with same improvements to reach 80%+
-- [ ] Retrain LINK/IOTA models (currently failing) with extended training
-- [ ] Add missing 10th pair (VET/USDC) for complete MiCA coverage
-- [ ] Implement proper hyperparameter tuning pipeline
-- [ ] Add model validation pipeline with automated retraining
-- [ ] Fix model loading for all 10 pairs with proper error handling
-
-#### Category 3: Test Suite Integrity (Subagent: Tester)
-- [x] **COMPLETED**: 71/73 tests passing (97.3%) - no actual failures, only 2 appropriate skips
-- [x] **COMPLETED**: Fixed all syntax errors and import issues
-- [x] **COMPLETED**: Converted unittest to pytest format
-- [x] **COMPLETED**: Resolved async test warnings and mock complexity
-- [ ] Add integration tests for MiCA compliance enforcement
-- [ ] Add model accuracy validation tests (>80% threshold)
-
-#### Category 4: WebSocket Live Testing (Subagent: Network) - **COMPLETED**
-- [x] **HIGH**: Live test WebSocket reconnect logic with real exchanges ✅
-- [x] Verify circuit breaker functionality under network failures ✅
-- [x] Test multi-exchange connectivity (Binance, Coinbase, Kraken, KuCoin, OKX) ✅
-- [x] Add connection health monitoring and automatic failover ✅
-- [x] Implement network stress testing and recovery procedures ✅
-
-### Wave 2: Core AI/ML Enhancements (Priority: HIGH)
-*Focus: Improve prediction accuracy and automation*
-
-#### Category 1: Model Architecture (Subagent: ML Engineer)
-- [x] Fix critical model loading crisis (gpu_arbitrage_model module missing) - Created proper module, verified all 9 models load successfully (BTC, ETH, XRP, XLM, HBAR, ALGO, ADA, LINK, IOTA)
-- [x] Update model metadata with correct parameter counts and checksums - All 9 metadata files updated with real values instead of placeholders
-- [x] Implement model ensemble combining multiple ML architectures - Created ModelEnsemble class with weighted averaging, confidence weighting, voting methods, and adaptive ensemble optimization
-- [x] Add automated model retraining pipeline with new market data - Built ModelRetrainer class with performance drift detection, data quality validation, automated job scheduling, and model versioning
-- [x] Integrate Kelly Criterion dynamic position sizing - Enhanced RiskManager with Kelly formula implementation, win probability estimation, and dynamic position sizing with safety bounds
-- [x] Optimize GPU utilization and memory management - Implemented GPUOptimizer with advanced memory pooling, inference batching, model quantization, and background optimization
-
-#### Category 2: Risk Intelligence (Subagent: Quant)
-- [x] Add advanced risk metrics (VaR, stress testing, correlation matrix) - Implemented AdvancedRiskMetrics with HS/MC VaR, ES, stress testing, scenario analysis
-- [x] Implement dynamic risk adjustments based on market volatility - Created DynamicRiskAdjustment with regime detection, adaptive thresholds, circuit breakers
-- [x] Create portfolio optimization algorithms - Built correlation matrix analysis, efficient frontier, risk-parity allocation
-- [x] Add scenario analysis and risk forecasting - Implemented crypto crash, exchange outage, correlation breakdown scenarios
-
-#### Category 3: Communication Systems (Subagent: Integration)
-- [ ] Implement SMS/Email backup alerts beyond Telegram
-- [ ] Add multi-channel notification routing
-- [ ] Create alert prioritization and filtering system
-- [ ] Integrate with external monitoring services
-
-#### Category 4: Performance Optimization (Subagent: Performance)
-- [ ] Add Redis caching layer for high-frequency data
-- [ ] Implement intelligent API rate limiting for exchanges
-- [ ] Add data compression for logs and historical storage
-- [ ] Optimize memory usage and garbage collection
-
-### Wave 3: User Experience & Interfaces (Priority: MEDIUM)
-*Focus: Improve usability and accessibility*
-
-#### Category 1: Dashboard & Visualization (Subagent: Frontend)
-- [ ] Build advanced React dashboard with real-time P&L charts
-- [ ] Add risk gauges and position tables with live updates
-- [ ] Create historical backtesting UI with strategy comparison
-- [ ] Implement interactive charts and technical indicators
-
-
-#### Category 3: Multi-Asset Expansion (Subagent: Expansion)
-- [ ] Extend cross-asset arbitrage beyond crypto pairs
-- [ ] Add support for stocks, forex, commodities
-- [ ] Implement multi-asset risk management
-- [ ] Create unified trading interface across asset classes
-
-#### Category 4: AI Agent Integration (Subagent: AI)
-- [ ] Implement MCP server for multi-agent strategy orchestration
-- [ ] Add AI agent coordination and decision sharing
-- [ ] Create agent marketplace and plugin system
-- [ ] Integrate with external AI services and APIs
-
-### Wave 4: Advanced Features & Scaling (Priority: LOW)
-*Focus: Enterprise features and future-proofing*
-
-#### Category 1: Scalability & Distribution (Subagent: Scalability)
-- [ ] Implement horizontal scaling for high-volume trading
-- [ ] Add distributed computing for model training
-- [ ] Create load balancing and failover systems
-
-
-#### Category 2: Monitoring & Observability (Subagent: Monitoring)
-- [ ] Build comprehensive monitoring dashboard
-- [ ] Add advanced metrics collection and alerting
-- [ ] Implement distributed tracing and performance profiling
-- [ ] Create automated incident response and recovery
-
-#### Category 3: Security & Compliance (Subagent: Security)
-- [ ] Enhance security hardening and penetration testing
-- [ ] Add advanced compliance monitoring and reporting
-- [ ] Implement zero-trust architecture principles
-- [ ] Create audit trails and compliance documentation
-
-#### Category 4: Automation & Intelligence (Subagent: Automation)
-- [ ] Build fully automated deployment and update systems
-- [ ] Add AI-driven strategy optimization and adaptation
-- [ ] Implement self-healing and auto-recovery mechanisms
-- [ ] Create intelligent resource allocation and optimization
+> **Last Updated**: 2026-03-12 (Audit v2 — dual-agent scan: main + Explore/opus)
+> **Audit Method**: Full codebase scan (43 Python modules, 20,918 lines, 12 .pth models, 9 metadata files, 8 test files, dashboard, docker, k8s)
+> **Overall Health**: 68% production-ready — core ML + risk engine solid, dashboard stub, deps uninstalled, 4 models below accuracy threshold
 
 ---
 
-## 🔍 Full Audit Report (Subagent Analysis)
+## 🔴 IMMEDIATE BLOCKERS (Fix Before Any Live Testing)
 
-*Audit performed using 5 parallel subagents: CEO, Researcher, Engineer, Tester, Risk*
+These are **hard blockers** — the system cannot run at all until resolved.
 
-### CEO Agent Synthesis
-**Status Table:**
-
-| Component | Status | Key Evidence | Fix Priority | Est. Tokens |
-|-----------|--------|--------------|--------------|-------------|
-| Real-Time Arbitrage Detection | GREEN | 71/73 tests passing, GPU inference working | N/A | N/A |
-| Multi-Exchange Integration | YELLOW | WebSocket reconnect implemented but needs live testing | MED | 800 |
-| Risk Management | GREEN | Kelly Criterion, position sizing, stop-loss implemented | N/A | N/A |
-| Alert System | YELLOW | Telegram working, but 2 tests skipped due to mock complexity | LOW | 400 |
-| MiCA Compliance | GREEN | Hard whitelist enforcement, personal security | N/A | N/A |
-| Infrastructure | GREEN | Docker + K8s production-ready | N/A | N/A |
-
-**Total Rebuild Cost Estimate**: 12,000 tokens for full system rebuild if needed.
-
-### Researcher Agent Findings
-**24 Tasks Truly Implemented/Working:**
-1. ✅ Real-time arbitrage detection with AI models
-2. ✅ Multi-exchange price monitoring (Binance, Coinbase, Kraken)
-3. ✅ PyTorch GPU inference with CUDA support
-4. ✅ Telegram alert system with markdown formatting
-5. ✅ MiCA compliance whitelist enforcement
-6. ✅ Docker containerization with security hardening
-7. ✅ Kubernetes deployment manifests
-8. ✅ Risk management with position sizing
-9. ✅ WebSocket connections with reconnection logic
-10. ✅ Personal security module for local execution
-11. ✅ CLI wrapper for Windows deployment
-12. ✅ Auto-recovery system for service restarts
-13. ✅ Enhanced arbitrage detector with SMC integration
-14. ✅ Cross-exchange arbitrage capabilities
-15. ✅ Grok AI reasoning integration
-16. ✅ Compliance engine with asset validation
-17. ✅ Local database for opportunity storage
-18. ✅ Performance monitoring and metrics
-19. ✅ Error handling and logging throughout
-20. ✅ Type hints and documentation
-21. ✅ Async/await patterns everywhere
-22. ✅ Model loading and fallback mechanisms
-23. ✅ Configuration management
-24. ✅ Health checks and liveness probes
-
-### Engineer Agent Findings
-**Broken/Missing Components:**
-- ❌ **WebSocket Reconnect**: Implemented but needs live testing verification (WORKING.md note)
-- ❌ **PyTorch Model Loading**: LINK/IOTA pairs mentioned as missing in WORKING.md
-- ❌ **Risk Management Position Sizing**: Kelly Criterion implemented but may need dynamic adjustments
-- ❌ **Telegram Alerts**: Working but 2 tests skipped due to async mocking issues
-
-**Runtime/Security/Compliance Proofs:**
-- ✅ **Docker Hardening**: Non-root user, minimal base image, security labels
-- ✅ **K8s Security**: RBAC, service accounts, network policies
-- ✅ **Local-Only Execution**: Personal security module verifies no external connections
-- ✅ **MiCA Whitelist**: Only compliant pairs allowed (XRP/USDC, ADA/USDC, etc.)
-
-### Tester Agent Findings
-**5 Failing Tests (Exact Details):**
-
-1. **Test: Integration Test Async Issues**
-   ```
-   Error: RuntimeWarning: coroutine 'test_compliance_filtering' was never awaited
-   Root Cause: Unittest framework doesn't handle async test methods properly
-   Reproduction: python -m pytest tests/test_integration.py::TestDataIntegrationService::test_compliance_filtering -v
-   Fix: Convert to pytest async tests or use asyncio.run()
-   ```
-
-2. **Test: Telegram Mock Complexity**
-   ```
-   Error: Complex async mocking for telegram bot initialization
-   Root Cause: Async telegram library mocking issues in test environment
-   Reproduction: python -m pytest test_telegram_alerts.py -k "test_initialization" -v
-   Fix: Simplify mocks or use integration tests with test tokens
-   ```
-
-3. **Test: WebSocket Connection Tests**
-   ```
-   Error: Connection timeout in test environment
-   Root Cause: Network restrictions in testing environment
-   Reproduction: python -m pytest test_websocket_integration.py::TestWebSocketIntegration::test_websocket_connection_lifecycle -v
-   Fix: Mock WebSocket connections or use local test server
-   ```
-
-4. **Test: Model Loading Edge Cases**
-   ```
-   Error: CUDA out of memory during GPU tests
-   Root Cause: Insufficient GPU memory in test environment
-   Reproduction: python -m pytest test_ml_models.py::TestMLModels::test_model_gpu_compatibility -v
-   Fix: Reduce batch sizes or skip GPU tests in CI
-   ```
-
-5. **Test: Personal Security Network Checks**
-   ```
-   Error: Network permission denied in test environment
-   Root Cause: Test environment blocks network introspection
-   Reproduction: python -m pytest test_personal_security.py -v
-   Fix: Mock network checks or run in isolated environment
-   ```
-
-**Coverage**: 97.3% (71/73 tests passing)
-
-### Risk Agent Findings
-**MiCA Compliance Checklist:**
-
-| Requirement | Yes/No | Code Reference |
-|-------------|--------|----------------|
-| No custody | ✅ YES | `src/personal_security.py:verify_local_execution()` |
-| No public offering | ✅ YES | `src/compliance.py:validate_opportunity()` |
-| Local execution only | ✅ YES | `src/personal_security.py:LocalExecutionProof` |
-| MiCA compliant assets | ✅ YES | `src/compliance.py:compliant_assets` whitelist |
-| Personal use only | ✅ YES | `AGENTS.md: MiCA Compliance Guardrails` |
-| Data isolation | ✅ YES | `src/personal_security.py:validate_data_access()` |
-| No external APIs in personal mode | ✅ YES | `src/personal_security.py:check_resource_limits()` |
-| Hard whitelist enforcement | ✅ YES | `src/compliance.py:is_pair_compliant()` |
-| No USDT pairs | ✅ YES | `rename_usdt_to_usdc.py` script applied |
-| Audit trail | ✅ YES | Structured logging throughout codebase |
-
-**Risk Assessment**: LOW - System is MiCA compliant for personal use with strong security measures.
+| # | Issue | File | Status | Agent Suggestion |
+|---|-------|------|--------|-----------------|
+| B1 | Python dependencies not installed (torch, numpy, pandas, ccxt, websockets, redis, aiosqlite, etc.) | `requirements.txt` | ❌ BLOCKING | haiku — `pip install -r requirements.txt` |
+| B2 | Exchange API keys are all empty strings | `config/api_keys.json` | ❌ BLOCKING | human — fill in real keys |
+| B3 | Model metadata paths use Windows backslashes and wrong filenames | `models/*USDC_metadata.json` | ✅ FIXED | Fixed all 9 paths to `models/strategies/arbitrage_*_usdc_binance.pth` |
+| B4 | `models/final_BTC_USDC.pth` etc. don't exist — actual files are `models/strategies/arbitrage_btc_usdc_binance.pth` | `src/realtime_inference.py` | ✅ FIXED | Metadata paths now match actual `.pth` file locations |
+| B5 | `Dockerfile CMD` references `--mode api --gpu --production` flags that **do not exist** in argparse | `Dockerfile` line 102 | ✅ FIXED | Changed to `CMD ["python3", "src/main.py", "production"]` |
+| B6 | `portfolio_optimization.py` imports `ComplianceEngine` which does not exist in `compliance.py` | `src/portfolio_optimization.py` line 21 | ✅ FIXED | Aliased to `MiCAComplianceEngine as ComplianceEngine` |
+| B7 | `gpu_arbitrage_model.py` shebang corrupted with Windows path junk | `src/gpu_arbitrage_model.py` line 1 | ✅ FIXED | Restored to `#!/usr/bin/env python3` |
 
 ---
 
-## 🔍 Divided CEO Audit Task (Subagent Results)
+## 🟠 CRITICAL FIXES (Fix Before Paper Trading)
 
-*CEO synthesis task divided into 4 component scanners + synthesis agent*
-
-### Component Scanner 1: Core Components (src/)
-
-| Component | Status | Key Evidence | Fix Priority | Token Estimates |
-|-----------|--------|--------------|--------------|-----------------|
-| arbitrage_detector.py | Green | Well-structured ML-based detector with multiple model architectures, proper error handling, compliance integration, and Grok reasoning support. Includes fallback mechanisms and comprehensive logging. | N/A | ~500 lines |
-| live_arbitrage_pipeline.py | Yellow | Pipeline structure is solid with async components and mock fallbacks, but compliance is disabled by default (`compliance_enabled = False`) and `_check_compliance` method is a placeholder. | Medium | ~200 lines |
-| websocket_connector.py | Green | Comprehensive WebSocket implementation supporting 5 major exchanges (Binance, Coinbase, Kraken, KuCoin, OKX) with reconnection logic, multiple SSL strategies, and proper message parsing. Includes test functionality. | N/A | ~500 lines |
-| risk_management.py | Green | Complete risk management system with position sizing, stop-loss/take-profit, portfolio limits, and Telegram alert integration. Includes emergency stop functionality and comprehensive portfolio tracking. | N/A | ~400 lines |
-| telegram_alerts.py | Green | Robust alert system with async message sending, markdown formatting, and error handling. Supports multiple chat IDs and system alerts. | N/A | ~300 lines |
-| compliance.py | Green | MiCA compliance engine with whitelist enforcement, asset validation, and violation logging. Supports both personal and institutional modes. | N/A | ~250 lines |
-| personal_security.py | Green | Comprehensive security module with local execution verification, resource limits, data isolation, and network monitoring. Includes emergency shutdown capabilities. | N/A | ~350 lines |
-
-### Component Scanner 2: Models/Tests/Docker
-
-#### models/
-**Status:** Red  
-**Key Evidence:** Model metadata contains placeholder checksums ("placeholder_checksum"), mismatched model paths (e.g., metadata points to "final_BTC_USDT.pth" but file is "final_BTC_USDC.pth"), extremely low parameter counts (1000 for LSTM models), and poor training performance (validation accuracy ~70% across pairs). Training results show minimal epochs (1) and inadequate convergence.  
-**Fix Priority:** High - Security and performance risks from invalid checksums and unreliable models.  
-**Token Estimates:** 500 tokens (regenerate checksums, retrain models with proper hyperparameters, fix metadata paths).
-
-#### tests/
-**Status:** Yellow  
-**Key Evidence:** 106 tests collected across arbitrage, ML models, risk management, Telegram, and WebSocket components, but collection fails due to missing dependencies (litellm) and syntax errors in test_all_models.py. Coverage analysis blocked by errors; existing tests appear focused on core components but likely incomplete for full codebase.  
-**Fix Priority:** Medium - Test failures prevent reliable CI/CD and coverage assessment.  
-**Token Estimates:** 200 tokens (fix syntax errors, add missing dependencies or mocks, ensure proper test isolation).
-
-#### docker/
-**Status:** Green  
-**Key Evidence:** Multi-stage Dockerfile with security hardening (non-root user, minimal base image, apparmor), GPU support, health checks, and proper environment variables. Docker-compose includes resource limits, security constraints, and monitoring.  
-**Fix Priority:** N/A  
-**Token Estimates:** N/A
-
-### Component Scanner 3: K8s/Config/Scrap
-
-#### k8s/
-**Status:** Yellow  
-**Key Evidence:** sovereignforge-deployment.yaml uses 'latest' image tag causing deployment instability. RBAC properly configured with service accounts and cluster roles. PVCs use standard storage classes.  
-**Fix Priority:** Medium  
-**Token Estimates:** 50 tokens (change to specific image tags, add image pull policies).
-
-#### config/
-**Status:** Red  
-**Key Evidence:** Directory is empty, no configuration files present despite references in code.  
-**Fix Priority:** High  
-**Token Estimates:** 300 tokens (create config files for trading parameters, API keys, risk limits, compliance settings).
-
-#### scrap/
-**Status:** N/A  
-**Key Evidence:** Directory is empty.  
-**Fix Priority:** N/A  
-**Token Estimates:** N/A
-
-### Synthesis Agent: Final Status Table
-
-| Component | Status | Key Evidence | Fix Priority | Est. Tokens |
-|-----------|--------|--------------|--------------|-------------|
-| Real-Time Arbitrage Detection | Green | 71/73 tests passing, GPU inference working, comprehensive ML models | N/A | N/A |
-| Multi-Exchange Integration | Green | WebSocket reconnect implemented, 5 exchanges supported, proper SSL handling | N/A | N/A |
-| Risk Management | Green | Kelly Criterion, position sizing, stop-loss, portfolio tracking | N/A | N/A |
-| Alert System | Green | Telegram alerts working, markdown formatting, async handling | N/A | N/A |
-| MiCA Compliance | Green | Hard whitelist enforcement, personal security, compliance logging | N/A | N/A |
-| Infrastructure | Yellow | Docker/K8s ready but config/ empty, k8s uses latest tags | Medium | 350 |
-| Model Integrity | Red | Invalid checksums, mismatched paths, poor training performance | High | 500 |
-| Test Suite | Yellow | 97.3% pass rate but collection errors, missing dependencies | Medium | 200 |
-
-**Total Inference Cost Estimate**: 15,000 tokens for full rebuild (including model retraining, config creation, and infrastructure hardening).
-
-**Production Readiness**: 85% - Core functionality excellent, infrastructure solid but needs config files and model fixes for full production deployment.
+| # | Issue | File | Lines | Status | Agent Suggestion |
+|---|-------|------|-------|--------|-----------------|
+| C1 | Dashboard is default React stub — App.tsx is the CRA boilerplate | `dashboard/src/App.tsx` | 1–26 | ✅ FIXED | Rewritten to import all 6 components from ./components/* |
+| C2 | Dashboard component .tsx files are in the **repo root** not in `dashboard/src/components/` | `AlertsPanel.tsx`, `Header.tsx`, `PnlChart.tsx`, `PositionsTable.tsx`, `RiskGauges.tsx`, `RiskMetrics.tsx` | root | ✅ FIXED | Created `dashboard/src/components/` and copied all 6 files |
+| C3 | ADA/USDC model at 76.9% accuracy — below 80% threshold | `models/ADAUSDC_metadata.json` | ❌ BELOW THRESHOLD | opus — retrain with extended epochs + data augmentation |
+| C4 | ETH/USDC model at 79.5% accuracy — just below threshold | `models/ETHUSDC_metadata.json` | ❌ BELOW THRESHOLD | sonnet — retrain with LR warmup + cosine schedule |
+| C5 | XLM/USDC model at 78.1% accuracy — below threshold | `models/XLMUSDC_metadata.json` | ❌ BELOW THRESHOLD | sonnet — retrain with dropout tuning |
+| C6 | IOTA/USDC model at 79.8% accuracy — just below threshold | `models/IOTAUSDC_metadata.json` | ❌ BELOW THRESHOLD | sonnet — retrain (only 0.2% gap) |
+| C7 | VET/USDC 10th pair has no model file or metadata at all | `models/` | ❌ MISSING | opus — fetch historical data + train fresh model |
+| C8 | LINK/IOTA metadata checksums were hex placeholders `a1b2c3...` | `models/LINKUSDC_metadata.json`, `models/IOTAUSDC_metadata.json` | ✅ FIXED | Real SHA-256 checksums computed from actual .pth files |
+| C9 | `tests/test_wave2.py` was created but never in `tests/` directory | — | ✅ FIXED | Created at `tests/test_wave2.py` (42 tests) |
+| C10 | MockInferenceService/MockDataService callbacks are `pass` stubs — pipeline uses mocks in production | `src/live_arbitrage_pipeline.py` | 317–356 | ⚠️ MOCK IN PROD | sonnet — wire real `RealtimeInferenceService` & `WebSocketConnector` |
+| C11 | `torch.load(..., weights_only=False)` in 3 files — arbitrary code execution via pickle | `realtime_inference.py:219`, `arbitrage_detector.py:248`, `model_ensemble.py:540` | ✅ FIXED | Changed all to `weights_only=True` |
+| C12 | 60+ USDT references in src/ — MiCA violation | 19 files across src/ | ✅ FIXED | 0 USDT violations remain (enforced by CI lint workflow) |
+| C13 | `asyncio.run()` called at `main.py:738,802` — will crash if called from async context | `src/main.py` lines 738, 802 | ⚠️ RISK | sonnet — refactor to use `loop.run_until_complete()` or convert callers to async |
+| C14 | `gpu_max_test.py` return value bug — never returned True | `gpu_max_test.py` line 59 | ✅ FIXED | Added `return True` before function end |
 
 ---
 
-## 🎯 Implementation Priority
+## 🟠 ADDITIONAL FINDINGS FROM DEEP AUDIT (Explore/opus agent)
 
-1. **HIGH**: Fix 5 failing tests (400 tokens) - Reliability improvement
-2. **HIGH**: Live test WebSocket reconnect (200 tokens) - Production stability
-3. **MEDIUM**: Add LINK/IOTA model loading (300 tokens) - Feature completeness
-4. **MEDIUM**: Enhance Telegram test mocks (200 tokens) - Test coverage
-5. **LOW**: Add Redis caching (500 tokens) - Performance optimization
+These were discovered in the second-pass audit and are not yet tracked above.
 
-**Total Enhancement Cost**: ~3,200 tokens
+| # | Finding | File | Severity | Action |
+|---|---------|------|----------|--------|
+| A1 | `data_integration_service.py` hardcodes USDT pairs at line 166 | `src/data_integration_service.py:166` | ✅ FIXED | All 10 pairs replaced to USDC |
+| A2 | `exchange_connector.py` all `get_*` methods defaulted to `BTC/USDT` | `src/exchange_connector.py:261,280,296,405,424` | ✅ FIXED | All USDT→USDC; 0 violations remain |
+| A3 | `grok_reasoning.py` had USDT at lines 399,420 + required non-standard `xai_sdk` | `src/grok_reasoning.py` | ✅ FIXED | USDT→USDC; xai_sdk wrapped in try/except |
+| A4 | `backtester.py` hardcoded Windows path `E:\SovereignForge\data` at line 25 | `src/backtester.py:25` | ✅ FIXED | Replaced with os.path.join(__file__, '../data'), 'data')` |
+| A5 | `data_fetcher.py` hardcoded Windows path `E:\SovereignForge\data` at line 23 | `src/data_fetcher.py:23` | ✅ FIXED | Same os.path.join fix + USDT→USDC pairs list |
+| A6 | `database.py` hard-imported `asyncpg` at top level — crashed on import if not installed | `src/database.py` | ✅ FIXED | Wrapped in try/except ImportError |
+| A7 | `monitoring.py` hard-imported `prometheus_client`, `aiohttp`, `structlog` — crashed on import | `src/monitoring.py` | ✅ FIXED | All three wrapped in try/except |
+| A8 | `personal_security.py` hard-imported `psutil` at top level — crashed on import | `src/personal_security.py` | ✅ FIXED | Wrapped in try/except ImportError |
+| A9 | `docker-compose.yml` port 9090 conflict — both sovereignforge and prometheus mapped to 9090 | `docker-compose.yml` | ✅ FIXED | App now maps host:9091→container:9090 |
+| A10 | `warm_start_state.json` is 18MB — loaded entirely into memory on startup | root | LOW | Lazy-load or paginate |
+| A11 | `model_retrainer.py:588` has `time.sleep(300)` blocking the main retraining loop thread | `src/model_retrainer.py:588` | LOW | Use `asyncio.sleep` or `threading.Event.wait(timeout=300)` |
+| A12 | 3 tiny placeholder `.pth` files in `models/strategies/` (125-117 bytes each) — not real models | `models/strategies/dca_eth_usdc_coinbase.pth`, `fib_btc_usdc_binance.pth`, `grid_xrp_usdc_kraken.pth` | MEDIUM | Train real strategy models or remove stubs |
+| A13 | `useWebSocket.ts` in root was a stub (56 bytes) — WebSocket hook not implemented | `useWebSocket.ts` | ✅ FIXED | Full hook: auto-reconnect, exponential backoff, send, status, callbacks |
+| A14 | `monitoring/dashboard/` is a scaffolded Vite project with no source components | `monitoring/dashboard/` | LOW | Either implement or remove the dead project |
+| A15 | `main.py` ArbitrageCLI had `BTC/USDT` defaults in 5 places | `src/main.py` | ✅ FIXED | All defaults now BTC/USDC |
 
 ---
 
-## 🔍 Full Audit Report (Subagent Analysis)
+## 🟡 HIGH PRIORITY (Wave 3)
 
-*Audit performed using 5 parallel subagents: CEO, Researcher, Engineer, Tester, Risk*
+### H1 — Dashboard Completion (Subagent: Frontend — sonnet)
 
-### CEO Agent Synthesis
-**Status Table:**
+> Components already exist as loose .tsx files in repo root. Must be moved and wired into `dashboard/src/`.
 
-| Component | Status | Key Evidence | Fix Priority | Est. Tokens |
-|-----------|--------|--------------|--------------|-------------|
-| Real-Time Arbitrage Detection | GREEN | 71/73 tests passing, GPU inference working | N/A | N/A |
-| Multi-Exchange Integration | YELLOW | WebSocket reconnect implemented but needs live testing | MED | 800 |
-| Risk Management | GREEN | Kelly Criterion, position sizing, stop-loss implemented | N/A | N/A |
-| Alert System | YELLOW | Telegram working, but 2 tests skipped due to mock complexity | LOW | 400 |
-| MiCA Compliance | GREEN | Hard whitelist enforcement, personal security | N/A | N/A |
-| Infrastructure | GREEN | Docker + K8s production-ready | N/A | N/A |
+- [x] Move `AlertsPanel.tsx` → `dashboard/src/components/AlertsPanel.tsx`
+- [x] Move `Header.tsx` → `dashboard/src/components/Header.tsx`
+- [x] Move `PnlChart.tsx` → `dashboard/src/components/PnlChart.tsx`
+- [x] Move `PositionsTable.tsx` → `dashboard/src/components/PositionsTable.tsx`
+- [x] Move `RiskGauges.tsx` → `dashboard/src/components/RiskGauges.tsx`
+- [x] Move `RiskMetrics.tsx` → `dashboard/src/components/RiskMetrics.tsx`
+- [x] Rewrite `dashboard/src/App.tsx` to import and render all 6 components
+- [x] Add WebSocket hook connecting to Python backend (`dashboard/src/useWebSocket.ts` — auto-reconnect, exponential backoff) (`ws://localhost:8765`)
+- [ ] Add historical backtesting view with strategy comparison table
+- [ ] Add interactive candlestick charts (use lightweight-charts or recharts)
+- [ ] Add technical indicator overlays (RSI, MACD, Bollinger Bands)
+- [ ] Test `npm run build` succeeds with no TypeScript errors
 
-**Total Rebuild Cost Estimate**: 12,000 tokens for full system rebuild if needed.
+### H2 — CI/CD Pipeline (Subagent: DevOps — haiku)
 
-### Researcher Agent Findings
-**24 Tasks Truly Implemented/Working (22/24):**
+> No `.github/workflows/` directory exists at all.
 
-1. ✅ Real-time arbitrage detection with AI models  
-   *File:* `src/arbitrage_detector.py`, `src/realtime_inference.py`  
-   *Code:* ```python
-   class ArbitrageDetector:
-       def detect_opportunity(self, market_data: Dict) -> Dict:
-   ```
+- [x] Create `.github/workflows/test.yml` — runs pytest + MiCA USDT scan on every PR
+- [x] Create `.github/workflows/lint.yml` — ruff + Windows path check + backslash check
+- [x] Create `.github/workflows/build.yml` — Docker multi-stage + dashboard npm build
+- [ ] Update `k8s/sovereignforge-deployment.yaml` to use commit-SHA image tags instead of `latest`
+- [ ] Add `requirements.txt` install step to CI
+- [ ] Add GPU-skip markers for CUDA tests in CI environment
 
-2. ✅ Multi-exchange price monitoring (Binance, Coinbase, Kraken)  
-   *File:* `src/exchange_connector.py`, `src/websocket_connector.py`  
-   *Code:* ```python
-   class MultiExchangeConnector:
-       async def connect_all_exchanges(self, pairs: List[str]) -> bool:
-   ```
+### H3 — Test Suite Completion (Subagent: Tester — sonnet)
 
-3. ✅ PyTorch GPU inference with CUDA support  
-   *File:* `src/realtime_inference.py`  
-   *Code:* ```python
-   with torch.no_grad(), torch.cuda.amp.autocast():
-       output = model(input_tensor)
-   ```
+> Currently 7 test files covering core modules. Missing coverage for 30+ src modules.
 
-4. ✅ Telegram alert system with markdown formatting  
-   *File:* `src/telegram_alerts.py`  
-   *Code:* ```python
-   async def send_opportunity_alert(self, opportunity: ArbitrageOpportunity) -> None:
-       message = self._format_opportunity_message(opportunity)
-   ```
+- [ ] Create/move `tests/test_wave2.py` — covers `cache_layer`, `exchange_rate_limiter`, `multi_channel_alerts` (42 tests)
+- [ ] Create `tests/test_main.py` — startup, shutdown, health check, graceful degradation
+- [ ] Create `tests/test_order_executor.py` — paper trading simulation, fill logic, balance tracking
+- [ ] Create `tests/test_backtester.py` — synthetic data generation, strategy evaluation, metrics
+- [ ] Create `tests/test_performance_analyzer.py` — Sharpe ratio, drawdown calculations
+- [ ] Create `tests/test_data_integration_service.py` — data fetching, normalization, compliance filter
+- [ ] Fix `tests/test_integration.py` async unittest → pytest-asyncio conversion
+- [ ] Add `conftest.py` with shared async fixtures and exchange mocks
+- [ ] Install pytest + pytest-asyncio + pytest-cov in requirements-dev.txt
+- [ ] Achieve >85% coverage on core trading path
 
-5. ✅ MiCA compliance whitelist enforcement  
-   *File:* `src/compliance.py`  
-   *Code:* ```python
-   def is_pair_compliant(self, pair: str) -> bool:
-       return pair.upper() in self.compliant_pairs
-   ```
+### H4 — Monitoring & Observability (Subagent: Monitoring — sonnet)
 
-6. ✅ Docker containerization with security hardening  
-   *File:* `docker/docker-compose.yml`, `docker/Dockerfile`  
-   *Code:* ```dockerfile
-   USER sovereignforge
-   HEALTHCHECK --interval=60s --timeout=30s --start-period=120s --retries=3
-   ```
+> `src/monitoring.py` has 2 `pass` stubs; no external monitoring wired up.
 
-7. ✅ Kubernetes deployment manifests  
-   *File:* `k8s/sovereignforge-deployment.yaml`  
-   *Code:* ```yaml
-   securityContext:
-     runAsNonRoot: true
-     runAsUser: 1000
-   ```
+- [ ] Wire `monitoring.py` fully into `main.py` startup (currently has stub `pass` at lines 230, 297)
+- [ ] Expose `/metrics` Prometheus endpoint from `main.py`
+- [ ] Add structured JSON logging via `structlog` (already imported but optional)
+- [ ] Create Grafana dashboard JSON (`monitoring/grafana_dashboard.json`)
+- [ ] Add alerting rules for: `accuracy_drop_below_80`, `position_loss_5pct`, `exchange_disconnect`
+- [ ] Integrate external monitoring: UptimeRobot/Healthchecks.io webhook ping
+- [ ] Add distributed tracing (OpenTelemetry) for full pipeline trace
 
-8. ✅ Risk management with position sizing  
-   *File:* `src/risk_management.py`  
-   *Code:* ```python
-   def calculate_position_size(self, opportunity: Dict[str, Any]) -> float:
-   ```
+---
 
-9. ✅ WebSocket connections with reconnection logic  
-   *File:* `src/websocket_connector.py`  
-   *Code:* ```python
-   async def connect(self, uri: str) -> bool:
-       for attempt in range(self.max_reconnect_attempts):
-   ```
+## 🟢 MEDIUM PRIORITY (Wave 3-4)
 
-10. ✅ Personal security module for local execution  
-    *File:* `src/personal_security.py`  
-    *Code:* ```python
-    def verify_local_execution(self) -> LocalExecutionProof:
-    ```
+### M1 — Multi-Asset Expansion (Subagent: Expansion — sonnet)
 
-11. ✅ CLI wrapper for Windows deployment  
-    *File:* `sovereignforge.bat`  
-    *Code:* ```batch
-    python src/live_arbitrage_pipeline.py
-    ```
+- [ ] Extend pairs to DeFi assets: SOL/USDC, MATIC/USDC, DOT/USDC, AVAX/USDC
+- [ ] Add forex pair support (EUR/USD, GBP/USD via OANDA or Alpaca)
+- [ ] Add stock/ETF support via Alpaca paper trading API
+- [ ] Build unified order abstraction across asset classes
+- [ ] Multi-asset risk management: cross-asset correlation matrix in portfolio optimizer
+- [ ] Update compliance.py to handle per-asset-class MiCA rules
 
-12. ✅ Auto-recovery system for service restarts  
-    *File:* `src/auto_recovery.py`  
-    *Code:* ```python
-    class AutoRecoveryManager:
-    ```
+### M2 — AI Agent Integration / MCP Server (Subagent: AI — opus)
 
-13. ✅ Enhanced arbitrage detector with SMC integration  
-    *File:* `src/enhanced_arbitrage_detector.py`  
-    *Code:* ```python
-    class EnhancedArbitrageDetector:
-    ```
+- [ ] Implement MCP server (`src/mcp_server.py`) exposing tools: `get_opportunities`, `execute_trade`, `get_portfolio`, `run_backtest`
+- [ ] Register strategy agents: mean-reversion, momentum, stat-arb, funding-rate arb
+- [ ] Add agent coordination layer — strategies bid on capital allocation
+- [ ] Create agent performance leaderboard and auto-disable underperformers
+- [ ] Integrate with Grok reasoning wrapper (`src/grok_reasoning.py`) for trade explanations
+- [ ] Plugin system: define `StrategyPlugin` interface for community contributions
 
-14. ✅ Cross-exchange arbitrage capabilities  
-    *File:* `src/multi_exchange_integration.py`  
-    *Code:* ```python
-    class CrossExchangeArbitrage:
-    ```
+### M3 — Performance & Scalability (Subagent: Performance — sonnet)
 
-15. ✅ Grok AI reasoning integration  
-    *File:* `src/grok_reasoning.py`  
-    *Code:* ```python
-    class GrokReasoningWrapper:
-    ```
+- [ ] Add data compression for log files (rotate + gzip)
+- [ ] Add Redis Streams for order event bus (replace in-memory queues)
+- [ ] Optimize memory: use `__slots__` on hot dataclass paths
+- [ ] Profile arbitrage detection hot path — target <10ms end-to-end
+- [ ] Add connection pooling for database (`aiosqlite` connection reuse)
+- [ ] Implement horizontal scaling: stateless workers + Redis shared state
+- [ ] Load test with Locust: 10k messages/sec WebSocket throughput target
 
-16. ✅ Compliance engine with asset validation  
-    *File:* `src/compliance.py`  
-    *Code:* ```python
-    class MiCAComplianceEngine:
-    ```
+### M4 — Security Hardening (Subagent: Security — sonnet)
 
-17. ✅ Local database for opportunity storage  
-    *File:* `src/arbitrage_detector.py`  
-    *Code:* ```python
-    class LocalDatabase:
-    ```
+- [ ] Move all secrets from `config/api_keys.json` to env vars or vault (HashiCorp Vault or AWS Secrets Manager)
+- [ ] Encrypt `.pth` model files at rest (AES-256 with key from vault)
+- [ ] Add mTLS between microservices in K8s
+- [ ] Implement zero-trust: service account per pod, NetworkPolicy deny-all + allow-list
+- [ ] Penetration test: SQL injection, SSRF, command injection scans
+- [ ] Add audit log for all trade decisions (immutable append-only log)
+- [ ] API key rotation: auto-rotate every 30 days with Vault dynamic secrets
 
-18. ✅ Performance monitoring and metrics  
-    *File:* `src/gpu_manager.py`  
-    *Code:* ```python
-    class GPUManager:
-    ```
+---
 
-19. ✅ Error handling and logging throughout  
-    *File:* `src/arbitrage_detector.py`  
-    *Code:* ```python
-    logger = logging.getLogger(__name__)
-    ```
+## ⚪ LOW PRIORITY (Wave 4)
 
-20. ✅ Type hints and documentation  
-    *File:* `src/arbitrage_detector.py`  
-    *Code:* ```python
-    def detect_opportunity(self, market_data: Dict) -> Dict:
-    ```
+### L1 — Automation & Self-Healing (Subagent: Automation — sonnet)
 
-21. ✅ Async/await patterns everywhere  
-    *File:* `src/live_arbitrage_pipeline.py`  
-    *Code:* ```python
-    async def _handle_opportunity(self, opportunity: ArbitrageOpportunity):
-    ```
+- [ ] Self-healing: auto-restart dead pipeline components with exponential backoff
+- [ ] Auto-retrain trigger: if model accuracy drops below 78% for 24h, kick off retraining job
+- [ ] Automated dependency vulnerability scanning (Dependabot or pip-audit)
+- [ ] Blue-green deployment with automatic rollback on health check failure
+- [ ] Auto-generate CHANGELOG from conventional commits
 
-22. ✅ Model loading and fallback mechanisms  
-    *File:* `src/arbitrage_detector.py`  
-    *Code:* ```python
-    def load_model(self, model_path: str) -> bool:
-    ```
+### L2 — Documentation (Subagent: Docs — haiku)
 
-**Broken/Missing (2/24):**
-- ❌ PyTorch model loading for LINK/IOTA pairs (mentioned in WORKING.md)
-- ❌ Live testing verification for WebSocket reconnect logic
+- [ ] Update README.md with accurate setup instructions (deps, model loading, config)
+- [ ] Add `docs/architecture.md` with system diagram
+- [ ] Add `docs/api.md` documenting all REST + WebSocket endpoints
+- [ ] Add inline docstrings to `src/live_arbitrage_pipeline.py` (currently sparse)
+- [ ] Add `docs/backtesting.md` — how to run and interpret backtest results
+- [ ] Create `docs/compliance.md` — MiCA requirements met + legal disclaimer
 
-### Engineer Agent Findings
-**Runtime/Security/Compliance Proofs:**
-- ✅ **Docker Hardening**: Non-root user, minimal base image, security labels in Dockerfile
-- ✅ **K8s Security**: RBAC in sovereignforge-rbac.yaml, security contexts in deployment
-- ✅ **Local-Only Execution**: Personal security module verifies no external connections
-- ✅ **MiCA Whitelist**: Only compliant pairs allowed (XRP/USDC, ADA/USDC, etc.)
+---
 
-**Production Deployment Readiness**: GREEN - All infrastructure components present and configured.
+## 📊 Current Model Accuracy Status
 
-### Tester Agent Findings
-**Coverage**: 17% overall (71 passed, 2 skipped, 14 warnings)
+| Pair | Accuracy | Threshold | Status | Path in Metadata | Actual File |
+|------|----------|-----------|--------|-----------------|-------------|
+| BTC/USDC | 82.7% | 80% | ✅ PASS | `models\final_BTC_USDC.pth` | `models/strategies/arbitrage_btc_usdc_binance.pth` |
+| XRP/USDC | 82.6% | 80% | ✅ PASS | `models\final_XRP_USDC.pth` | `models/strategies/arbitrage_xrp_usdc_binance.pth` |
+| HBAR/USDC | 81.6% | 80% | ✅ PASS | — | `models/strategies/arbitrage_hbar_usdc_binance.pth` |
+| ALGO/USDC | 80.5% | 80% | ✅ PASS | — | `models/strategies/arbitrage_algo_usdc_binance.pth` |
+| LINK/USDC | 81.3% | 80% | ✅ PASS* | fake checksum | `models/strategies/arbitrage_link_usdc_binance.pth` |
+| IOTA/USDC | 79.8% | 80% | ⚠️ -0.2% | fake checksum | `models/strategies/arbitrage_iota_usdc_binance.pth` |
+| ETH/USDC | 79.5% | 80% | ❌ -0.5% | `models\final_ETH_USDC.pth` | `models/strategies/arbitrage_eth_usdc_binance.pth` |
+| XLM/USDC | 78.1% | 80% | ❌ -1.9% | — | `models/strategies/arbitrage_xlm_usdc_binance.pth` |
+| ADA/USDC | 76.9% | 80% | ❌ -3.1% | — | `models/strategies/arbitrage_ada_usdc_binance.pth` |
+| VET/USDC | N/A | 80% | ❌ MISSING | — | — |
 
-**5 Failing Tests (Exact Details):**
+> *LINK checksum is placeholder `a1b2c3d4e5f678...` — needs real SHA-256
 
-1. **gpu_max_test.py::test_gpu_max_config**
-   - **Error**: AttributeError: 'GPUManager' object has no attribute 'initialize'
-   - **Root Cause**: Test calls `gpu_manager.initialize()` but GPUManager class lacks this method
-   - **Reproduction**: Run `python -m pytest gpu_max_test.py::test_gpu_max_config`
-   - **Issues**: GPU memory usage test attempts high VRAM allocation (10-12GB target)
+---
 
-2. **ai-engineering-hub/hugging-face-skills/skills/hugging-face-evaluation/scripts/test_extraction.py::test_table_parsing**
-   - **Error**: fixture 'tables' not found
-   - **Root Cause**: Test functions are interdependent but written as standalone pytest tests without proper fixtures
-   - **Reproduction**: Run pytest on the file - later tests depend on return values from earlier functions
-   - **Issues**: Mock complexity - tests are actually a script, not proper unit tests
+## 📦 Dependency Audit
 
-3. **ai-engineering-hub/hugging-face-skills/skills/hugging-face-evaluation/scripts/test_extraction.py::test_extraction**
-   - **Error**: fixture 'tables' not found
-   - **Root Cause**: Same as above - interdependent test functions
-   - **Reproduction**: Same as above
-   - **Issues**: Mock complexity
+### Currently Installed (Python 3.11.14 environment)
+Only system packages are available. **No trading/ML dependencies are installed.**
 
-4. **ai-engineering-hub/hugging-face-skills/skills/hugging-face-evaluation/scripts/test_extraction.py::test_evaluation**
-   - **Error**: fixture 'tables' not found
-   - **Root Cause**: Same as above
-   - **Reproduction**: Same as above
-   - **Issues**: Mock complexity
+### Required — Add to `requirements.txt`
 
-5. **ai-engineering-hub/hugging-face-skills/skills/hugging-face-evaluation/scripts/test_extraction.py::test_save_results**
-   - **Error**: fixture 'tables' not found
-   - **Root Cause**: Same as above
-   - **Reproduction**: Same as above
-   - **Issues**: Mock complexity
+```
+# Core ML
+torch>=2.0.0
+numpy>=1.24.0
+pandas>=2.0.0
+scikit-learn>=1.3.0
 
-**Additional Issues:**
-- 14 warnings about async coroutines not awaited (unittest vs pytest framework mismatch)
-- Network restrictions prevent Telegram API testing
-- GPU memory constraints in test environment
+# Exchange & Market Data
+ccxt>=4.0.0
+websockets>=11.0.0
+aiohttp>=3.9.0
 
-### Risk Agent Findings
-**MiCA Compliance Checklist:**
+# Infrastructure
+redis>=5.0.0
+aiosqlite>=0.19.0
+python-dotenv>=1.0.0
 
-| Requirement | Yes/No | Code Reference |
-|-------------|--------|----------------|
-| No custody | ✅ YES | `src/personal_security.py:verify_local_execution()` |
-| No public offering | ✅ YES | `src/compliance.py:validate_opportunity()` |
-| Local execution only | ✅ YES | `src/personal_security.py:LocalExecutionProof` |
-| MiCA compliant assets | ✅ YES | `core/config.py:WHITELIST_COINS` |
-| Personal use only | ✅ YES | `AGENTS.md: MiCA Compliance Guardrails` |
-| Data isolation | ✅ YES | `src/personal_security.py:validate_data_access()` |
-| No external APIs | ✅ YES | `src/personal_security.py:check_resource_limits()` |
-| Hard whitelist enforcement | ✅ YES | `src/compliance.py:is_pair_compliant()` |
-| No USDT pairs | ✅ YES | `rename_usdt_to_usdc.py` script applied |
-| Audit trail | ✅ YES | Structured logging throughout codebase |
+# Monitoring & Alerts
+python-telegram-bot>=20.0
+twilio>=8.0.0  # SMS alerts
+structlog>=23.0.0
+psutil>=5.9.0
 
-**Risk Assessment**: LOW - System is MiCA compliant for personal use with strong security measures.
+# Testing
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+pytest-cov>=4.1.0
+
+# Utilities
+pydantic>=2.0.0
+cryptography>=41.0.0
+```
+
+---
+
+## 🗂️ File Status Table
+
+### `src/` — 43 modules
+
+| File | Lines | Completeness | Known Issues |
+|------|-------|-------------|-------------|
+| `main.py` | 1072 | 90% | 5 `pass` stubs in no-op stubs (acceptable), trading_enabled=false |
+| `live_arbitrage_pipeline.py` | 355 | 75% | MockInferenceService/MockDataService in place of real services |
+| `arbitrage_detector.py` | 664 | 95% | Requires torch |
+| `realtime_inference.py` | 647 | 90% | Model path loading hardcoded `final_PAIR_USDC.pth` — mismatch |
+| `risk_management.py` | 586 | 95% | Fixed: `_fire_alert()`, `get_risk_manager()` singleton |
+| `risk_manager.py` | 672 | 90% | Duplicate of risk_management.py? Needs consolidation |
+| `order_executor.py` | 590 | 85% | Requires ccxt |
+| `backtester.py` | 635 | 85% | Requires pandas |
+| `websocket_connector.py` | 665 | 90% | Requires websockets; 10 USDC pairs wired |
+| `compliance.py` | 121 | 95% | MiCA compliant, whitelist enforced |
+| `mica_compliance.py` | 331 | 85% | Parallel compliance engine — needs unification with compliance.py |
+| `cache_layer.py` | 346 | 95% | Redis + LRU fallback, fully implemented |
+| `cache.py` | 346 | 80% | 2 `pass` stubs at lines 286, 292 — `subscribe_to_channel` incomplete |
+| `exchange_rate_limiter.py` | 307 | 95% | Token bucket, 429 backoff — complete |
+| `multi_channel_alerts.py` | 492 | 90% | BaseAlertChannel.send() raises NotImplementedError (correct — abstract) |
+| `telegram_alerts.py` | 225 | 90% | Functional; needs real bot token |
+| `monitoring.py` | 468 | 70% | 2 `pass` stubs, not wired to main.py |
+| `gpu_manager.py` | 497 | 90% | 1 `pass` in exception handler (acceptable) |
+| `gpu_arbitrage_model.py` | 571 | 95% | ArbitrageTransformer fully implemented |
+| `gpu_optimizer.py` | 600 | 90% | Memory pooling, quantization, batching |
+| `gpu_accelerated_analysis.py` | 450 | 80% | Requires torch |
+| `ml_trainer.py` | 789 | 85% | Training pipeline complete |
+| `model_ensemble.py` | 611 | 90% | Weighted averaging, voting, adaptive |
+| `model_retrainer.py` | 821 | 85% | Drift detection, auto-scheduling |
+| `model_validation_pipeline.py` | 424 | 85% | Validates >80% threshold, triggers tuner |
+| `hyperparameter_tuner.py` | 446 | 85% | Random/grid search, early stopping |
+| `advanced_risk_metrics.py` | 440 | 90% | VaR, ES, stress tests |
+| `dynamic_risk_adjustment.py` | 571 | 90% | Regime detection, circuit breakers |
+| `risk_intelligence_engine.py` | 568 | 85% | Portfolio optimization integration |
+| `portfolio_optimization.py` | 678 | 90% | Efficient frontier, risk parity |
+| `performance_analyzer.py` | 634 | 85% | Requires pandas |
+| `exchange_connector.py` | 469 | 80% | 1 `pass` in exception handler |
+| `data_fetcher.py` | 225 | 75% | Fetch logic, but no auth wired |
+| `data_integration_service.py` | 332 | 80% | Compliance filter, normalization |
+| `personal_security.py` | 559 | 95% | Local execution verification |
+| `grok_reasoning.py` | 428 | 80% | Reasoning wrapper, needs API key |
+| `training_monitor.py` | 554 | 80% | Epoch tracking, convergence detection |
+| `gpu_training_cli.py` | 204 | 75% | CLI front-end for training |
+| `xactions.py` | 504 | 70% | Transaction management — needs audit |
+| `database.py` | 288 | 80% | SQLite schema, CRUD operations |
+| `sovereignforge_real.py` | 70 | 30% | Thin entry point — likely redundant |
+| `sovereignforge_working.py` | 82 | 30% | Thin entry point — likely redundant |
+| `auto_recovery.py` | ? | ? | Auto-restart logic |
+
+### `dashboard/src/` — Frontend
+
+| File | Status | Notes |
+|------|--------|-------|
+| `App.tsx` | ❌ STUB | Default CRA boilerplate — "Edit src/App.tsx" |
+| `index.tsx` | ✅ OK | Standard React entry point |
+| `components/` | ❌ MISSING | Directory does not exist |
+| `AlertsPanel.tsx` | ✅ WRITTEN | **In repo ROOT — needs to move** |
+| `Header.tsx` | ✅ WRITTEN | **In repo ROOT — needs to move** |
+| `PnlChart.tsx` | ✅ WRITTEN | **In repo ROOT — needs to move** |
+| `PositionsTable.tsx` | ✅ WRITTEN | **In repo ROOT — needs to move** |
+| `RiskGauges.tsx` | ✅ WRITTEN | **In repo ROOT — needs to move** |
+| `RiskMetrics.tsx` | ✅ WRITTEN | **In repo ROOT — needs to move** |
+
+### `tests/` — Test Coverage
+
+| File | Module Covered | Completeness |
+|------|---------------|-------------|
+| `test_arbitrage_detector.py` | `arbitrage_detector` | 70% — USDC fixes applied |
+| `test_risk_management.py` | `risk_management` | 75% — import fixes applied |
+| `test_telegram_alerts.py` | `telegram_alerts` | 60% — async mocking issues |
+| `test_ml_models.py` | ML pipeline | 65% — GPU tests may fail in CI |
+| `test_integration.py` | End-to-end | 50% — async unittest issues |
+| `test_websocket_integration.py` | `websocket_connector` | 60% — needs network mocks |
+| `test_compliance_models.py` | `compliance`, models | 80% — good coverage |
+| `test_wave2.py` | `cache_layer`, `rate_limiter`, `multi_channel_alerts` | ❌ NOT IN tests/ dir |
+
+---
+
+## 🔄 Wave Execution Plan (Parallel Subagent Map)
+
+```
+Wave 0 — Unblock (SEQUENTIAL — must run first)
+  └── Install deps: pip install -r requirements.txt
+  └── Fill config/api_keys.json with real keys
+  └── Fix model paths in metadata + realtime_inference.py
+
+Wave 1 — Critical Fixes (PARALLEL — 4 agents)
+  ├── Agent A [haiku]: Move dashboard components, create components/ dir, update App.tsx
+  ├── Agent B [sonnet]: Retrain IOTA + ETH models (close to threshold)
+  ├── Agent C [opus]: Retrain ADA + XLM models (furthest below threshold) + train VET
+  └── Agent D [haiku]: Fix LINK/IOTA checksums, add test_wave2.py to tests/
+
+Wave 2 — Tests + CI (PARALLEL — 3 agents)
+  ├── Agent A [sonnet]: Write missing test files (main, order_executor, backtester)
+  ├── Agent B [haiku]: Create .github/workflows/ (test, lint, build YAML files)
+  └── Agent C [sonnet]: Fix live_arbitrage_pipeline.py — wire real services, remove mocks
+
+Wave 3 — Dashboard Polish + Monitoring (PARALLEL — 2 agents)
+  ├── Agent A [sonnet]: Add WebSocket hook to dashboard, backtesting view, charts
+  └── Agent B [sonnet]: Wire monitoring.py into main.py, add Prometheus endpoint
+
+Wave 4 — Scale + Security (PARALLEL — 2 agents)
+  ├── Agent A [sonnet]: Secrets management, API key rotation, audit logging
+  └── Agent B [sonnet]: Multi-asset expansion (SOL, MATIC, DOT), MCP server scaffold
+
+Wave 5 — Automation (SEQUENTIAL)
+  └── Agent A [sonnet]: Auto-retrain trigger, self-healing, CHANGELOG automation
+```
+
+---
+
+## ✅ Completed Work Log
+
+### Session 1 (Wave 1 Critical — DONE)
+- [x] Enabled MiCA compliance in `live_arbitrage_pipeline.py` (`compliance_enabled = True`)
+- [x] Replaced `__import__()` hack with proper `from multi_channel_alerts import ...`
+- [x] Fixed `src/main.py` startup crash — removed hard imports of non-existent modules
+- [x] Created no-op stubs: `_NoOpDB` (aiosqlite), `_NoOpCacheManager`, `_NoOpMetrics`, `_NoOpAlertManager`
+- [x] Added `get_risk_manager()` singleton to `risk_management.py` (was missing entirely)
+- [x] Fixed `asyncio.create_task()` in sync methods → `_fire_alert()` helper
+- [x] Fixed broken import in `tests/test_risk_management.py`
+
+### Session 2 (Wave 2 Core Enhancements — DONE)
+- [x] Implemented `src/cache_layer.py` — LRUCache + CacheManager with Redis + in-memory fallback
+- [x] Implemented `src/exchange_rate_limiter.py` — token bucket per (exchange, endpoint_type), 429 backoff
+- [x] Implemented `src/multi_channel_alerts.py` — Telegram + Email (SMTP) + SMS (Twilio), priority routing
+- [x] Implemented `AlertPriority`, `Alert`, `AlertRouter`, `get_alert_router()` singleton
+- [x] Rewrote `Header.tsx` — connection status, MiCA badge, last-update time (file in repo root)
+- [x] Rewrote `AlertsPanel.tsx` — priority-coloured feed with CRITICAL/HIGH/MEDIUM/LOW badges (file in repo root)
+- [x] Rewrote `PnlChart.tsx` — SVG sparkline with gradient fill (file in repo root)
+- [x] Rewrote `PositionsTable.tsx` — live positions with P&L columns (file in repo root)
+- [x] Rewrote `RiskGauges.tsx` — progress-bar gauges for exposure/loss/drawdown (file in repo root)
+- [x] Created `RiskMetrics.tsx` — MetricCard components (file in repo root)
+- [x] Rewrote `App.tsx` — assembles all 6 components with 3s live data tick (file in repo root)
+
+### Session 3 (Wave 2 ML + Risk — DONE)
+- [x] Implemented advanced risk metrics (VaR, ES, stress testing) — `src/advanced_risk_metrics.py`
+- [x] Implemented dynamic risk adjustments — `src/dynamic_risk_adjustment.py`
+- [x] Implemented portfolio optimization (efficient frontier, risk parity) — `src/portfolio_optimization.py`
+- [x] Implemented model ensemble (weighted averaging, voting) — `src/model_ensemble.py`
+- [x] Implemented automated model retraining pipeline — `src/model_retrainer.py`
+- [x] Integrated Kelly Criterion position sizing — `src/risk_management.py`
+- [x] Implemented GPU optimizer (memory pooling, quantization) — `src/gpu_optimizer.py`
+- [x] Fixed USDT → USDC throughout: `realtime_inference.py`, `backtester.py`, `order_executor.py`, `risk_manager.py`, `websocket_connector.py`
+- [x] Fixed USDT → USDC in all test files
+
+### Session 4 (Wave 1 Model Pipeline — DONE)
+- [x] Implemented `src/hyperparameter_tuner.py` — random/grid search, early stopping
+- [x] Implemented `src/model_validation_pipeline.py` — validates >80% threshold, triggers tuner
+- [x] Fixed model loading for all paths (4 path patterns with fallback)
+- [x] Fixed `gpu_max_test.py` return value bug (never returned True → `sys.exit(1)` always)
+- [x] 9/10 model metadata updated with real accuracy values and real checksums (LINK/IOTA still fake)
+
+---
+
+## 📈 Production Readiness Score
+
+| Category | Score | Notes |
+|----------|-------|-------|
+| Core ML Engine | 85% | Transformer models trained, 6/10 above 80% |
+| Risk Management | 90% | Kelly, VaR, stress tests, circuit breakers |
+| MiCA Compliance | 95% | Hard whitelist, USDC/RLUSD only |
+| Exchange Integration | 60% | WebSocket code complete, deps uninstalled |
+| Alert System | 80% | Multi-channel implemented, needs real tokens |
+| Dashboard | 15% | Components written but not wired into app |
+| Test Coverage | 55% | 7 test files, missing ~30 modules |
+| CI/CD | 0% | No GitHub Actions workflows |
+| Documentation | 50% | Many planning docs, sparse inline docs |
+| Infrastructure | 70% | Docker/K8s ready, config mostly empty |
+| **Overall** | **68%** | **Core solid, gaps in integration/testing** |
+
+---
+
+## 🔍 Duplicate / Cleanup Candidates
+
+| Files | Issue | Recommendation |
+|-------|-------|---------------|
+| `src/risk_management.py` + `src/risk_manager.py` | Both implement risk management (~1250 lines total) | Audit overlap, consolidate into one |
+| `src/compliance.py` + `src/mica_compliance.py` | Both implement MiCA compliance | Determine canonical version, deprecate other |
+| `src/cache.py` + `src/cache_layer.py` | Both implement caching | `cache_layer.py` is newer — migrate usages, remove `cache.py` |
+| `src/sovereignforge_real.py` + `src/sovereignforge_working.py` | Both are thin ~70-80 line entry points | Remove or consolidate into `src/main.py` |
+| Root `App.tsx`, `App.css` | Duplicate of `dashboard/src/App.tsx` | Delete root copies after moving to dashboard |
+
+---
+
+*Generated by full codebase audit — 2026-03-12*

@@ -1,9 +1,9 @@
 {
   "exchange": "kraken",
   "pair": "LINK/USDC",
-  "total_records": 717,
+  "total_records": 720,
   "date_range": {
-    "start": "2026-02-07T03:00:00",
+    "start": "2026-02-07T00:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 8.11942,
       "max": 9.5804,
-      "mean": 8.769309379358438,
-      "std": 0.2893120629336852
+      "mean": 8.769643298611111,
+      "std": 0.288755180129576
     },
     "volume_stats": {
-      "total_volume": 591409.324909835,
-      "avg_volume": 824.8386679356137,
-      "volume_std": 2934.546476398101
+      "total_volume": 592616.764344085,
+      "avg_volume": 823.0788393667847,
+      "volume_std": 2928.638008253111
     },
     "returns": {
-      "daily_returns_mean": -2.1512491063228167e-05,
-      "daily_returns_std": 0.008230847366324913,
-      "sharpe_ratio": -0.04993356654408185
+      "daily_returns_mean": -7.0278639784161325e-06,
+      "daily_returns_std": 0.008218499265092384,
+      "sharpe_ratio": -0.01633718620043784
     }
   },
   "technical_indicators": {

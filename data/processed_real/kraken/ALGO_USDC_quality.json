@@ -1,9 +1,9 @@
 {
   "exchange": "kraken",
   "pair": "ALGO/USDC",
-  "total_records": 648,
+  "total_records": 652,
   "date_range": {
-    "start": "2026-02-07T04:00:00",
+    "start": "2026-02-07T00:00:00",
     "end": "2026-03-08T22:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.08186,
       "max": 0.10078,
-      "mean": 0.0899844492811715,
-      "std": 0.004571475491131767
+      "mean": 0.09003681462300481,
+      "std": 0.004606095337089062
     },
     "volume_stats": {
-      "total_volume": 8615847.583809432,
-      "avg_volume": 13296.061086125666,
-      "volume_std": 40332.70264238766
+      "total_volume": 8617435.131269712,
+      "avg_volume": 13216.925047959681,
+      "volume_std": 40221.238959219125
     },
     "returns": {
-      "daily_returns_mean": -0.00025745148298996916,
-      "daily_returns_std": 0.006299133957973685,
-      "sharpe_ratio": -0.7808380817244672
+      "daily_returns_mean": -0.00024734970633660087,
+      "daily_returns_std": 0.006292253267400927,
+      "sharpe_ratio": -0.7510202313016168
     }
   },
   "technical_indicators": {

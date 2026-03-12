@@ -1,9 +1,9 @@
 {
   "exchange": "binance",
   "pair": "ALGO/USDC",
-  "total_records": 16325,
+  "total_records": 16329,
   "date_range": {
-    "start": "2024-04-26T13:00:00",
+    "start": "2024-04-26T09:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.0819,
       "max": 0.5896,
-      "mean": 0.19786359489535477,
-      "std": 0.08575916584513975
+      "mean": 0.1978646938983812,
+      "std": 0.08574869101190236
     },
     "volume_stats": {
-      "total_volume": 6912421524.0,
-      "avg_volume": 423425.5144869831,
-      "volume_std": 709996.1395149723
+      "total_volume": 6912442349.5,
+      "avg_volume": 423323.06629309815,
+      "volume_std": 709939.3421869098
     },
     "returns": {
-      "daily_returns_mean": 4.2218588679280255e-06,
-      "daily_returns_std": 0.010793182716832751,
-      "sharpe_ratio": 0.007473096910763659
+      "daily_returns_mean": 2.7941113784816043e-06,
+      "daily_returns_std": 0.010792921014028057,
+      "sharpe_ratio": 0.004945966236868922
     }
   },
   "technical_indicators": {

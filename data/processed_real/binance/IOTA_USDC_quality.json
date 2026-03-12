@@ -1,9 +1,9 @@
 {
   "exchange": "binance",
   "pair": "IOTA/USDC",
-  "total_records": 8484,
+  "total_records": 8487,
   "date_range": {
-    "start": "2025-03-20T12:00:00",
+    "start": "2025-03-20T09:00:00",
     "end": "2026-03-08T23:00:00"
   },
   "data_quality": {
@@ -16,18 +16,18 @@
     "price_range": {
       "min": 0.0626,
       "max": 0.2681,
-      "mean": 0.15262506482791138,
-      "std": 0.05039017833459185
+      "mean": 0.1526331860492518,
+      "std": 0.05038564285595494
     },
     "volume_stats": {
-      "total_volume": 1028264187.5,
-      "avg_volume": 121200.39928099953,
-      "volume_std": 286128.5327719647
+      "total_volume": 1033422174.5,
+      "avg_volume": 121765.30864852127,
+      "volume_std": 290415.6187592696
     },
     "returns": {
-      "daily_returns_mean": -7.763891722558629e-05,
-      "daily_returns_std": 0.009689469361627994,
-      "sharpe_ratio": -0.15308262769986788
+      "daily_returns_mean": -7.760799063074665e-05,
+      "daily_returns_std": 0.009848422313985713,
+      "sharpe_ratio": -0.15055188860301089
     }
   },
   "technical_indicators": {

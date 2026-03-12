@@ -258,7 +258,7 @@ class ExchangeConnector:
             'reconnect_manager': self.reconnect_manager.get_connection_status(f"{self.exchange_name}_ws") if self.reconnect_manager else None
         }
 
-    def get_ticker(self, symbol: str = 'BTC/USDT') -> Optional[Dict]:
+    def get_ticker(self, symbol: str = 'BTC/USDC') -> Optional[Dict]:
         """Get ticker data"""
         if not self.exchange:
             return None
@@ -277,7 +277,7 @@ class ExchangeConnector:
             logger.error(f"Failed to get ticker for {symbol}: {e}")
             return None
 
-    def get_order_book(self, symbol: str = 'BTC/USDT', limit: int = 10) -> Optional[Dict]:
+    def get_order_book(self, symbol: str = 'BTC/USDC', limit: int = 10) -> Optional[Dict]:
         """Get order book"""
         if not self.exchange:
             return None
@@ -293,7 +293,7 @@ class ExchangeConnector:
             logger.error(f"Failed to get order book for {symbol}: {e}")
             return None
 
-    def get_recent_trades(self, symbol: str = 'BTC/USDT', limit: int = 100) -> Optional[List]:
+    def get_recent_trades(self, symbol: str = 'BTC/USDC', limit: int = 100) -> Optional[List]:
         """Get recent trades"""
         if not self.exchange:
             return None
@@ -402,7 +402,7 @@ class MultiExchangeConnector:
 
         return status
 
-    def get_market_data(self, symbol: str = 'BTC/USDT') -> Dict:
+    def get_market_data(self, symbol: str = 'BTC/USDC') -> Dict:
         """Get market data from all exchanges"""
         market_data = {
             'symbol': symbol,
@@ -421,7 +421,7 @@ class MultiExchangeConnector:
 
         return market_data
 
-    def get_price_history(self, symbol: str = 'BTC/USDT', timeframe: str = '1m', limit: int = 100) -> List[float]:
+    def get_price_history(self, symbol: str = 'BTC/USDC', timeframe: str = '1m', limit: int = 100) -> List[float]:
         """Get price history from first available exchange"""
         for connector in self.connectors.values():
             try:
@@ -453,7 +453,7 @@ def test_connectors():
     print("Testing exchange connectors...")
 
     connector = create_demo_connector()
-    market_data = connector.get_market_data('BTC/USDT')
+    market_data = connector.get_market_data('BTC/USDC')
 
     print(f"Symbol: {market_data['symbol']}")
     print(f"Exchanges: {list(market_data['exchanges'].keys())}")
@@ -461,7 +461,7 @@ def test_connectors():
     for exchange_name, data in market_data['exchanges'].items():
         print(f"{exchange_name}: Bid={data['bid']}, Ask={data['ask']}, Volume={data['volume']}")
 
-    price_history = connector.get_price_history('BTC/USDT')
+    price_history = connector.get_price_history('BTC/USDC')
     print(f"Price history: {len(price_history)} points")
 
     print("Exchange connector test completed!")

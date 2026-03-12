@@ -28,9 +28,11 @@ class RealDataProcessor:
         self.processed_data_dir = Path('data/processed_real')
         self.processed_data_dir.mkdir(parents=True, exist_ok=True)
 
+        # All 10 MiCA-compliant USDC pairs (BTC/ETH allowed in personal deployment)
         self.mica_pairs = [
+            'BTC/USDC', 'ETH/USDC',
             'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC',
-            'LINK/USDC', 'IOTA/USDC', 'XDC/USDC', 'ONDO/USDC', 'VET/USDC'
+            'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
         ]
 
     def load_raw_data(self, exchange: str, pair: str) -> Optional[pd.DataFrame]:
@@ -72,10 +74,10 @@ class RealDataProcessor:
             df = df[df['low'] > 0]
             df = df[df['close'] > 0]
 
-            # Remove price outliers (more than 50% change in single period)
-            for col in ['open', 'high', 'low', 'close']:
-                pct_change = df[col].pct_change().abs()
-                df = df[pct_change < 0.5]
+            # Remove extreme data errors (>90% single-candle move — data corruption, not volatility)
+            # Using close only to avoid dropping valid wick spikes on open/high/low
+            pct_change = df['close'].pct_change().abs()
+            df = df[pct_change < 0.9]
 
             # Fill small gaps (up to 3 hours) with interpolation
             df = df.resample('1h').asfreq()
@@ -289,22 +291,58 @@ class RealDataProcessor:
             logger.error(f"Failed to process data for {pair} from {exchange}: {e}")
             return False
 
+    def discover_raw_files(self) -> List[Tuple[str, str]]:
+        """
+        Auto-discover all raw CSV files that were actually fetched.
+        Returns list of (exchange, pair) tuples.
+        """
+        found = []
+        if not self.raw_data_dir.exists():
+            return found
+        for ex_dir in sorted(self.raw_data_dir.iterdir()):
+            if not ex_dir.is_dir():
+                continue
+            exchange = ex_dir.name
+            for csv_file in sorted(ex_dir.glob("*_1h.csv")):
+                # Convert filename back to pair: XRP_USDC_1h.csv → XRP/USDC
+                stem = csv_file.stem.replace("_1h", "")
+                # Handle both XRP_USDC and XRPUSDC formats
+                if "_" in stem:
+                    pair = stem.replace("_", "/", 1)
+                else:
+                    # Try to split at known stablecoins
+                    for stable in ("USDC", "RLUSD", "USDT"):
+                        if stem.endswith(stable):
+                            pair = stem[: -len(stable)] + "/" + stable
+                            break
+                    else:
+                        pair = stem
+                found.append((exchange, pair))
+        return found
+
     def process_all_data(self):
-        """Process all available raw data"""
-        logger.info("Starting data processing for all exchanges and pairs")
+        """Process all available raw data (auto-discovers fetched files)."""
+        logger.info("Starting data processing — discovering available raw files...")
 
-        exchanges = ['binance', 'coinbase', 'kraken']
+        available = self.discover_raw_files()
+        if not available:
+            logger.warning(
+                f"No raw CSV files found in {self.raw_data_dir}. "
+                "Run fetch_real_historical_data.py first."
+            )
+            return
+
+        logger.info(f"Found {len(available)} raw files to process")
         total_processed = 0
-        total_pairs = len(exchanges) * len(self.mica_pairs)
 
-        for exchange in exchanges:
-            for pair in self.mica_pairs:
-                if self.process_pair_data(exchange, pair):
-                    total_processed += 1
+        for i, (exchange, pair) in enumerate(available, 1):
+            logger.info(f"[{i}/{len(available)}] {exchange} {pair}")
+            if self.process_pair_data(exchange, pair):
+                total_processed += 1
 
-                logger.info(f"Progress: {total_processed}/{total_pairs} pairs processed")
-
-        logger.info(f"Data processing completed! {total_processed}/{total_pairs} pairs successfully processed")
+        logger.info(
+            f"Data processing complete: {total_processed}/{len(available)} pairs processed"
+        )
 
     def generate_summary_report(self):
         """Generate overall summary report"""

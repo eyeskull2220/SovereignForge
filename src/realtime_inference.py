@@ -159,11 +159,11 @@ class SecureModelLoader:
         with self.model_lock:
             try:
                 # Try multiple naming conventions for backward compatibility
-                # Convert BTCUSDT to BTC_USDT format for file matching
-                pair_with_underscore = trading_pair.replace('USDT', '_USDT')
+                # Convert BTCUSDC to BTC_USDC format for file matching
+                pair_with_underscore = trading_pair.replace('USDC', '_USDC')
                 possible_model_names = [
                     f"{trading_pair}_model.pt",  # Expected format
-                    f"final_{pair_with_underscore}.pth",  # Phase 3 format (BTC_USDT)
+                    f"final_{pair_with_underscore}.pth",  # Phase 3 format (BTC_USDC)
                     f"best_{pair_with_underscore}_epoch_0.pth",  # Training format
                 ]
 
@@ -216,7 +216,7 @@ class SecureModelLoader:
                 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
                 # Load checkpoint and extract model_state_dict
-                checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+                checkpoint = torch.load(model_path, map_location=device, weights_only=True)
 
                 # Extract model_state_dict from checkpoint
                 if 'model_state_dict' in checkpoint:
@@ -341,7 +341,8 @@ class RealTimeInferenceService:
             logger.warning("Personal Security Manager not available")
 
         # Trading pairs and models (expected by integration tests)
-        self.pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT']
+        self.pairs = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
+                      'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC']
         self.models = {}  # Will be populated by load_models
         self.buffers = [[] for _ in self.pairs]  # Data buffers for each pair
 
@@ -633,12 +634,12 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
 
     # Initialize service
-    trading_pairs = ["BTCUSDT", "ETHUSDT", "XRPUSDT"]
+    trading_pairs = ["BTCUSDC", "ETHUSDC", "XRPUSDC"]
     if initialize_inference_service(trading_pairs):
         logger.info("Inference service ready")
 
         # Example inference (would need real market data)
-        # result = infer_signal("BTCUSDT", sample_market_data)
+        # result = infer_signal("BTCUSDC", sample_market_data)
         # print(f"Arbitrage signal: {result.arbitrage_signal}")
 
         # Health check

@@ -13,6 +13,14 @@ import time
 
 logger = logging.getLogger(__name__)
 
+# MiCA-compliant trading pairs (USDC and RLUSD only — no USDT)
+MICA_COMPLIANT_PAIRS = [
+    'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
+    'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
+    'XRP/RLUSD', 'XLM/RLUSD', 'HBAR/RLUSD', 'ALGO/RLUSD', 'ADA/RLUSD',
+    'LINK/RLUSD', 'IOTA/RLUSD', 'VET/RLUSD',
+]
+
 @dataclass
 class ArbitrageOpportunity:
     """Represents a detected arbitrage opportunity"""
@@ -52,7 +60,7 @@ class OpportunityFilter:
         self.min_probability = min_probability
         self.min_spread = min_spread
         self.max_risk_score = max_risk_score
-        self.compliance_enabled = False  # Disabled by default for testing
+        self.compliance_enabled = True  # MiCA compliance enforced
 
         # Statistics
         self.filtered_count = 0
@@ -109,10 +117,15 @@ class OpportunityFilter:
         )
 
     def _check_compliance(self, opportunity: ArbitrageOpportunity) -> bool:
-        """Check MiCA compliance (placeholder)"""
-        # Check if pair is in whitelist
-        whitelist = ['XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'XDC/USDC', 'ONDO/USDC', 'VET/USDC', 'XRP/RLUSD', 'XLM/RLUSD', 'HBAR/RLUSD', 'ALGO/RLUSD', 'ADA/RLUSD', 'LINK/RLUSD', 'IOTA/RLUSD', 'XDC/RLUSD', 'ONDO/RLUSD', 'VET/RLUSD']
-        return opportunity.pair in whitelist
+        """Check MiCA compliance using MiCAComplianceEngine."""
+        try:
+            from compliance import MiCAComplianceEngine
+            if not hasattr(self, '_compliance_engine'):
+                self._compliance_engine = MiCAComplianceEngine(personal_deployment=True)
+            return self._compliance_engine.is_pair_compliant(opportunity.pair)
+        except ImportError:
+            logger.warning("MiCAComplianceEngine not available — using built-in pair whitelist")
+            return opportunity.pair in MICA_COMPLIANT_PAIRS
 
     def get_filter_stats(self) -> Dict[str, int]:
         """Get filter statistics"""
@@ -160,6 +173,33 @@ class LiveArbitragePipeline:
             logger.warning("TelegramAlertSystem not available, using mock")
             self.alert_system = MockAlertSystem()
 
+        # Cache layer (Redis + LRU in-memory fallback)
+        try:
+            from cache_layer import get_cache
+            self.cache = get_cache()
+            logger.info("CacheManager initialised (Redis + LRU fallback)")
+        except ImportError:
+            logger.warning("cache_layer not available — caching disabled")
+            self.cache = None
+
+        # Per-exchange rate limiter (token bucket)
+        try:
+            from exchange_rate_limiter import get_rate_limiter
+            self.rate_limiter = get_rate_limiter()
+            logger.info("RateLimiterManager initialised")
+        except ImportError:
+            logger.warning("exchange_rate_limiter not available — rate limiting disabled")
+            self.rate_limiter = None
+
+        # Multi-channel alert router (Telegram primary + Email/SMS backup)
+        try:
+            from multi_channel_alerts import get_alert_router
+            self.alert_router = get_alert_router()
+            logger.info("AlertRouter initialised (multi-channel)")
+        except ImportError:
+            logger.warning("multi_channel_alerts not available — using Telegram-only alerts")
+            self.alert_router = None
+
         # Pipeline statistics
         self.stats = {
             'opportunities_detected': 0,
@@ -188,14 +228,66 @@ class LiveArbitragePipeline:
         self.stats['opportunities_detected'] += 1
 
         try:
+            # Acquire rate limit token for the primary exchange before proceeding
+            if self.rate_limiter and opportunity.exchanges:
+                allowed = await self.rate_limiter.acquire(
+                    opportunity.exchanges[0], endpoint_type="rest_private", wait=False
+                )
+                if not allowed:
+                    logger.debug(f"Rate limited on {opportunity.exchanges[0]} — skipping opportunity")
+                    self.stats['opportunities_filtered'] += 1
+                    return
+
             # Apply risk filtering
             if hasattr(self.opportunity_filter, 'validate_opportunity'):
                 if not self.opportunity_filter.validate_opportunity(opportunity):
                     self.stats['opportunities_filtered'] += 1
                     return
 
-            # Send alert
-            if hasattr(self.alert_system, 'send_opportunity_alert'):
+            # Cache the opportunity
+            if self.cache is not None:
+                try:
+                    await self.cache.cache_opportunity(
+                        f"{opportunity.pair}:{opportunity.timestamp}",
+                        {
+                            'pair': opportunity.pair,
+                            'probability': opportunity.probability,
+                            'confidence': opportunity.confidence,
+                            'exchanges': opportunity.exchanges,
+                            'profit_potential': opportunity.profit_potential,
+                        }
+                    )
+                except Exception:
+                    pass  # Cache failure is non-fatal
+
+            # Send alert via multi-channel router (primary), fall back to Telegram-only
+            if self.alert_router is not None:
+                try:
+                    from multi_channel_alerts import AlertPriority, Alert as MCAlert
+                    priority = (
+                        AlertPriority.HIGH if opportunity.probability >= 0.8
+                        else AlertPriority.MEDIUM
+                    )
+                    await self.alert_router.send(
+                        MCAlert(
+                            title=f"Arbitrage Opportunity: {opportunity.pair}",
+                            message=(
+                                f"Probability: {opportunity.probability:.1%}  "
+                                f"Confidence: {opportunity.confidence:.1%}  "
+                                f"Profit: {opportunity.profit_potential:.4f}  "
+                                f"Exchanges: {', '.join(opportunity.exchanges)}"
+                            ),
+                            priority=priority,
+                            category="arbitrage",
+                        )
+                    )
+                    self.stats['alerts_sent'] += 1
+                except Exception as e:
+                    logger.warning(f"Multi-channel alert failed, falling back to Telegram: {e}")
+                    if hasattr(self.alert_system, 'send_opportunity_alert'):
+                        await self.alert_system.send_opportunity_alert(opportunity)
+                        self.stats['alerts_sent'] += 1
+            elif hasattr(self.alert_system, 'send_opportunity_alert'):
                 await self.alert_system.send_opportunity_alert(opportunity)
                 self.stats['alerts_sent'] += 1
 
@@ -228,9 +320,12 @@ class MockDataService:
         return {'is_running': True, 'data_sources': 5, 'active_callbacks': 1}
 
 class MockInferenceService:
-    """Mock inference service"""
+    """Mock inference service (MiCA-compliant USDC pairs only)"""
     def __init__(self):
-        self.pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT']
+        self.pairs = [
+            'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
+            'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
+        ]
         self.models = {}
 
     def add_opportunity_callback(self, callback):

@@ -20,8 +20,8 @@ logger = logging.getLogger(__name__)
 class RealDataFetcher:
     """Fetches real historical data from exchanges using CCXT"""
 
-    def __init__(self, data_directory: str = "E:\\SovereignForge\\data"):
-        self.data_directory = data_directory
+    def __init__(self, data_directory: str = None):
+        self.data_directory = data_directory or os.path.join(os.path.dirname(__file__), '..', 'data')
         self.exchanges = {}
 
         # Initialize exchanges and load markets
@@ -36,9 +36,8 @@ class RealDataFetcher:
 
         # MiCA compliant pairs (only these are allowed)
         self.mica_pairs = [
-            'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT',
-            'LINK/USDT', 'IOTA/USDT', 'XDC/USDT', 'ONDO/USDT', 'VET/USDT',
-            'USDC/USDT', 'RLUSD/USDT', 'BTC/USDT', 'ETH/USDT'
+            'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC',
+            'LINK/USDC', 'IOTA/USDC', 'VET/USDC', 'BTC/USDC', 'ETH/USDC'
         ]
 
         # Ensure data directory exists

@@ -4,7 +4,7 @@
 
 ## Current Status
 
-- **Tests**: 155 passing, 2 skipped (GPU markers)
+- **Tests**: 193 passing, 2 skipped (GPU markers)
 - **Lint**: Clean — ruff passes on both src/ and tests/
 - **MiCA Compliance**: Clean — 0 USDT violations in src/
 - **Models**: 5/10 above 80% accuracy threshold, 4 need retraining, 1 missing (VET/USDC)
@@ -25,9 +25,9 @@
 
 | Issue | Location | Fix |
 |-------|----------|-----|
-| Mock services in production pipeline | `src/live_arbitrage_pipeline.py:153,160` | Wire real `WebSocketConnector` and `RealtimeInferenceService` |
-| 3 stub .pth files (<200 bytes) | `models/strategies/dca_*`, `fib_*`, `grid_*` | Delete or train real models |
-| 18MB `warm_start_state.json` | repo root | Consider .gitignore or lazy-loading |
+| Mock services in production pipeline | `src/live_arbitrage_pipeline.py` | Already wired — mocks only used when deps missing (e.g. no torch) |
+| ~~3 stub .pth files~~ | ~~`models/strategies/`~~ | Resolved — no stub files remain |
+| ~~18MB `warm_start_state.json`~~ | ~~repo root~~ | Resolved — in .gitignore, removed from tracking |
 
 ### Recently Fixed
 
@@ -45,6 +45,10 @@
 | 16 stale docs deleted | pending commit — PHASE2_*, handoffs, clinerules, etc. |
 | 81 new tests added | pending commit — compliance, monitoring, risk, pipeline, executor |
 | test_risk_management.py rewritten | pending commit — matched to actual RiskManager API |
+| ML weight loading fixed | `2db7c3d` — inference uses trained AdvancedArbitrageDetector weights |
+| Pre-trade balance validation | `2db7c3d` — OrderExecutor checks funds before placing orders |
+| Data integration service tests | pending commit — 21 new tests for HybridDataIntegrationService |
+| warm_start_state.json untracked | pending commit — removed from git tracking (already in .gitignore) |
 
 ### Not Broken (Confirmed Working)
 

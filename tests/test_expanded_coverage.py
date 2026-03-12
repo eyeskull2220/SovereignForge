@@ -1132,3 +1132,243 @@ class TestPreTradeBalanceCheck:
             assert err == ''
 
         asyncio.run(run())
+
+    def test_balance_check_exchange_unreachable(self):
+        """Should fail when get_account_balance returns None (exchange down)."""
+        from order_executor import OrderExecutor
+
+        executor = OrderExecutor.__new__(OrderExecutor)
+        executor.exchanges = {'binance': Mock(), 'coinbase': Mock()}
+        executor.get_account_balance = Mock(return_value=None)
+
+        trade_params = {
+            'symbol': 'BTC/USDC', 'buy_exchange': 'binance',
+            'sell_exchange': 'coinbase', 'quantity': 0.1,
+            'buy_price': 50000.0, 'sell_price': 50250.0,
+        }
+
+        async def run():
+            ok, err = await executor._check_sufficient_balance(trade_params)
+            assert not ok
+            assert 'Cannot fetch balance' in err
+
+        asyncio.run(run())
+
+
+# ── Data Integration Service ──────────────────────────────────────────────
+
+class TestHybridDataIntegrationService:
+    """Tests for src/data_integration_service.py"""
+
+    def test_init_creates_connections(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        assert len(svc.connections) == 5
+        assert 'binance' in svc.connections
+        assert 'kraken' in svc.connections
+
+    def test_init_connections_disconnected(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        for status in svc.connections.values():
+            assert not status.connected
+            assert status.reconnect_attempts == 0
+            assert status.error_count == 0
+
+    def test_add_data_callback(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        cb = Mock()
+        svc.add_data_callback(cb)
+        assert cb in svc.data_callbacks
+
+    def test_get_service_status(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        status = svc.get_service_status()
+        assert 'is_running' in status
+        assert 'data_sources' in status
+        assert status['data_sources'] == 5
+        assert 'websocket_connections' in status
+
+    def test_get_connection_health(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        health = svc.get_connection_health()
+        assert len(health) == 5
+        for exchange, info in health.items():
+            assert 'connected' in info
+            assert 'healthy' in info
+            assert not info['healthy']  # Not connected yet
+
+    def test_websocket_urls(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        assert 'binance' in svc._get_websocket_url('binance')
+        assert 'coinbase' in svc._get_websocket_url('coinbase')
+        assert 'kraken' in svc._get_websocket_url('kraken')
+        assert svc._get_websocket_url('unknown') == ''
+
+    def test_create_subscription_message_binance(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        msg = svc._create_subscription_message('binance', ['BTC/USDC', 'ETH/USDC'])
+        assert msg is not None
+        assert msg['method'] == 'SUBSCRIBE'
+        assert len(msg['params']) == 2
+
+    def test_create_subscription_message_unknown(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        msg = svc._create_subscription_message('unknown_exchange', ['BTC/USDC'])
+        assert msg is None
+
+    def test_create_heartbeat_message(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        assert svc._create_heartbeat_message('binance') is not None
+        assert svc._create_heartbeat_message('unknown') is None
+
+    def test_initialize(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+
+        async def run():
+            await svc.initialize()
+            # initialize() should not set is_running
+            assert not svc.is_running
+
+        asyncio.run(run())
+
+    def test_is_healthy_when_not_running(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+
+        async def run():
+            return await svc.is_healthy()
+
+        assert not asyncio.run(run())
+
+    def test_handle_market_data_calls_callbacks(self):
+        from data_integration_service import HybridDataIntegrationService, MarketData
+        svc = HybridDataIntegrationService()
+        received = []
+        svc.add_data_callback(lambda data: received.append(data))
+
+        market_data = MarketData(
+            exchange='binance', pair='XRP/USDC', timestamp=time.time(),
+            price=1.0, volume=1000, bid_price=0.999, ask_price=1.001,
+            bid_volume=500, ask_volume=500,
+        )
+
+        async def run():
+            await svc._handle_market_data(market_data)
+
+        asyncio.run(run())
+        assert len(received) == 1
+        assert received[0].pair == 'XRP/USDC'
+
+    def test_handle_market_data_filters_noncompliant(self):
+        from data_integration_service import HybridDataIntegrationService, MarketData
+        svc = HybridDataIntegrationService()
+        received = []
+        svc.add_data_callback(lambda data: received.append(data))
+
+        # Use a non-compliant pair
+        svc.compliance_engine = Mock()
+        svc.compliance_engine.is_pair_compliant = Mock(return_value=False)
+
+        market_data = MarketData(
+            exchange='binance', pair='SCAM/USDT', timestamp=time.time(),
+            price=0.01, volume=100, bid_price=0.009, ask_price=0.011,
+            bid_volume=50, ask_volume=50,
+        )
+
+        async def run():
+            await svc._handle_market_data(market_data)
+
+        asyncio.run(run())
+        assert len(received) == 0  # Filtered out
+
+    def test_handle_market_data_async_callback(self):
+        from data_integration_service import HybridDataIntegrationService, MarketData
+        svc = HybridDataIntegrationService()
+        received = []
+
+        async def async_cb(data):
+            received.append(data)
+
+        svc.add_data_callback(async_cb)
+
+        market_data = MarketData(
+            exchange='binance', pair='XRP/USDC', timestamp=time.time(),
+            price=1.0, volume=1000, bid_price=0.999, ask_price=1.001,
+            bid_volume=500, ask_volume=500,
+        )
+
+        async def run():
+            await svc._handle_market_data(market_data)
+
+        asyncio.run(run())
+        assert len(received) == 1
+
+    def test_parse_market_data_binance(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        data = {
+            'stream': 'xrpusdc@ticker',
+            'data': {
+                's': 'XRPUSDC', 'c': '1.05', 'v': '500000',
+                'b': '1.049', 'a': '1.051', 'B': '10000', 'A': '8000',
+            }
+        }
+        result = svc._parse_market_data('binance', data)
+        assert result is not None
+        assert result.exchange == 'binance'
+        assert result.price == 1.05
+        assert result.volume == 500000.0
+
+    def test_parse_market_data_unknown_exchange(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        result = svc._parse_market_data('unknown', {'some': 'data'})
+        assert result is None
+
+    def test_handle_connection_failure_increments_attempts(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+
+        async def run():
+            initial = svc.connections['binance'].reconnect_attempts
+            await svc._handle_connection_failure('binance')
+            assert svc.connections['binance'].reconnect_attempts == initial + 1
+
+        asyncio.run(run())
+
+    def test_market_data_dataclass(self):
+        from data_integration_service import MarketData
+        md = MarketData(
+            exchange='binance', pair='ADA/USDC', timestamp=1234567890.0,
+            price=0.5, volume=100000, bid_price=0.499, ask_price=0.501,
+            bid_volume=50000, ask_volume=50000,
+        )
+        assert md.exchange == 'binance'
+        assert md.pair == 'ADA/USDC'
+
+    def test_connection_status_dataclass(self):
+        from data_integration_service import ConnectionStatus
+        cs = ConnectionStatus(
+            exchange='kraken', connected=True,
+            last_message=time.time(), reconnect_attempts=0, error_count=0,
+        )
+        assert cs.exchange == 'kraken'
+        assert cs.connected
+
+    def test_mock_compliance_engine(self):
+        from data_integration_service import MockComplianceEngine
+        engine = MockComplianceEngine()
+        assert engine.is_asset_compliant('BTC')
+        assert engine.is_asset_compliant('XRP')
+        assert engine.is_pair_compliant('BTC/USDC')
+        compliant = engine.filter_compliant_pairs(['BTC/USDC', 'UNKNOWN/USDC'])
+        assert 'BTC/USDC' in compliant

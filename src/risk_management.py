@@ -11,10 +11,33 @@ from datetime import datetime
 import math
 import numpy as np
 
-# Import Telegram alerts for risk event notifications
-from telegram_alerts import send_system_alert
-
 logger = logging.getLogger(__name__)
+
+
+def _fire_alert(title: str, message: str, level: str = "warning") -> None:
+    """
+    Fire-and-forget alert from synchronous code.
+    Schedules the coroutine on the running event loop if one exists,
+    otherwise logs the alert so no information is lost.
+    """
+    import asyncio
+    try:
+        from telegram_alerts import send_system_alert
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            loop.create_task(send_system_alert(title, message, level))
+        else:
+            # No running loop — use multi_channel_alerts synchronous path or just log
+            try:
+                from multi_channel_alerts import get_alert_router, Alert, AlertPriority
+                pmap = {"error": AlertPriority.HIGH, "warning": AlertPriority.MEDIUM,
+                        "success": AlertPriority.LOW, "info": AlertPriority.LOW}
+                priority = pmap.get(level, AlertPriority.MEDIUM)
+                asyncio.run(get_alert_router().send(Alert(title=title, message=message, priority=priority)))
+            except Exception:
+                logger.warning(f"ALERT [{level.upper()}] {title}: {message}")
+    except Exception as e:
+        logger.warning(f"ALERT [{level.upper()}] {title}: {message} (send failed: {e})")
 
 @dataclass
 class Position:
@@ -424,13 +447,7 @@ class RiskManager:
                     alert_title = f"Position Closed: {reason.upper()}"
                     alert_message = f"Pair: {pair}\nExit Price: ${exit_price:.2f}\nReason: {reason.replace('_', ' ').title()}"
                     alert_level = "warning" if reason == "stop_loss" else "success" if reason == "take_profit" else "info"
-
-                    try:
-                        # Send alert asynchronously (fire and forget)
-                        import asyncio
-                        asyncio.create_task(send_system_alert(alert_title, alert_message, alert_level))
-                    except Exception as e:
-                        logger.error(f"Failed to send position closure alert: {e}")
+                    _fire_alert(alert_title, alert_message, alert_level)
 
             return closed_pairs
 
@@ -459,31 +476,22 @@ class RiskManager:
                 risk_violations.append(violation_msg)
 
                 # Send alert for risk limit breach
-                try:
-                    import asyncio
-                    asyncio.create_task(send_system_alert(
-                        "Risk Limit Breach: Portfolio Exposure",
-                        f"Current: {total_exposure_pct:.1%}\nLimit: {self.risk_limits.max_portfolio_risk_pct:.1%}\nAction Required: Reduce exposure",
-                        "error"
-                    ))
-                except Exception as e:
-                    logger.error(f"Failed to send portfolio exposure alert: {e}")
+                _fire_alert(
+                    "Risk Limit Breach: Portfolio Exposure",
+                    f"Current: {total_exposure_pct:.1%}\nLimit: {self.risk_limits.max_portfolio_risk_pct:.1%}\nAction Required: Reduce exposure",
+                    "error"
+                )
 
             if abs(daily_pnl_pct) > self.risk_limits.max_daily_loss_pct:
                 violation_msg = f"Daily P&L ({daily_pnl_pct:.1%}) exceeds limit ({self.risk_limits.max_daily_loss_pct:.1%})"
                 risk_violations.append(violation_msg)
 
                 # Send alert for daily loss limit breach
-                try:
-                    import asyncio
-                    alert_level = "error" if daily_pnl_pct < -self.risk_limits.max_daily_loss_pct else "warning"
-                    asyncio.create_task(send_system_alert(
-                        "Risk Limit Breach: Daily Loss",
-                        f"Current: {daily_pnl_pct:.1%}\nLimit: {self.risk_limits.max_daily_loss_pct:.1%}\nDaily P&L: ${self.daily_pnl:.2f}",
-                        alert_level
-                    ))
-                except Exception as e:
-                    logger.error(f"Failed to send daily loss alert: {e}")
+                _fire_alert(
+                    "Risk Limit Breach: Daily Loss",
+                    f"Current: {daily_pnl_pct:.1%}\nLimit: {self.risk_limits.max_daily_loss_pct:.1%}\nDaily P&L: ${self.daily_pnl:.2f}",
+                    "error" if daily_pnl_pct < -self.risk_limits.max_daily_loss_pct else "warning"
+                )
 
             return {
                 'portfolio_value': portfolio_value,
@@ -550,15 +558,11 @@ class RiskManager:
                     closed_count += 1
 
             # Send emergency stop alert
-            try:
-                import asyncio
-                asyncio.create_task(send_system_alert(
-                    "EMERGENCY STOP EXECUTED",
-                    f"Closed {closed_count}/{len(positions_to_close)} positions\nPortfolio protected from further losses\nManual intervention required",
-                    "error"
-                ))
-            except Exception as e:
-                logger.error(f"Failed to send emergency stop alert: {e}")
+            _fire_alert(
+                "EMERGENCY STOP EXECUTED",
+                f"Closed {closed_count}/{len(positions_to_close)} positions\nPortfolio protected from further losses\nManual intervention required",
+                "error"
+            )
 
             logger.warning(f"Emergency stop executed: closed {closed_count}/{len(positions_to_close)} positions")
             return closed_count
@@ -566,3 +570,18 @@ class RiskManager:
         except Exception as e:
             logger.error(f"Error in emergency stop: {e}")
             return 0
+
+
+# ---------------------------------------------------------------------------
+# Module-level singleton
+# ---------------------------------------------------------------------------
+
+_risk_manager: Optional[RiskManager] = None
+
+
+def get_risk_manager(initial_capital: float = 10000.0) -> RiskManager:
+    """Return the module-level RiskManager singleton, creating it on first call."""
+    global _risk_manager
+    if _risk_manager is None:
+        _risk_manager = RiskManager(initial_capital=initial_capital)
+    return _risk_manager

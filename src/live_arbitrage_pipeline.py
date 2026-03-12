@@ -263,13 +263,13 @@ class LiveArbitragePipeline:
             # Send alert via multi-channel router (primary), fall back to Telegram-only
             if self.alert_router is not None:
                 try:
-                    from multi_channel_alerts import AlertPriority
+                    from multi_channel_alerts import AlertPriority, Alert as MCAlert
                     priority = (
                         AlertPriority.HIGH if opportunity.probability >= 0.8
                         else AlertPriority.MEDIUM
                     )
                     await self.alert_router.send(
-                        __import__('multi_channel_alerts').Alert(
+                        MCAlert(
                             title=f"Arbitrage Opportunity: {opportunity.pair}",
                             message=(
                                 f"Probability: {opportunity.probability:.1%}  "

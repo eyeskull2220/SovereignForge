@@ -36,7 +36,7 @@ class TestTelegramAlertSystem:
     def sample_opportunity(self):
         """Create sample arbitrage opportunity"""
         return ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=1640995200.0,  # 2022-01-01 00:00:00
             probability=0.85,
             confidence=0.92,
@@ -122,7 +122,7 @@ class TestTelegramAlertSystem:
         message = alert_system._format_opportunity_message(sample_opportunity)
 
         assert "🚀 *ARBITRAGE OPPORTUNITY DETECTED*" in message
-        assert "BTC/USDT" in message
+        assert "BTC/USDC" in message
         assert "85.0%" in message  # probability
         assert "0.0012" in message  # spread
         assert "2.34%" in message  # profit potential

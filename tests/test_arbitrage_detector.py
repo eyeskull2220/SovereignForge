@@ -20,7 +20,7 @@ class TestArbitrageOpportunity(unittest.TestCase):
     def test_opportunity_creation(self):
         """Test creating an arbitrage opportunity"""
         opp = ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=1640995200.0,  # 2022-01-01 00:00:00 UTC
             probability=0.85,
             confidence=0.92,
@@ -32,7 +32,7 @@ class TestArbitrageOpportunity(unittest.TestCase):
             profit_potential=0.0234
         )
 
-        assert opp.pair == "BTC/USDT"
+        assert opp.pair == "BTC/USDC"
         assert opp.probability == 0.85
         assert opp.confidence == 0.92
         assert opp.spread_prediction == 0.0024
@@ -44,7 +44,7 @@ class TestArbitrageOpportunity(unittest.TestCase):
     def test_opportunity_string_representation(self):
         """Test string representation of opportunity"""
         opp = ArbitrageOpportunity(
-            pair="ETH/USDT",
+            pair="ETH/USDC",
             timestamp=time.time(),
             probability=0.75,
             confidence=0.88,
@@ -58,7 +58,7 @@ class TestArbitrageOpportunity(unittest.TestCase):
 
         # Should not raise any exceptions
         str_repr = str(opp)
-        assert "ETH/USDT" in str_repr
+        assert "ETH/USDC" in str_repr
         assert "0.75" in str_repr
 
 
@@ -76,7 +76,7 @@ class TestOpportunityFilter(unittest.TestCase):
     def test_filter_high_probability_opportunity(self):
         """Test filtering opportunity with high probability"""
         opp = ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=time.time(),
             probability=0.85,  # Above threshold
             confidence=0.9,
@@ -100,7 +100,7 @@ class TestOpportunityFilter(unittest.TestCase):
     def test_filter_low_probability_opportunity(self):
         """Test filtering opportunity with low probability"""
         opp = ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=time.time(),
             probability=0.5,  # Below threshold
             confidence=0.8,
@@ -119,7 +119,7 @@ class TestOpportunityFilter(unittest.TestCase):
     def test_filter_small_spread_opportunity(self):
         """Test filtering opportunity with small spread"""
         opp = ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=time.time(),
             probability=0.8,
             confidence=0.85,
@@ -138,7 +138,7 @@ class TestOpportunityFilter(unittest.TestCase):
     def test_filter_high_risk_opportunity(self):
         """Test filtering opportunity with high risk"""
         opp = ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=time.time(),
             probability=0.8,
             confidence=0.6,  # Low confidence = high risk
@@ -158,7 +158,7 @@ class TestOpportunityFilter(unittest.TestCase):
     def test_generate_alerts_high_probability(self):
         """Test alert generation for high probability opportunity"""
         opp = ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=time.time(),
             probability=0.95,  # Very high probability
             confidence=0.9,
@@ -178,7 +178,7 @@ class TestOpportunityFilter(unittest.TestCase):
     def test_generate_alerts_large_spread(self):
         """Test alert generation for large spread opportunity"""
         opp = ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=time.time(),
             probability=0.8,
             confidence=0.85,
@@ -198,7 +198,7 @@ class TestOpportunityFilter(unittest.TestCase):
     def test_generate_alerts_low_volume(self):
         """Test alert generation for low volume opportunity"""
         opp = ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=time.time(),
             probability=0.8,
             confidence=0.85,
@@ -222,7 +222,7 @@ class TestFilteredOpportunity(unittest.TestCase):
     def test_filtered_opportunity_creation(self):
         """Test creating a filtered opportunity"""
         opp = ArbitrageOpportunity(
-            pair="BTC/USDT",
+            pair="BTC/USDC",
             timestamp=time.time(),
             probability=0.8,
             confidence=0.85,
@@ -254,7 +254,7 @@ class TestFilteredOpportunity(unittest.TestCase):
     def test_filtered_opportunity_default_values(self):
         """Test default values in filtered opportunity"""
         opp = ArbitrageOpportunity(
-            pair="ETH/USDT",
+            pair="ETH/USDC",
             timestamp=time.time(),
             probability=0.75,
             confidence=0.8,

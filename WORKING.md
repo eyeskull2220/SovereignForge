@@ -4,7 +4,7 @@
 
 ## Current Status
 
-- **Tests**: 231 passing, 78 skipped (GPU/torch/scipy markers)
+- **Tests**: 331 passing, 80 skipped (GPU/torch/scipy/prometheus markers)
 - **Lint**: Clean — ruff passes on both src/ and tests/
 - **MiCA Compliance**: Clean — 0 USDT violations in src/
 - **Models**: 5/10 above 80% accuracy threshold, 4 need retraining, 1 missing (VET/USDC)
@@ -41,6 +41,7 @@
 | StrategyEnsemble wired into pipeline | pending — collective brain gates opportunities by multi-strategy agreement |
 | 9 ensemble integration tests | pending — buffer, readiness, agreement threshold, opportunity flow |
 | 88 coverage expansion tests | pending — arbitrage_detector, performance_analyzer, personal_security, dynamic_risk, backtester |
+| 102 coverage batch 2 tests | `1d2daf2` — cache_layer, monitoring, xactions, training_monitor, grok_reasoning, database, exchange_rate_limiter, websocket_validator |
 | `asyncio.run()` in async context | `93ed347` — replaced with `loop.run_until_complete()` |
 | `time.sleep(300)` blocking | `93ed347` — replaced with `threading.Event.wait(timeout=300)` |
 | Monitoring wired into main.py | `93ed347` — factory function with no-op fallback |

@@ -36,9 +36,8 @@ class RealDataFetcher:
 
         # MiCA compliant pairs (only these are allowed)
         self.mica_pairs = [
-            'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT',
-            'LINK/USDT', 'IOTA/USDT', 'XDC/USDT', 'ONDO/USDT', 'VET/USDT',
-            'USDC/USDT', 'RLUSD/USDT', 'BTC/USDT', 'ETH/USDT'
+            'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC',
+            'LINK/USDC', 'IOTA/USDC', 'VET/USDC', 'BTC/USDC', 'ETH/USDC'
         ]
 
         # Ensure data directory exists

@@ -10,7 +10,7 @@ services:
     container_name: sovereignforge-trading
     ports:
       - "8000:8000"  # API server
-      - "9090:9090"  # Metrics/Prometheus
+      - "9091:9090"  # App internal metrics (host:9091 → container:9090, avoids conflict with prometheus:9090)
     environment:
       - CUDA_VISIBLE_DEVICES=0
       - PYTORCH_CUDA_ALLOC_CONF=max_split_size_mb:512

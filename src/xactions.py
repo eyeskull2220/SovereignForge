@@ -473,14 +473,14 @@ if __name__ == "__main__":
     legs = [
         TransactionLeg(
             exchange="binance",
-            symbol="BTCUSDT",
+            symbol="BTCUSDC",
             side="buy",
             quantity=Decimal('0.001'),
             price=Decimal('50000')
         ),
         TransactionLeg(
             exchange="coinbase",
-            symbol="BTCUSDT",
+            symbol="BTCUSDC",
             side="sell",
             quantity=Decimal('0.001'),
             price=Decimal('50100')

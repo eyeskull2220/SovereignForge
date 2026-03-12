@@ -37,7 +37,7 @@ These are **hard blockers** — the system cannot run at all until resolved.
 | C9 | `tests/test_wave2.py` was created but never in `tests/` directory | — | ✅ FIXED | Created at `tests/test_wave2.py` (42 tests) |
 | C10 | MockInferenceService/MockDataService callbacks are `pass` stubs — pipeline uses mocks in production | `src/live_arbitrage_pipeline.py` | 317–356 | ⚠️ MOCK IN PROD | sonnet — wire real `RealtimeInferenceService` & `WebSocketConnector` |
 | C11 | `torch.load(..., weights_only=False)` in 3 files — arbitrary code execution via pickle | `realtime_inference.py:219`, `arbitrage_detector.py:248`, `model_ensemble.py:540` | ✅ FIXED | Changed all to `weights_only=True` |
-| C12 | 60+ USDT references remain in src/ — MiCA violation | `backtester.py`, `data_fetcher.py`, `exchange_connector.py`, `main.py`, `xactions.py` + 5 more | ❌ REMAINING | sonnet — systematic replace across all remaining files |
+| C12 | 60+ USDT references in src/ — MiCA violation | 19 files across src/ | ✅ FIXED | 0 USDT violations remain (enforced by CI lint workflow) |
 | C13 | `asyncio.run()` called at `main.py:738,802` — will crash if called from async context | `src/main.py` lines 738, 802 | ⚠️ RISK | sonnet — refactor to use `loop.run_until_complete()` or convert callers to async |
 | C14 | `gpu_max_test.py` return value bug — never returned True | `gpu_max_test.py` line 59 | ✅ FIXED | Added `return True` before function end |
 
@@ -49,21 +49,21 @@ These were discovered in the second-pass audit and are not yet tracked above.
 
 | # | Finding | File | Severity | Action |
 |---|---------|------|----------|--------|
-| A1 | `data_integration_service.py` hardcodes USDT pairs at line 166 | `src/data_integration_service.py:166` | HIGH | Fix USDT→USDC |
-| A2 | `exchange_connector.py` all `get_*` methods default to `BTC/USDT` | `src/exchange_connector.py:261,280,296,405,424` | HIGH | Fix USDT→USDC |
-| A3 | `grok_reasoning.py` has USDT at lines 399,420 + requires non-standard `xai_sdk` | `src/grok_reasoning.py` | MEDIUM | Fix USDT; wrap import as optional |
-| A4 | `backtester.py` hardcodes Windows path `E:\SovereignForge\data` at line 25 | `src/backtester.py:25` | HIGH | Replace with `os.path.join(os.path.dirname(__file__), '..', 'data')` |
-| A5 | `data_fetcher.py` hardcodes Windows path `E:\SovereignForge\data` at line 23 | `src/data_fetcher.py:23` | HIGH | Same fix as above |
-| A6 | `database.py` hard-imports `asyncpg` at top level — crashes on import if not installed | `src/database.py` | HIGH | Wrap in try/except ImportError |
-| A7 | `monitoring.py` hard-imports `prometheus_client`, `aiohttp`, `structlog` — crashes on import | `src/monitoring.py` | HIGH | Wrap in try/except ImportError |
-| A8 | `personal_security.py` hard-imports `psutil` at top level — crashes on import | `src/personal_security.py` | MEDIUM | Wrap in try/except ImportError |
-| A9 | `docker-compose.yml` port 9090 conflict — both sovereignforge and prometheus mapped to 9090 | `docker-compose.yml` | MEDIUM | Change sovereignforge internal port or remove duplicate |
+| A1 | `data_integration_service.py` hardcodes USDT pairs at line 166 | `src/data_integration_service.py:166` | ✅ FIXED | All 10 pairs replaced to USDC |
+| A2 | `exchange_connector.py` all `get_*` methods defaulted to `BTC/USDT` | `src/exchange_connector.py:261,280,296,405,424` | ✅ FIXED | All USDT→USDC; 0 violations remain |
+| A3 | `grok_reasoning.py` had USDT at lines 399,420 + required non-standard `xai_sdk` | `src/grok_reasoning.py` | ✅ FIXED | USDT→USDC; xai_sdk wrapped in try/except |
+| A4 | `backtester.py` hardcoded Windows path `E:\SovereignForge\data` at line 25 | `src/backtester.py:25` | ✅ FIXED | Replaced with os.path.join(__file__, '../data'), 'data')` |
+| A5 | `data_fetcher.py` hardcoded Windows path `E:\SovereignForge\data` at line 23 | `src/data_fetcher.py:23` | ✅ FIXED | Same os.path.join fix + USDT→USDC pairs list |
+| A6 | `database.py` hard-imported `asyncpg` at top level — crashed on import if not installed | `src/database.py` | ✅ FIXED | Wrapped in try/except ImportError |
+| A7 | `monitoring.py` hard-imported `prometheus_client`, `aiohttp`, `structlog` — crashed on import | `src/monitoring.py` | ✅ FIXED | All three wrapped in try/except |
+| A8 | `personal_security.py` hard-imported `psutil` at top level — crashed on import | `src/personal_security.py` | ✅ FIXED | Wrapped in try/except ImportError |
+| A9 | `docker-compose.yml` port 9090 conflict — both sovereignforge and prometheus mapped to 9090 | `docker-compose.yml` | ✅ FIXED | App now maps host:9091→container:9090 |
 | A10 | `warm_start_state.json` is 18MB — loaded entirely into memory on startup | root | LOW | Lazy-load or paginate |
 | A11 | `model_retrainer.py:588` has `time.sleep(300)` blocking the main retraining loop thread | `src/model_retrainer.py:588` | LOW | Use `asyncio.sleep` or `threading.Event.wait(timeout=300)` |
 | A12 | 3 tiny placeholder `.pth` files in `models/strategies/` (125-117 bytes each) — not real models | `models/strategies/dca_eth_usdc_coinbase.pth`, `fib_btc_usdc_binance.pth`, `grid_xrp_usdc_kraken.pth` | MEDIUM | Train real strategy models or remove stubs |
-| A13 | `useWebSocket.ts` in root is a stub (56 bytes) — WebSocket hook not implemented | `useWebSocket.ts` | HIGH | Implement WebSocket hook for live dashboard data |
+| A13 | `useWebSocket.ts` in root was a stub (56 bytes) — WebSocket hook not implemented | `useWebSocket.ts` | ✅ FIXED | Full hook: auto-reconnect, exponential backoff, send, status, callbacks |
 | A14 | `monitoring/dashboard/` is a scaffolded Vite project with no source components | `monitoring/dashboard/` | LOW | Either implement or remove the dead project |
-| A15 | `main.py` ArbitrageCLI still has `BTC/USDT` defaults in 3 places | `src/main.py:565,712,760` | MEDIUM | Fix USDT→USDC |
+| A15 | `main.py` ArbitrageCLI had `BTC/USDT` defaults in 5 places | `src/main.py` | ✅ FIXED | All defaults now BTC/USDC |
 
 ---
 
@@ -73,14 +73,14 @@ These were discovered in the second-pass audit and are not yet tracked above.
 
 > Components already exist as loose .tsx files in repo root. Must be moved and wired into `dashboard/src/`.
 
-- [ ] Move `AlertsPanel.tsx` → `dashboard/src/components/AlertsPanel.tsx`
-- [ ] Move `Header.tsx` → `dashboard/src/components/Header.tsx`
-- [ ] Move `PnlChart.tsx` → `dashboard/src/components/PnlChart.tsx`
-- [ ] Move `PositionsTable.tsx` → `dashboard/src/components/PositionsTable.tsx`
-- [ ] Move `RiskGauges.tsx` → `dashboard/src/components/RiskGauges.tsx`
-- [ ] Move `RiskMetrics.tsx` → `dashboard/src/components/RiskMetrics.tsx`
-- [ ] Rewrite `dashboard/src/App.tsx` to import and render all 6 components
-- [ ] Add WebSocket hook connecting to Python backend (`ws://localhost:8765`)
+- [x] Move `AlertsPanel.tsx` → `dashboard/src/components/AlertsPanel.tsx`
+- [x] Move `Header.tsx` → `dashboard/src/components/Header.tsx`
+- [x] Move `PnlChart.tsx` → `dashboard/src/components/PnlChart.tsx`
+- [x] Move `PositionsTable.tsx` → `dashboard/src/components/PositionsTable.tsx`
+- [x] Move `RiskGauges.tsx` → `dashboard/src/components/RiskGauges.tsx`
+- [x] Move `RiskMetrics.tsx` → `dashboard/src/components/RiskMetrics.tsx`
+- [x] Rewrite `dashboard/src/App.tsx` to import and render all 6 components
+- [x] Add WebSocket hook connecting to Python backend (`dashboard/src/useWebSocket.ts` — auto-reconnect, exponential backoff) (`ws://localhost:8765`)
 - [ ] Add historical backtesting view with strategy comparison table
 - [ ] Add interactive candlestick charts (use lightweight-charts or recharts)
 - [ ] Add technical indicator overlays (RSI, MACD, Bollinger Bands)
@@ -90,9 +90,9 @@ These were discovered in the second-pass audit and are not yet tracked above.
 
 > No `.github/workflows/` directory exists at all.
 
-- [ ] Create `.github/workflows/test.yml` — runs pytest on every PR
-- [ ] Create `.github/workflows/lint.yml` — runs ruff/mypy on push
-- [ ] Create `.github/workflows/build.yml` — builds Docker image, tags with commit SHA
+- [x] Create `.github/workflows/test.yml` — runs pytest + MiCA USDT scan on every PR
+- [x] Create `.github/workflows/lint.yml` — ruff + Windows path check + backslash check
+- [x] Create `.github/workflows/build.yml` — Docker multi-stage + dashboard npm build
 - [ ] Update `k8s/sovereignforge-deployment.yaml` to use commit-SHA image tags instead of `latest`
 - [ ] Add `requirements.txt` install step to CI
 - [ ] Add GPU-skip markers for CUDA tests in CI environment

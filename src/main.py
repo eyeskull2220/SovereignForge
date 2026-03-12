@@ -684,7 +684,7 @@ class ArbitrageCLI:
         # Test order executor
         print("Testing order executor...")
         balance = self.order_executor.get_paper_balance('binance')
-        print(f"[OK] Order executor working: ${balance.get('USDT', 0):.2f} balance")
+        print(f"[OK] Order executor working: ${balance.get('USDC', 0):.2f} balance")
 
         print("System tests completed!")
 
@@ -809,7 +809,7 @@ class ArbitrageCLI:
                         # Show updated balances
                         for exchange in ['binance', 'coinbase']:
                             balance = self.order_executor.get_paper_balance(exchange)
-                            usdc = balance.get('USDC', balance.get('USDT', 0))
+                            usdc = balance.get('USDC', 0)
                             print(f"  {exchange}: ${usdc:.2f} USDC")
 
                 else:

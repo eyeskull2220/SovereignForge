@@ -42,7 +42,7 @@ ACCURACY_THRESHOLD = 0.80
 _MODEL_PATH_PATTERNS = [
     "models/strategies/arbitrage_{pair_lower}_usdc_binance.pth",
     "models/strategies/final_{pair_upper}_USDC.pth",
-    "models/strategies/final_{pair_upper}_USDT.pth",  # legacy fallback
+    "models/strategies/final_{pair_upper}_USDC.pth",  # alternate naming
     "models/{pair_upper}USDC_model.pth",
 ]
 

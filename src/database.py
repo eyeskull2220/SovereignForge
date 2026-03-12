@@ -102,7 +102,7 @@ class DatabaseManager:
                     VALUES ($1, $2, $3, $4, $5, $6, $7)
                 """,
                 result['timestamp'],
-                result.get('symbol', 'BTC/USDT'),
+                result.get('symbol', 'BTC/USDC'),
                 result['arbitrage_signal'],
                 result['confidence'],
                 result['opportunity_detected'],
@@ -125,7 +125,7 @@ class DatabaseManager:
                     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
                 """,
                 trade_result.get('timestamp', datetime.now().isoformat()),
-                trade_result.get('symbol', 'BTC/USDT'),
+                trade_result.get('symbol', 'BTC/USDC'),
                 trade_result.get('buy_exchange', 'binance'),
                 trade_result.get('sell_exchange', 'coinbase'),
                 trade_result.get('quantity', 0),

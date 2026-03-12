@@ -17,7 +17,12 @@ import sys
 import logging
 import hashlib
 import socket
-import psutil
+try:
+    import psutil
+    _HAS_PSUTIL = True
+except ImportError:
+    psutil = None
+    _HAS_PSUTIL = False
 import threading
 from typing import Dict, List, Optional, Any, Set
 from dataclasses import dataclass

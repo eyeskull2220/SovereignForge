@@ -1,0 +1,66 @@
+name: Lint
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [master, main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install linters
+        run: pip install ruff
+
+      - name: Ruff lint — src/
+        run: |
+          ruff check src/ \
+            --select E,W,F,I \
+            --ignore E501,W503,F401,E402,F841,E741 \
+            --output-format=github \
+            || true  # Advisory only until baseline is clean
+
+      - name: Ruff lint — tests/
+        run: |
+          ruff check tests/ \
+            --select E,W,F,I \
+            --ignore E501,W503,F401,E402 \
+            --output-format=github \
+            || true
+
+      - name: Check for Windows line endings (CRLF) in Python files
+        run: |
+          crlf_files=$(grep -rlU $'\r' src/ tests/ --include="*.py" 2>/dev/null || true)
+          if [ -n "$crlf_files" ]; then
+            echo "::warning::Files with CRLF line endings: $crlf_files"
+          fi
+
+      - name: Check for trailing Windows paths (E:\\)
+        run: |
+          win_paths=$(grep -rn "E:\\\\" src/ --include="*.py" || true)
+          if [ -n "$win_paths" ]; then
+            echo "$win_paths"
+            echo "::error::Hardcoded Windows paths found in src/"
+            exit 1
+          fi
+          echo "No hardcoded Windows paths found"
+
+      - name: Validate model metadata paths (no backslashes)
+        run: |
+          for f in models/*USDC_metadata.json; do
+            if grep -q '\\\\' "$f"; then
+              echo "::error::Windows backslash path in $f"
+              exit 1
+            fi
+          done
+          echo "All model metadata paths use forward slashes"

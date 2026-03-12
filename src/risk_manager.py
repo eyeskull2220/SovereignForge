@@ -82,7 +82,7 @@ class RiskManager:
         # Extract opportunity details
         spread_pct = arbitrage_opportunity.get('spread_percentage', 0)
         confidence = arbitrage_opportunity.get('confidence', 0)
-        symbol = arbitrage_opportunity.get('symbol', 'BTC/USDT')
+        symbol = arbitrage_opportunity.get('symbol', 'BTC/USDC')
 
         # Get asset-specific configuration
         if asset_config is None:
@@ -145,37 +145,37 @@ class RiskManager:
         """Get asset-specific configuration parameters"""
         # Default asset configurations for multi-asset support
         asset_configs = {
-            'BTC/USDT': {
+            'BTC/USDC': {
                 'volatility': 0.03,  # 3% daily volatility
                 'min_order_size': 0.0001,  # 0.0001 BTC minimum
                 'volatility_multiplier': 1.0
             },
-            'ETH/USDT': {
+            'ETH/USDC': {
                 'volatility': 0.04,  # 4% daily volatility
                 'min_order_size': 0.001,  # 0.001 ETH minimum
                 'volatility_multiplier': 1.0
             },
-            'XRP/USDT': {
+            'XRP/USDC': {
                 'volatility': 0.08,  # 8% daily volatility (high)
                 'min_order_size': 1,  # 1 XRP minimum
                 'volatility_multiplier': 1.5  # Higher risk adjustment
             },
-            'XLM/USDT': {
+            'XLM/USDC': {
                 'volatility': 0.07,  # 7% daily volatility
                 'min_order_size': 1,  # 1 XLM minimum
                 'volatility_multiplier': 1.4
             },
-            'HBAR/USDT': {
+            'HBAR/USDC': {
                 'volatility': 0.09,  # 9% daily volatility (very high)
                 'min_order_size': 10,  # 10 HBAR minimum
                 'volatility_multiplier': 1.6
             },
-            'ALGO/USDT': {
+            'ALGO/USDC': {
                 'volatility': 0.10,  # 10% daily volatility (very high)
                 'min_order_size': 1,  # 1 ALGO minimum
                 'volatility_multiplier': 1.7
             },
-            'ADA/USDT': {
+            'ADA/USDC': {
                 'volatility': 0.06,  # 6% daily volatility
                 'min_order_size': 1,  # 1 ADA minimum
                 'volatility_multiplier': 1.2
@@ -647,7 +647,7 @@ if __name__ == "__main__":
         'spread_percentage': 0.003,  # 0.3%
         'confidence': 0.8,
         'entry_price': 45000,
-        'symbol': 'BTC/USDT'
+        'symbol': 'BTC/USDC'
     }
 
     # Calculate position size

@@ -597,7 +597,7 @@ if __name__ == "__main__":
             batch_size, seq_len, input_dim = 1, 50, 10
             test_data = torch.randn(batch_size, seq_len, input_dim)
 
-            prediction = await ensemble.predict_ensemble(test_data, "BTC/USDT")
+            prediction = await ensemble.predict_ensemble(test_data, "BTC/USDC")
             logger.info(f"Ensemble prediction: signal={prediction.arbitrage_signal:.3f}, "
                        f"confidence={prediction.confidence_score:.3f}")
 

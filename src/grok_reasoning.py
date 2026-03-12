@@ -9,7 +9,12 @@ import json
 import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-import xai_sdk
+try:
+    import xai_sdk
+    _HAS_XAI = True
+except ImportError:
+    xai_sdk = None
+    _HAS_XAI = False
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -396,7 +401,7 @@ async def test_grok_integration():
 
     # Test opportunity analysis
     test_opportunity = {
-        "pair": "BTC/USDT",
+        "pair": "BTC/USDC",
         "exchanges": ["binance", "coinbase"],
         "spread": 0.005,
         "probability": 0.85,
@@ -417,7 +422,7 @@ async def test_grok_integration():
 
     portfolio = {
         "balance": 10000,
-        "positions": {"BTC/USDT": 0.5}
+        "positions": {"BTC/USDC": 0.5}
     }
 
     print("\\n🎯 Planning trading strategy...")

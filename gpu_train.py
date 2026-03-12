@@ -51,6 +51,7 @@ except ImportError:
 # Core imports
 from gpu_manager import get_gpu_manager, shutdown_gpu_manager
 from gpu_arbitrage_model import run_gpu_arbitrage_training, setup_gpu_training
+from multi_strategy_training import StrategyType, train_strategy_model, train_all_strategies
 from gpu_training_cli import GPUTrainingCLI
 from training_monitor import create_training_monitor, display_training_monitor, GPUTrainingMonitor
 
@@ -252,17 +253,38 @@ GPU Training Configuration:
             logger.warning("GPU monitoring not available")
 
     def _execute_training(self) -> Optional[Dict[str, Any]]:
-        """Execute the actual training"""
+        """Execute the actual training, dispatching by strategy"""
         try:
-            # Run GPU arbitrage training directly
-            training_results = run_gpu_arbitrage_training(
-                pairs=self.args.pairs,
-                exchanges=['binance', 'coinbase', 'kraken'],
-                num_epochs=self.args.epochs,
-                batch_size=self.args.batch_size,
-                save_models=True,
-                monitor_training=self.args.gpu_monitor
-            )
+            strategy = getattr(self.args, 'strategy', 'arbitrage')
+
+            if strategy == 'arbitrage':
+                # Use existing GPU arbitrage training (unchanged)
+                training_results = run_gpu_arbitrage_training(
+                    pairs=self.args.pairs,
+                    exchanges=['binance', 'coinbase', 'kraken'],
+                    num_epochs=self.args.epochs,
+                    batch_size=self.args.batch_size,
+                    save_models=True,
+                    monitor_training=self.args.gpu_monitor
+                )
+            elif strategy == 'all':
+                # Train all 4 strategies (collective brain)
+                logger.info("Training ALL strategies (collective brain mode)")
+                training_results = train_all_strategies(
+                    pairs=self.args.pairs,
+                    epochs=self.args.epochs,
+                    batch_size=self.args.batch_size,
+                )
+            else:
+                # Train a specific non-arbitrage strategy
+                strategy_type = StrategyType(strategy)
+                logger.info(f"Training {strategy} strategy")
+                training_results = train_strategy_model(
+                    strategy=strategy_type,
+                    pairs=self.args.pairs,
+                    epochs=self.args.epochs,
+                    batch_size=self.args.batch_size,
+                )
 
             return training_results
 
@@ -406,6 +428,12 @@ Examples:
 
   # Quick training test
   python gpu_train.py --pairs BTC/USDT --epochs 5 --batch-size 16
+
+  # Train a specific strategy (fibonacci, grid, dca)
+  python gpu_train.py --strategy fibonacci --all-pairs --epochs 100
+
+  # Train ALL strategies (collective brain)
+  python gpu_train.py --strategy all --all-pairs --epochs 100 --gpu-monitor
         """
     )
 
@@ -441,6 +469,11 @@ Examples:
                        help='Enable TensorBoard logging')
     parser.add_argument('--wandb', action='store_true',
                        help='Enable Weights & Biases logging')
+
+    # Strategy selection
+    parser.add_argument('--strategy', choices=['arbitrage', 'fibonacci', 'grid', 'dca', 'all'],
+                       default='arbitrage',
+                       help='Strategy to train (default: arbitrage, use "all" for collective brain)')
 
     # Safety options
     parser.add_argument('--safe-mode', action='store_true',

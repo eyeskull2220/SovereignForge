@@ -999,3 +999,589 @@ class TestMiCACompliantPairs:
         for pair in MICA_COMPLIANT_PAIRS:
             quote = pair.split('/')[1]
             assert quote in ('USDC', 'RLUSD'), f"Unexpected quote currency in {pair}"
+
+
+# ── Pre-Trade Balance Checks ─────────────────────────────────────────────
+
+class TestPreTradeBalanceCheck:
+    """Tests for order_executor.py pre-trade balance validation."""
+
+    def test_balance_check_passes_sufficient_funds(self):
+        """Should pass when both exchanges have enough funds."""
+        from order_executor import OrderExecutor
+
+        executor = OrderExecutor.__new__(OrderExecutor)
+        executor.exchanges = {'binance': Mock(), 'coinbase': Mock()}
+
+        # Mock get_account_balance
+        executor.get_account_balance = Mock(side_effect=lambda name: {
+            'total': {}, 'used': {},
+            'free': {'USDC': 50000.0, 'BTC': 1.0},
+            'timestamp': None,
+        })
+
+        trade_params = {
+            'symbol': 'BTC/USDC', 'buy_exchange': 'binance',
+            'sell_exchange': 'coinbase', 'quantity': 0.1,
+            'buy_price': 50000.0, 'sell_price': 50250.0,
+        }
+
+        async def run():
+            ok, err = await executor._check_sufficient_balance(trade_params)
+            assert ok
+            assert err == ''
+
+        asyncio.run(run())
+
+    def test_balance_check_fails_insufficient_quote(self):
+        """Should fail when buy exchange lacks quote currency."""
+        from order_executor import OrderExecutor
+
+        executor = OrderExecutor.__new__(OrderExecutor)
+        executor.exchanges = {'binance': Mock(), 'coinbase': Mock()}
+
+        executor.get_account_balance = Mock(side_effect=lambda name: {
+            'total': {}, 'used': {},
+            'free': {'USDC': 100.0, 'BTC': 1.0},  # Only $100 USDC
+            'timestamp': None,
+        })
+
+        trade_params = {
+            'symbol': 'BTC/USDC', 'buy_exchange': 'binance',
+            'sell_exchange': 'coinbase', 'quantity': 0.1,
+            'buy_price': 50000.0, 'sell_price': 50250.0,
+        }
+
+        async def run():
+            ok, err = await executor._check_sufficient_balance(trade_params)
+            assert not ok
+            assert 'Insufficient USDC' in err
+
+        asyncio.run(run())
+
+    def test_balance_check_fails_insufficient_base(self):
+        """Should fail when sell exchange lacks base currency."""
+        from order_executor import OrderExecutor
+
+        executor = OrderExecutor.__new__(OrderExecutor)
+        executor.exchanges = {'binance': Mock(), 'coinbase': Mock()}
+
+        def mock_balance(name):
+            if name == 'binance':
+                return {'total': {}, 'used': {}, 'free': {'USDC': 50000.0}, 'timestamp': None}
+            return {'total': {}, 'used': {}, 'free': {'BTC': 0.001}, 'timestamp': None}
+
+        executor.get_account_balance = Mock(side_effect=mock_balance)
+
+        trade_params = {
+            'symbol': 'BTC/USDC', 'buy_exchange': 'binance',
+            'sell_exchange': 'coinbase', 'quantity': 0.1,
+            'buy_price': 50000.0, 'sell_price': 50250.0,
+        }
+
+        async def run():
+            ok, err = await executor._check_sufficient_balance(trade_params)
+            assert not ok
+            assert 'Insufficient BTC' in err
+
+        asyncio.run(run())
+
+    def test_paper_trading_balance_check_insufficient_base(self):
+        """PaperTradingExecutor should fail when sell exchange has no base asset."""
+        from order_executor import PaperTradingExecutor
+
+        with patch('order_executor.OrderExecutor._init_exchanges'):
+            executor = PaperTradingExecutor(
+                {'binance': {}, 'coinbase': {}}, initial_balance=10000.0
+            )
+
+        trade_params = {
+            'symbol': 'XRP/USDC', 'buy_exchange': 'binance',
+            'sell_exchange': 'coinbase', 'quantity': 100,
+            'buy_price': 1.0, 'sell_price': 1.005,
+        }
+
+        async def run():
+            # coinbase has 0 XRP, so sell-side check fails
+            ok, err = await executor._check_sufficient_balance(trade_params)
+            assert not ok
+            assert 'Insufficient paper XRP' in err
+
+        asyncio.run(run())
+
+    def test_paper_trading_balance_check_sufficient(self):
+        """PaperTradingExecutor should pass when both sides have funds."""
+        from order_executor import PaperTradingExecutor
+
+        with patch('order_executor.OrderExecutor._init_exchanges'):
+            executor = PaperTradingExecutor(
+                {'binance': {}, 'coinbase': {}}, initial_balance=10000.0
+            )
+            # Give coinbase some XRP
+            executor.paper_balances['coinbase']['XRP'] = 500.0
+
+        trade_params = {
+            'symbol': 'XRP/USDC', 'buy_exchange': 'binance',
+            'sell_exchange': 'coinbase', 'quantity': 100,
+            'buy_price': 1.0, 'sell_price': 1.005,
+        }
+
+        async def run():
+            ok, err = await executor._check_sufficient_balance(trade_params)
+            assert ok
+            assert err == ''
+
+        asyncio.run(run())
+
+    def test_balance_check_exchange_unreachable(self):
+        """Should fail when get_account_balance returns None (exchange down)."""
+        from order_executor import OrderExecutor
+
+        executor = OrderExecutor.__new__(OrderExecutor)
+        executor.exchanges = {'binance': Mock(), 'coinbase': Mock()}
+        executor.get_account_balance = Mock(return_value=None)
+
+        trade_params = {
+            'symbol': 'BTC/USDC', 'buy_exchange': 'binance',
+            'sell_exchange': 'coinbase', 'quantity': 0.1,
+            'buy_price': 50000.0, 'sell_price': 50250.0,
+        }
+
+        async def run():
+            ok, err = await executor._check_sufficient_balance(trade_params)
+            assert not ok
+            assert 'Cannot fetch balance' in err
+
+        asyncio.run(run())
+
+
+# ── Data Integration Service ──────────────────────────────────────────────
+
+class TestHybridDataIntegrationService:
+    """Tests for src/data_integration_service.py"""
+
+    def test_init_creates_connections(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        assert len(svc.connections) == 5
+        assert 'binance' in svc.connections
+        assert 'kraken' in svc.connections
+
+    def test_init_connections_disconnected(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        for status in svc.connections.values():
+            assert not status.connected
+            assert status.reconnect_attempts == 0
+            assert status.error_count == 0
+
+    def test_add_data_callback(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        cb = Mock()
+        svc.add_data_callback(cb)
+        assert cb in svc.data_callbacks
+
+    def test_get_service_status(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        status = svc.get_service_status()
+        assert 'is_running' in status
+        assert 'data_sources' in status
+        assert status['data_sources'] == 5
+        assert 'websocket_connections' in status
+
+    def test_get_connection_health(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        health = svc.get_connection_health()
+        assert len(health) == 5
+        for exchange, info in health.items():
+            assert 'connected' in info
+            assert 'healthy' in info
+            assert not info['healthy']  # Not connected yet
+
+    def test_websocket_urls(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        assert 'binance' in svc._get_websocket_url('binance')
+        assert 'coinbase' in svc._get_websocket_url('coinbase')
+        assert 'kraken' in svc._get_websocket_url('kraken')
+        assert svc._get_websocket_url('unknown') == ''
+
+    def test_create_subscription_message_binance(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        msg = svc._create_subscription_message('binance', ['BTC/USDC', 'ETH/USDC'])
+        assert msg is not None
+        assert msg['method'] == 'SUBSCRIBE'
+        assert len(msg['params']) == 2
+
+    def test_create_subscription_message_unknown(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        msg = svc._create_subscription_message('unknown_exchange', ['BTC/USDC'])
+        assert msg is None
+
+    def test_create_heartbeat_message(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        assert svc._create_heartbeat_message('binance') is not None
+        assert svc._create_heartbeat_message('unknown') is None
+
+    def test_initialize(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+
+        async def run():
+            await svc.initialize()
+            # initialize() should not set is_running
+            assert not svc.is_running
+
+        asyncio.run(run())
+
+    def test_is_healthy_when_not_running(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+
+        async def run():
+            return await svc.is_healthy()
+
+        assert not asyncio.run(run())
+
+    def test_handle_market_data_calls_callbacks(self):
+        from data_integration_service import HybridDataIntegrationService, MarketData
+        svc = HybridDataIntegrationService()
+        received = []
+        svc.add_data_callback(lambda data: received.append(data))
+
+        market_data = MarketData(
+            exchange='binance', pair='XRP/USDC', timestamp=time.time(),
+            price=1.0, volume=1000, bid_price=0.999, ask_price=1.001,
+            bid_volume=500, ask_volume=500,
+        )
+
+        async def run():
+            await svc._handle_market_data(market_data)
+
+        asyncio.run(run())
+        assert len(received) == 1
+        assert received[0].pair == 'XRP/USDC'
+
+    def test_handle_market_data_filters_noncompliant(self):
+        from data_integration_service import HybridDataIntegrationService, MarketData
+        svc = HybridDataIntegrationService()
+        received = []
+        svc.add_data_callback(lambda data: received.append(data))
+
+        # Use a non-compliant pair
+        svc.compliance_engine = Mock()
+        svc.compliance_engine.is_pair_compliant = Mock(return_value=False)
+
+        market_data = MarketData(
+            exchange='binance', pair='SCAM/USDT', timestamp=time.time(),
+            price=0.01, volume=100, bid_price=0.009, ask_price=0.011,
+            bid_volume=50, ask_volume=50,
+        )
+
+        async def run():
+            await svc._handle_market_data(market_data)
+
+        asyncio.run(run())
+        assert len(received) == 0  # Filtered out
+
+    def test_handle_market_data_async_callback(self):
+        from data_integration_service import HybridDataIntegrationService, MarketData
+        svc = HybridDataIntegrationService()
+        received = []
+
+        async def async_cb(data):
+            received.append(data)
+
+        svc.add_data_callback(async_cb)
+
+        market_data = MarketData(
+            exchange='binance', pair='XRP/USDC', timestamp=time.time(),
+            price=1.0, volume=1000, bid_price=0.999, ask_price=1.001,
+            bid_volume=500, ask_volume=500,
+        )
+
+        async def run():
+            await svc._handle_market_data(market_data)
+
+        asyncio.run(run())
+        assert len(received) == 1
+
+    def test_parse_market_data_binance(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        data = {
+            'stream': 'xrpusdc@ticker',
+            'data': {
+                's': 'XRPUSDC', 'c': '1.05', 'v': '500000',
+                'b': '1.049', 'a': '1.051', 'B': '10000', 'A': '8000',
+            }
+        }
+        result = svc._parse_market_data('binance', data)
+        assert result is not None
+        assert result.exchange == 'binance'
+        assert result.price == 1.05
+        assert result.volume == 500000.0
+
+    def test_parse_market_data_unknown_exchange(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+        result = svc._parse_market_data('unknown', {'some': 'data'})
+        assert result is None
+
+    def test_handle_connection_failure_increments_attempts(self):
+        from data_integration_service import HybridDataIntegrationService
+        svc = HybridDataIntegrationService()
+
+        async def run():
+            initial = svc.connections['binance'].reconnect_attempts
+            await svc._handle_connection_failure('binance')
+            assert svc.connections['binance'].reconnect_attempts == initial + 1
+
+        asyncio.run(run())
+
+    def test_market_data_dataclass(self):
+        from data_integration_service import MarketData
+        md = MarketData(
+            exchange='binance', pair='ADA/USDC', timestamp=1234567890.0,
+            price=0.5, volume=100000, bid_price=0.499, ask_price=0.501,
+            bid_volume=50000, ask_volume=50000,
+        )
+        assert md.exchange == 'binance'
+        assert md.pair == 'ADA/USDC'
+
+    def test_connection_status_dataclass(self):
+        from data_integration_service import ConnectionStatus
+        cs = ConnectionStatus(
+            exchange='kraken', connected=True,
+            last_message=time.time(), reconnect_attempts=0, error_count=0,
+        )
+        assert cs.exchange == 'kraken'
+        assert cs.connected
+
+    def test_mock_compliance_engine(self):
+        from data_integration_service import MockComplianceEngine
+        engine = MockComplianceEngine()
+        assert engine.is_asset_compliant('BTC')
+        assert engine.is_asset_compliant('XRP')
+        assert engine.is_pair_compliant('BTC/USDC')
+        compliant = engine.filter_compliant_pairs(['BTC/USDC', 'UNKNOWN/USDC'])
+        assert 'BTC/USDC' in compliant
+
+
+# ── Multi-Strategy Training ─────────────────────────────────────────────────
+
+try:
+    import torch as _torch
+    _torch_available = True
+except ImportError:
+    _torch_available = False
+
+
+@pytest.mark.skipif(not _torch_available, reason="torch not installed")
+class TestMultiStrategyTraining:
+    """Tests for src/multi_strategy_training.py — requires torch"""
+
+    def test_strategy_type_enum(self):
+        """All 4 strategy types should be defined"""
+        from multi_strategy_training import StrategyType
+        assert StrategyType.ARBITRAGE.value == 'arbitrage'
+        assert StrategyType.FIBONACCI.value == 'fibonacci'
+        assert StrategyType.GRID.value == 'grid'
+        assert StrategyType.DCA.value == 'dca'
+        assert len(StrategyType) == 4
+
+    def test_strategy_models_registry(self):
+        """STRATEGY_MODELS should map each StrategyType to a callable factory"""
+        from multi_strategy_training import STRATEGY_MODELS, StrategyType
+        assert len(STRATEGY_MODELS) == 4
+        for st in StrategyType:
+            assert st in STRATEGY_MODELS
+            assert callable(STRATEGY_MODELS[st])
+
+    def test_factory_functions_importable(self):
+        """All 4 factory functions should be importable"""
+        from multi_strategy_training import (
+            create_attention_model,
+            create_gru_model,
+            create_lstm_model,
+            create_transformer_model,
+        )
+        assert callable(create_lstm_model)
+        assert callable(create_gru_model)
+        assert callable(create_transformer_model)
+        assert callable(create_attention_model)
+
+    def test_engineer_features_importable(self):
+        """engineer_features function should be importable"""
+        from multi_strategy_training import engineer_features
+        assert callable(engineer_features)
+
+    def test_generate_labels_importable(self):
+        """generate_labels function should be importable"""
+        from multi_strategy_training import generate_labels
+        assert callable(generate_labels)
+
+    def test_engineer_features_with_data(self):
+        """engineer_features should produce 10-feature vectors from OHLCV"""
+        from multi_strategy_training import engineer_features
+        # Create fake OHLCV data: [timestamp, open, high, low, close, volume]
+        rng = np.random.default_rng(42)
+        prices = 100 + np.cumsum(rng.normal(0, 1, 100))
+        ohlcv = np.column_stack([
+            np.arange(100),           # timestamp
+            prices,                    # open
+            prices + rng.uniform(0, 2, 100),  # high
+            prices - rng.uniform(0, 2, 100),  # low
+            prices + rng.normal(0, 0.5, 100), # close
+            rng.uniform(1000, 5000, 100),     # volume
+        ])
+        features, labels = engineer_features(ohlcv, seq_len=10)
+        assert len(features) > 0
+        # Each feature vector should have 10 features
+        assert features.shape[-1] == 10
+
+    def test_generate_labels_arbitrage(self):
+        """Arbitrage labels should be based on forward returns"""
+        from multi_strategy_training import StrategyType, generate_labels
+        rng = np.random.default_rng(42)
+        prices = 100 + np.cumsum(rng.normal(0, 1, 50))
+        ohlcv = np.column_stack([
+            np.arange(50),
+            prices, prices + 1, prices - 1, prices + 0.5,
+            rng.uniform(1000, 5000, 50),
+        ])
+        labels = generate_labels(ohlcv, StrategyType.ARBITRAGE)
+        assert len(labels) == len(ohlcv)
+
+    def test_generate_labels_all_strategies(self):
+        """All 4 strategy types should produce labels without error"""
+        from multi_strategy_training import StrategyType, generate_labels
+        rng = np.random.default_rng(42)
+        prices = 100 + np.cumsum(rng.normal(0, 1, 50))
+        ohlcv = np.column_stack([
+            np.arange(50),
+            prices, prices + 1, prices - 1, prices + 0.5,
+            rng.uniform(1000, 5000, 50),
+        ])
+        for st in StrategyType:
+            labels = generate_labels(ohlcv, st)
+            assert len(labels) == len(ohlcv), f"Labels length mismatch for {st.value}"
+
+
+# ── Strategy Ensemble ────────────────────────────────────────────────────────
+
+@pytest.mark.skipif(not _torch_available, reason="torch not installed")
+class TestStrategyEnsemble:
+    """Tests for src/strategy_ensemble.py — requires torch"""
+
+    def test_ensemble_signal_dataclass(self):
+        """EnsembleSignal should have all required fields"""
+        from strategy_ensemble import EnsembleSignal
+        signal = EnsembleSignal(
+            pair='XRP/USDC',
+            action='buy',
+            confidence=0.85,
+            agreement_score=1.0,
+            strategy_signals={'arbitrage': 0.6, 'fibonacci': 0.4},
+            strategy_confidences={'arbitrage': 0.9, 'fibonacci': 0.7},
+        )
+        assert signal.pair == 'XRP/USDC'
+        assert signal.action == 'buy'
+        assert signal.confidence == 0.85
+        assert signal.agreement_score == 1.0
+        assert 'arbitrage' in signal.strategy_signals
+        assert signal.timestamp is not None
+
+    def test_ensemble_init_default_weights(self):
+        """StrategyEnsemble with no config should use equal weights"""
+        from strategy_ensemble import StrategyEnsemble
+        ensemble = StrategyEnsemble(config={})
+        from multi_strategy_training import StrategyType
+        # All strategies should be enabled
+        for st in StrategyType:
+            assert ensemble.strategy_enabled[st] is True
+        # Weights should sum to 1.0
+        total = sum(
+            w for st, w in ensemble.strategy_weights.items()
+            if ensemble.strategy_enabled[st]
+        )
+        assert abs(total - 1.0) < 0.01
+
+    def test_ensemble_init_custom_weights(self):
+        """StrategyEnsemble should respect config weights"""
+        from strategy_ensemble import StrategyEnsemble
+        config = {
+            'strategies': {
+                'arbitrage': {'enabled': True, 'weight': 0.6},
+                'fibonacci': {'enabled': True, 'weight': 0.2},
+                'grid': {'enabled': True, 'weight': 0.1},
+                'dca': {'enabled': True, 'weight': 0.1},
+            }
+        }
+        ensemble = StrategyEnsemble(config=config)
+        from multi_strategy_training import StrategyType
+        # Arbitrage should have the highest normalized weight
+        assert ensemble.strategy_weights[StrategyType.ARBITRAGE] > ensemble.strategy_weights[StrategyType.DCA]
+
+    def test_ensemble_disabled_strategy(self):
+        """Disabled strategies should not be loaded"""
+        from strategy_ensemble import StrategyEnsemble
+        config = {
+            'strategies': {
+                'fibonacci': {'enabled': False, 'weight': 0.2},
+            }
+        }
+        ensemble = StrategyEnsemble(config=config)
+        from multi_strategy_training import StrategyType
+        assert ensemble.strategy_enabled[StrategyType.FIBONACCI] is False
+
+    def test_ensemble_agreement_all_agree(self):
+        """Agreement score should be 1.0 when all strategies point same direction"""
+        from strategy_ensemble import StrategyEnsemble
+        ensemble = StrategyEnsemble(config={})
+        signals = {'arbitrage': 0.5, 'fibonacci': 0.3, 'grid': 0.6, 'dca': 0.4}
+        agreement = ensemble._calculate_agreement(signals)
+        assert agreement == 1.0
+
+    def test_ensemble_agreement_split(self):
+        """Agreement score should be < 1.0 when strategies disagree"""
+        from strategy_ensemble import StrategyEnsemble
+        ensemble = StrategyEnsemble(config={})
+        signals = {'arbitrage': 0.5, 'fibonacci': -0.3, 'grid': 0.6, 'dca': -0.4}
+        agreement = ensemble._calculate_agreement(signals)
+        assert agreement == 0.5  # 2 out of 4 agree
+
+    def test_ensemble_agreement_all_neutral(self):
+        """Agreement score should be 0.5 when all signals are neutral"""
+        from strategy_ensemble import StrategyEnsemble
+        ensemble = StrategyEnsemble(config={})
+        signals = {'arbitrage': 0.01, 'fibonacci': -0.02, 'grid': 0.0, 'dca': 0.03}
+        agreement = ensemble._calculate_agreement(signals)
+        assert agreement == 0.5
+
+    def test_ensemble_loaded_summary(self):
+        """get_loaded_summary should report status for all strategies"""
+        from strategy_ensemble import StrategyEnsemble
+        ensemble = StrategyEnsemble(config={})
+        summary = ensemble.get_loaded_summary()
+        assert 'arbitrage' in summary
+        assert 'fibonacci' in summary
+        assert 'grid' in summary
+        assert 'dca' in summary
+        for st_info in summary.values():
+            assert 'enabled' in st_info
+            assert 'weight' in st_info
+            assert 'count' in st_info
+
+    def test_create_ensemble_from_config(self):
+        """Factory function should create ensemble from config file"""
+        from strategy_ensemble import create_ensemble_from_config
+        # Uses default config path — will use empty config if file doesn't exist
+        ensemble = create_ensemble_from_config()
+        assert ensemble is not None

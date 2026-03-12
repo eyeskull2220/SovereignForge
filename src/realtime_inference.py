@@ -52,8 +52,9 @@ logger = logging.getLogger(__name__)
 
 # Import Phase 2 components
 try:
-    from gpu_manager import GPUManager, get_gpu_manager
     from secure_model_extractor import SecureModelExtractor
+
+    from gpu_manager import GPUManager, get_gpu_manager
     GPU_MANAGER_AVAILABLE = True
     logger.info("Phase 2 GPU Manager and Secure Model Extractor loaded successfully")
 except ImportError as e:
@@ -103,6 +104,34 @@ class ModelValidationResult:
     parameter_count: int
     expected_params: int
 
+class _LSTMInferenceWrapper(nn.Module):
+    """Wraps AdvancedArbitrageDetector (single-output LSTM) to produce the
+    3-column tensor [signal, confidence_logit, spread] that
+    infer_arbitrage_signal() expects at output[0, 0:3]."""
+
+    def __init__(self, lstm_model: nn.Module):
+        super().__init__()
+        self.lstm = lstm_model
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # AdvancedArbitrageDetector expects [batch, seq, features]
+        if x.dim() == 2:
+            x = x.unsqueeze(1)  # [batch, 1, features]
+
+        logit = self.lstm(x)  # [batch, 1] raw logit
+
+        # Build 3-column output: [signal, confidence_logit, spread_estimate]
+        signal = torch.sigmoid(logit)  # probability
+        confidence_logit = logit  # raw logit — sigmoid applied later in infer_arbitrage_signal
+        spread_estimate = signal * 0.01  # rough spread proxy (1% max)
+
+        return torch.cat([signal, confidence_logit, spread_estimate], dim=-1)  # [batch, 3]
+
+    def load_state_dict(self, state_dict, strict=True, **kwargs):
+        """Delegate to inner LSTM model."""
+        return self.lstm.load_state_dict(state_dict, strict=strict, **kwargs)
+
+
 class SecureModelLoader:
     """
     Secure model loading with architecture validation and integrity checks
@@ -112,6 +141,7 @@ class SecureModelLoader:
         self.models_dir = Path(models_dir)
         self.models_dir.mkdir(parents=True, exist_ok=True)
         self.loaded_models: Dict[str, Tuple[nn.Module, ModelMetadata]] = {}
+        self._weights_status: Dict[str, bool] = {}  # pair → True if trained weights loaded
         self.model_lock = threading.RLock()
 
         # GPU memory management
@@ -227,18 +257,29 @@ class SecureModelLoader:
                     # Assume the checkpoint is the state_dict directly
                     model_state = checkpoint
 
-                # Create model instance (Phase 5: skip loading incompatible state_dict)
+                # Create model and load trained weights
                 model = self._create_model_from_metadata(metadata)
-                # Skip loading state_dict for now - use randomly initialized weights
-                # model.load_state_dict(model_state)  # Commented out for Phase 5 compatibility
+                weights_loaded = False
+
+                try:
+                    model.load_state_dict(model_state, strict=False)
+                    weights_loaded = True
+                    logger.info(f"Loaded trained weights for {trading_pair}")
+                except RuntimeError as weight_err:
+                    logger.error(
+                        f"WEIGHT MISMATCH for {trading_pair}: {weight_err}. "
+                        f"Model will use RANDOM weights — predictions are meaningless. "
+                        f"Retrain this model with the current architecture."
+                    )
+
                 model.to(device)
                 model.eval()
 
-                # Skip validation for Phase 5 personal deployment (different architecture)
-                logger.info(f"Skipping architecture validation for Phase 5 compatibility: {trading_pair}")
-
                 self.loaded_models[trading_pair] = (model, metadata)
-                logger.info(f"Successfully loaded and validated model for {trading_pair}")
+                self._weights_status[trading_pair] = weights_loaded
+
+                status = "trained weights" if weights_loaded else "RANDOM weights"
+                logger.info(f"Model loaded for {trading_pair} ({status})")
                 return model, metadata
 
             except Exception as e:
@@ -246,21 +287,37 @@ class SecureModelLoader:
                 return None
 
     def _create_model_from_metadata(self, metadata: ModelMetadata) -> nn.Module:
-        """Create model instance based on metadata using correct architecture"""
-        # For Phase 5 personal deployment, create a simple working model
-        # that can handle the expected input/output format
-        logger.info("Creating simple working model for Phase 5 personal deployment")
+        """Create model instance matching the trained architecture.
+
+        Tries to load AdvancedArbitrageDetector (LSTM+attention) from ml_trainer
+        which matches the trained .pth files. Falls back to a simple feedforward
+        model if ml_trainer is not importable.
+
+        The LSTM model outputs a single value (arbitrage logit). The wrapper
+        adapts this to the 3-column tensor (signal, confidence, spread) that
+        infer_arbitrage_signal() expects.
+        """
+        # Try the real trained architecture first
+        try:
+            from ml_trainer import AdvancedArbitrageDetector
+            lstm_model = AdvancedArbitrageDetector(
+                input_size=int(metadata.expected_input_shape[-1]) if metadata.expected_input_shape else 22,
+                hidden_size=64,
+                num_layers=2,
+            )
+            logger.info("Created AdvancedArbitrageDetector (LSTM+attention) — matches trained weights")
+            return _LSTMInferenceWrapper(lstm_model)
+        except ImportError:
+            logger.warning(
+                "ml_trainer not importable — falling back to SimpleArbitrageModel. "
+                "Trained weights will NOT load correctly."
+            )
 
         class SimpleArbitrageModel(nn.Module):
-            """Simple working model for personal deployment"""
+            """Fallback model when LSTM architecture unavailable"""
 
-            def __init__(self, input_dim=64, hidden_dim=128, output_dim=3):
+            def __init__(self, input_dim=22, hidden_dim=64, output_dim=3):
                 super().__init__()
-                self.input_dim = input_dim
-                self.hidden_dim = hidden_dim
-                self.output_dim = output_dim
-
-                # Simple feedforward network
                 self.network = nn.Sequential(
                     nn.Linear(input_dim, hidden_dim),
                     nn.ReLU(),
@@ -272,27 +329,11 @@ class SecureModelLoader:
                 )
 
             def forward(self, x):
-                # Handle different input shapes
-                if x.dim() == 3:  # [batch, seq, features]
-                    # Global average pooling over sequence dimension
-                    x = torch.mean(x, dim=1)  # [batch, features]
+                if x.dim() == 3:
+                    x = torch.mean(x, dim=1)
+                return self.network(x)
 
-                # Ensure correct input dimension
-                if x.shape[-1] != self.input_dim:
-                    # Simple projection if dimensions don't match
-                    proj = nn.Linear(x.shape[-1], self.input_dim).to(x.device)
-                    x = proj(x)
-
-                output = self.network(x)
-
-                # Return arbitrage_signal, confidence_score, predicted_spread
-                arbitrage_signal = torch.sigmoid(output[:, 0:1])
-                confidence_score = torch.sigmoid(output[:, 1:2])
-                predicted_spread = output[:, 2:3]
-
-                return arbitrage_signal, confidence_score, predicted_spread
-
-        return SimpleArbitrageModel(input_dim=64, hidden_dim=128, output_dim=3)
+        return SimpleArbitrageModel(input_dim=22, hidden_dim=64, output_dim=3)
 
     def unload_model(self, trading_pair: str):
         """Unload model to free GPU memory"""

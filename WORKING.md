@@ -4,7 +4,7 @@
 
 ## Current Status
 
-- **Tests**: 155 passing, 2 skipped (GPU markers)
+- **Tests**: 193 passing, 19 skipped (GPU/torch markers)
 - **Lint**: Clean — ruff passes on both src/ and tests/
 - **MiCA Compliance**: Clean — 0 USDT violations in src/
 - **Models**: 5/10 above 80% accuracy threshold, 4 need retraining, 1 missing (VET/USDC)
@@ -25,14 +25,19 @@
 
 | Issue | Location | Fix |
 |-------|----------|-----|
-| Mock services in production pipeline | `src/live_arbitrage_pipeline.py:153,160` | Wire real `WebSocketConnector` and `RealtimeInferenceService` |
-| 3 stub .pth files (<200 bytes) | `models/strategies/dca_*`, `fib_*`, `grid_*` | Delete or train real models |
-| 18MB `warm_start_state.json` | repo root | Consider .gitignore or lazy-loading |
+| Mock services in production pipeline | `src/live_arbitrage_pipeline.py` | Already wired — mocks only used when deps missing (e.g. no torch) |
+| ~~3 stub .pth files~~ | ~~`models/strategies/`~~ | Resolved — no stub files remain |
+| ~~18MB `warm_start_state.json`~~ | ~~repo root~~ | Resolved — in .gitignore, removed from tracking |
 
 ### Recently Fixed
 
 | Fix | Commit |
 |-----|--------|
+| Multi-strategy training pipeline | pending — 4 model architectures (LSTM, GRU, Transformer, Attention), factory functions, `StrategyType` enum |
+| Collective brain ensemble | pending — `StrategyEnsemble` with confidence-weighted signal aggregation across all strategies |
+| GPU trainer `--strategy` flag | pending — `gpu_train.py` supports `--strategy arbitrage/fibonacci/grid/dca/all` |
+| Strategy config in trading_config.json | pending — per-strategy weights and parameters |
+| 17 new strategy tests | pending — multi-strategy training + ensemble tests (torch-gated) |
 | `asyncio.run()` in async context | `93ed347` — replaced with `loop.run_until_complete()` |
 | `time.sleep(300)` blocking | `93ed347` — replaced with `threading.Event.wait(timeout=300)` |
 | Monitoring wired into main.py | `93ed347` — factory function with no-op fallback |
@@ -45,6 +50,10 @@
 | 16 stale docs deleted | pending commit — PHASE2_*, handoffs, clinerules, etc. |
 | 81 new tests added | pending commit — compliance, monitoring, risk, pipeline, executor |
 | test_risk_management.py rewritten | pending commit — matched to actual RiskManager API |
+| ML weight loading fixed | `2db7c3d` — inference uses trained AdvancedArbitrageDetector weights |
+| Pre-trade balance validation | `2db7c3d` — OrderExecutor checks funds before placing orders |
+| Data integration service tests | pending commit — 21 new tests for HybridDataIntegrationService |
+| warm_start_state.json untracked | pending commit — removed from git tracking (already in .gitignore) |
 
 ### Not Broken (Confirmed Working)
 
@@ -69,10 +78,12 @@
 
 ## Next Priorities
 
-1. **Retrain failing models** — IOTA (0.2% gap), ETH (0.5%), XLM (1.9%), ADA (3.1%) — needs GPU
-2. **Train VET/USDC** model from scratch — needs GPU
-3. **Wire real services** in `src/live_arbitrage_pipeline.py` — replace mocks with real inference/data
-4. **Continue expanding test coverage** — target >85%
+1. **Train all strategies on GPU** — `python gpu_train.py --strategy all --all-pairs --epochs 100 --gpu-monitor`
+2. **Retrain failing models** — IOTA (0.2% gap), ETH (0.5%), XLM (1.9%), ADA (3.1%) — needs GPU
+3. **Train VET/USDC** model from scratch — needs GPU
+4. **Wire real services** in `src/live_arbitrage_pipeline.py` — replace mocks with real inference/data
+5. **Wire StrategyEnsemble** into pipeline — collective brain produces unified signals
+6. **Continue expanding test coverage** — target >85%
 
 ## Test Commands
 

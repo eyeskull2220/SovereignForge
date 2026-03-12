@@ -109,6 +109,12 @@ class OrderExecutor:
                 execution_result['errors'].append(trade_params['reason'])
                 return execution_result
 
+            # Pre-trade balance validation
+            balance_ok, balance_err = await self._check_sufficient_balance(trade_params)
+            if not balance_ok:
+                execution_result['errors'].append(balance_err)
+                return execution_result
+
             # Execute buy order (long cheaper exchange)
             buy_order = await self._execute_single_order(
                 trade_params['buy_exchange'],
@@ -153,6 +159,9 @@ class OrderExecutor:
             self._update_execution_stats(execution_result)
 
             logger.info(f"Arbitrage trade executed: P&L ${execution_result['pnl']:.2f}")
+
+            # Post-trade balance audit
+            self._log_post_trade_balances(trade_params)
 
         except Exception as e:
             execution_result['errors'].append(f"Execution error: {str(e)}")
@@ -402,6 +411,61 @@ class OrderExecutor:
 
         return None
 
+    async def _check_sufficient_balance(self, trade_params: Dict) -> tuple:
+        """Check that both exchanges have sufficient funds before trading.
+
+        Returns (True, '') if OK, or (False, error_message) if insufficient.
+        """
+        symbol = trade_params['symbol']
+        base, quote = symbol.split('/')
+        buy_exchange = trade_params['buy_exchange']
+        sell_exchange = trade_params['sell_exchange']
+        quantity = trade_params['quantity']
+        buy_price = trade_params['buy_price']
+
+        # Check buy exchange has enough quote currency (e.g. USDC)
+        buy_balance = self.get_account_balance(buy_exchange)
+        if buy_balance is None:
+            return False, f"Cannot fetch balance for {buy_exchange}"
+
+        required_quote = quantity * buy_price * 1.01  # 1% buffer for fees/slippage
+        available_quote = buy_balance['free'].get(quote, 0)
+        if available_quote < required_quote:
+            return False, (
+                f"Insufficient {quote} on {buy_exchange}: "
+                f"need {required_quote:.2f}, have {available_quote:.2f}"
+            )
+
+        # Check sell exchange has enough base currency (e.g. BTC)
+        sell_balance = self.get_account_balance(sell_exchange)
+        if sell_balance is None:
+            return False, f"Cannot fetch balance for {sell_exchange}"
+
+        available_base = sell_balance['free'].get(base, 0)
+        if available_base < quantity:
+            return False, (
+                f"Insufficient {base} on {sell_exchange}: "
+                f"need {quantity}, have {available_base}"
+            )
+
+        logger.info(
+            f"Balance check OK: {buy_exchange} has {available_quote:.2f} {quote}, "
+            f"{sell_exchange} has {available_base} {base}"
+        )
+        return True, ''
+
+    def _log_post_trade_balances(self, trade_params: Dict):
+        """Log balance state on both exchanges after a trade for audit trail."""
+        for exch_name in [trade_params['buy_exchange'], trade_params['sell_exchange']]:
+            balance = self.get_account_balance(exch_name)
+            if balance:
+                usdc = balance['free'].get('USDC', 0)
+                logger.info(f"Post-trade balance on {exch_name}: {usdc:.2f} USDC free")
+                if usdc < 100:
+                    logger.warning(
+                        f"LOW BALANCE on {exch_name}: {usdc:.2f} USDC — consider rebalancing"
+                    )
+
     def get_open_orders(self, exchange_name: str, symbol: str = None) -> List[Dict]:
         """Get open orders for exchange"""
 
@@ -468,6 +532,32 @@ class PaperTradingExecutor(OrderExecutor):
 
         self.paper_orders = []
         logger.info(f"Paper Trading Executor initialized with ${initial_balance} per exchange")
+
+    async def _check_sufficient_balance(self, trade_params: Dict) -> tuple:
+        """Check paper balances instead of real exchange balances."""
+        symbol = trade_params['symbol']
+        base, quote = symbol.split('/')
+        buy_exchange = trade_params['buy_exchange']
+        sell_exchange = trade_params['sell_exchange']
+        quantity = trade_params['quantity']
+        buy_price = trade_params['buy_price']
+
+        required_quote = quantity * buy_price * 1.01
+        available_quote = self.paper_balances.get(buy_exchange, {}).get(quote, 0)
+        if available_quote < required_quote:
+            return False, (
+                f"Insufficient paper {quote} on {buy_exchange}: "
+                f"need {required_quote:.2f}, have {available_quote:.2f}"
+            )
+
+        available_base = self.paper_balances.get(sell_exchange, {}).get(base, 0)
+        if available_base < quantity:
+            return False, (
+                f"Insufficient paper {base} on {sell_exchange}: "
+                f"need {quantity}, have {available_base}"
+            )
+
+        return True, ''
 
     async def _execute_single_order(self, exchange_name: str, symbol: str, side: str,
                                    quantity: float, price: float) -> Dict:

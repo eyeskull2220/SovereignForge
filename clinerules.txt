@@ -1,7 +1,0 @@
-Always use subagents for parallel tasks (inventory, testing, compliance checks).
-Lead agent = grok-4 (reasoning first, then clean tool calls).
-Subs = grok-code-fast-1 or grok-3-mini-fast-beta.
-Output ALL reasoning in <thinking></thinking> tags before any action.
-Strict MiCA compliance: never suggest public deployment, custody, or non-whitelisted assets (XRP, XLM, HBAR, ALGO, ADA, Chainlink, IOTA, XDC, ONDO, VeChain + USDC, RLUSD only).
-Local-only execution. Risk Agent must flag any position-sizing or alert changes.
-Pause before any file writes or Phase 2. Technical format only.

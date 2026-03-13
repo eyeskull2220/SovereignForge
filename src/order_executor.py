@@ -284,11 +284,13 @@ class OrderExecutor:
 
             order_result['order_id'] = order['id']
 
-            # Wait for execution (simplified - in production would use websockets)
-            await asyncio.sleep(1)  # Brief wait
-
-            # Check order status
-            order_status = exchange.fetch_order(order['id'], symbol)
+            # Poll for order fill with exponential backoff
+            order_status = None
+            for attempt in range(5):
+                await asyncio.sleep(min(0.5 * (2 ** attempt), 8))  # 0.5s, 1s, 2s, 4s, 8s
+                order_status = exchange.fetch_order(order['id'], symbol)
+                if order_status['status'] in ('closed', 'canceled', 'expired'):
+                    break
 
             if order_status['status'] == 'closed':
                 order_result['success'] = True

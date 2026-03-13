@@ -451,7 +451,6 @@ def run_gpu_arbitrage_training(pairs: List[str],
 
         model.model.train()
         for epoch in range(num_epochs):
-            model.model.train()
             epoch_train_loss = 0.0
             epoch_train_correct = 0
 

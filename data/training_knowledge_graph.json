@@ -1404,6 +1404,86 @@
       "val_loss": 0.00956378356139693,
       "epochs": 30,
       "id": "dca_hbar_usdc_binance_202603132332"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "ETH/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:32:46.476750",
+      "val_loss": 0.026195421318213143,
+      "epochs": 27,
+      "id": "arbitrage_eth_usdc_binance_202603132332"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "ETH/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T23:33:15.302082",
+      "val_loss": 0.031207428582840497,
+      "epochs": 26,
+      "id": "arbitrage_eth_usdc_okx_202603132333"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "ETH/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:34:11.629543",
+      "val_loss": 0.04114332331551446,
+      "epochs": 26,
+      "id": "fibonacci_eth_usdc_binance_202603132334"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "ETH/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T23:35:07.817639",
+      "val_loss": 0.044394558895793225,
+      "epochs": 26,
+      "id": "fibonacci_eth_usdc_okx_202603132335"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "ETH/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:35:45.736408",
+      "val_loss": 0.012577548436820508,
+      "epochs": 37,
+      "id": "grid_eth_usdc_binance_202603132335"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "ETH/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T23:36:13.339057",
+      "val_loss": 0.014193771075871256,
+      "epochs": 26,
+      "id": "grid_eth_usdc_okx_202603132336"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ETH/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:36:47.836734",
+      "val_loss": 0.013088424904789361,
+      "epochs": 31,
+      "id": "dca_eth_usdc_binance_202603132336"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ETH/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T23:37:18.249146",
+      "val_loss": 0.013761431977359784,
+      "epochs": 26,
+      "id": "dca_eth_usdc_okx_202603132337"
     }
   ],
   "edges": [
@@ -3401,6 +3481,126 @@
       "relation": "trains_exchange",
       "source": "dca_hbar_usdc_binance_202603132332",
       "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_eth_usdc_binance_202603132332",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_eth_usdc_binance_202603132332",
+      "target": "ETH/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_eth_usdc_binance_202603132332",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_eth_usdc_okx_202603132333",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_eth_usdc_okx_202603132333",
+      "target": "ETH/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_eth_usdc_okx_202603132333",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_eth_usdc_binance_202603132334",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_eth_usdc_binance_202603132334",
+      "target": "ETH/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_eth_usdc_binance_202603132334",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_eth_usdc_okx_202603132335",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_eth_usdc_okx_202603132335",
+      "target": "ETH/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_eth_usdc_okx_202603132335",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_eth_usdc_binance_202603132335",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_eth_usdc_binance_202603132335",
+      "target": "ETH/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_eth_usdc_binance_202603132335",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_eth_usdc_okx_202603132336",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_eth_usdc_okx_202603132336",
+      "target": "ETH/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_eth_usdc_okx_202603132336",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_eth_usdc_binance_202603132336",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_eth_usdc_binance_202603132336",
+      "target": "ETH/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_eth_usdc_binance_202603132336",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_eth_usdc_okx_202603132337",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_eth_usdc_okx_202603132337",
+      "target": "ETH/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_eth_usdc_okx_202603132337",
+      "target": "okx"
     }
   ]
 }

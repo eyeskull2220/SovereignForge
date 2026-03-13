@@ -34,13 +34,13 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ModelConfig:
     """Configuration for arbitrage model"""
-    input_dim: int = 10
+    input_dim: int = 17
     d_model: int = 512
     nhead: int = 8
     num_layers: int = 6
     dim_feedforward: int = 2048
     dropout: float = 0.1
-    max_seq_len: int = 100
+    max_seq_len: int = 128
 
 class PositionalEncoding(nn.Module):
     """Positional encoding for transformer inputs"""
@@ -68,13 +68,13 @@ class ArbitrageTransformer(nn.Module):
     """
 
     def __init__(self,
-                 input_dim: int = 10,
+                 input_dim: int = 17,
                  d_model: int = 512,
                  nhead: int = 8,
                  num_layers: int = 6,
                  dim_feedforward: int = 2048,
                  dropout: float = 0.1,
-                 max_seq_len: int = 100):
+                 max_seq_len: int = 128):
         super().__init__()
 
         self.input_dim = input_dim
@@ -174,13 +174,13 @@ class GPUArbitrageModel:
     def _get_default_config(self) -> Dict[str, Any]:
         """Get default model configuration"""
         return {
-            "input_dim": 10,
+            "input_dim": 17,
             "d_model": 512,
             "nhead": 8,
             "num_layers": 6,
             "dim_feedforward": 2048,
             "dropout": 0.1,
-            "max_seq_len": 100
+            "max_seq_len": 128
         }
 
     def _create_model(self) -> ArbitrageTransformer:
@@ -356,7 +356,7 @@ def setup_gpu_training():
         torch.backends.cudnn.deterministic = False
 
         # Set memory allocation strategy
-        torch.cuda.set_per_process_memory_fraction(0.8)
+        torch.cuda.set_per_process_memory_fraction(0.82)
 
         logger.info("GPU training optimizations enabled")
         return True
@@ -374,70 +374,95 @@ def run_gpu_arbitrage_training(pairs: List[str],
     Run GPU training for arbitrage models with real training data and optimization
     FIXED: Extended epochs, early stopping, learning rate scheduling per diagnostic report
     """
-    logger.info(f"Starting GPU arbitrage training for {len(pairs)} pairs: {pairs}")
+    logger.info(f"Starting GPU arbitrage training for {len(pairs)} pairs on {exchanges}: {pairs}")
 
     results = {}
     training_start = datetime.now()
 
-    for pair in pairs:
-        logger.info(f"Training model for {pair}")
+    try:
+        from multi_strategy_training import _load_pair_data, engineer_features
+    except ImportError:
+        from src.multi_strategy_training import _load_pair_data, engineer_features
 
-        # Create model and optimizer with improved settings
-        model = create_arbitrage_model()
-        optimizer = torch.optim.Adam(model.model.parameters(), lr=1e-4, weight_decay=1e-5)  # Added L2 regularization
-        criterion = nn.BCELoss()  # Binary cross entropy for arbitrage signal
+    for exchange in exchanges:
+        logger.info(f"\n{'=' * 50}")
+        logger.info(f"Training arbitrage models on {exchange.upper()}")
+        logger.info(f"{'=' * 50}")
 
-        # Add learning rate scheduler (cosine annealing)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)
+        data_dir = f"data/historical/{exchange}"
 
-        # Early stopping parameters
-        patience = 20  # Stop if no improvement for 20 epochs
-        best_val_loss = float('inf')
-        patience_counter = 0
-        best_model_state = None
+        for pair in pairs:
+            result_key = f"{pair}:{exchange}"
+            logger.info(f"Training model for {pair} on {exchange}")
 
-        # Generate synthetic training data (in real implementation, this would be real market data)
-        train_samples = 10000
-        val_samples = 2000
-        seq_len = 50
-        input_dim = 10
+            # Create model and optimizer with improved settings
+            model = create_arbitrage_model()
+            optimizer = torch.optim.Adam(model.model.parameters(), lr=8e-5, weight_decay=1e-5)
+            criterion = nn.BCELoss()
 
-        # Training data
-        train_data = []
-        train_labels = []
-        for i in range(train_samples):
-            # Generate realistic market data patterns
-            data = torch.randn(seq_len, input_dim).to(model.device)  # Move to GPU
-            # Add some arbitrage patterns (20% positive cases)
-            if np.random.random() < 0.2:
-                # Arbitrage opportunity pattern
-                data[seq_len//2:, :3] += torch.randn(seq_len//2, 3).to(model.device) * 0.5  # Price anomalies
-                arbitrage_signal = 1.0
+            # Add learning rate scheduler (ReduceLROnPlateau)
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, mode='min', factor=0.5, patience=10, min_lr=1e-6
+            )
+
+            # Early stopping parameters
+            patience = 25
+            min_delta = 0.0005
+            best_val_loss = float('inf')
+            patience_counter = 0
+            best_model_state = None
+
+            # Trading cost constants for loss penalty
+            TRADE_FEE = 0.0005     # 0.05%
+            TRADE_SLIPPAGE = 0.0008  # 0.08%
+            ROUND_TRIP_COST = 2 * (TRADE_FEE + TRADE_SLIPPAGE)  # 0.26%
+
+            # Load real market data from CSV files
+            seq_len = 128
+            input_dim = 17  # 10 technicals + ADX + 6 session one-hot
+
+            ohlcv = _load_pair_data(pair, data_dir)
+            if ohlcv is None:
+                logger.warning(f"No CSV data found for {pair} on {exchange}, skipping")
+                continue
+
+        features, n_features = engineer_features(ohlcv, seq_len)
+        if len(features) < 100:
+            logger.warning(f"Insufficient data for {pair} ({len(features)} samples), skipping")
+            continue
+
+        # Generate binary arbitrage labels from forward returns
+        close = ohlcv[:, 4].astype(float)
+        labels = []
+        for i in range(seq_len, min(seq_len + len(features), len(close))):
+            if i + 1 < len(close):
+                fwd_return = (close[i + 1] - close[i]) / (close[i] + 1e-10)
+                arb_signal = 1.0 if abs(fwd_return) > 0.001 else 0.0  # 0.1% threshold
             else:
-                arbitrage_signal = 0.0
+                arb_signal = 0.0
+            labels.append(arb_signal)
 
-            train_data.append(data)
-            train_labels.append(arbitrage_signal)
+        # Align lengths
+        min_len = min(len(features), len(labels))
+        features = features[:min_len]
+        labels = labels[:min_len]
 
-        train_data = torch.stack(train_data)
-        train_labels = torch.tensor(train_labels, dtype=torch.float32).to(model.device)  # Move to GPU
+        logger.info(f"Loaded {min_len} real samples for {pair} (input_dim={n_features})")
 
-        # Validation data
-        val_data = []
-        val_labels = []
-        for i in range(val_samples):
-            data = torch.randn(seq_len, input_dim).to(model.device)  # Move to GPU
-            if np.random.random() < 0.2:
-                data[seq_len//2:, :3] += torch.randn(seq_len//2, 3).to(model.device) * 0.5
-                arbitrage_signal = 1.0
-            else:
-                arbitrage_signal = 0.0
+        # Recreate model with correct input_dim if feature count differs from default
+        if n_features != 17:
+            model = create_arbitrage_model(config={"input_dim": n_features})
+            optimizer = torch.optim.Adam(model.model.parameters(), lr=8e-5, weight_decay=1e-5)
+            scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+                optimizer, mode='min', factor=0.5, patience=10, min_lr=1e-6
+            )
 
-            val_data.append(data)
-            val_labels.append(arbitrage_signal)
-
-        val_data = torch.stack(val_data)
-        val_labels = torch.tensor(val_labels, dtype=torch.float32).to(model.device)  # Move to GPU
+        # Train/val split: 45d train / 15d test (75/25, strict out-of-sample)
+        split_idx = int(min_len * 0.75)
+        train_data = torch.FloatTensor(features[:split_idx]).to(model.device)
+        train_labels = torch.tensor(labels[:split_idx], dtype=torch.float32).to(model.device)
+        val_data = torch.FloatTensor(features[split_idx:]).to(model.device)
+        val_labels = torch.tensor(labels[split_idx:], dtype=torch.float32).to(model.device)
 
         # Training loop with early stopping, LR scheduling, and mixed precision
         epoch_results = []
@@ -461,7 +486,10 @@ def run_gpu_arbitrage_training(pairs: List[str],
                 # Forward pass with AMP
                 with torch.amp.autocast('cuda', enabled=use_amp):
                     arbitrage_signal, confidence, spread = model.model(batch_data)
-                    loss = criterion(arbitrage_signal.squeeze(), batch_labels)
+                    bce_loss = criterion(arbitrage_signal.squeeze(), batch_labels)
+                    # Fee+slippage cost penalty: penalize signals by round-trip cost
+                    cost_penalty = ROUND_TRIP_COST * torch.abs(arbitrage_signal.squeeze()).mean()
+                    loss = bce_loss + cost_penalty
 
                 # Backward pass with scaler
                 if scaler:
@@ -515,8 +543,8 @@ def run_gpu_arbitrage_training(pairs: List[str],
 
             logger.info(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f}, Val Loss: {val_loss:.4f}, Val Acc: {val_acc:.4f}, LR: {optimizer.param_groups[0]['lr']:.6f}")
 
-            # Early stopping check
-            if val_loss < best_val_loss:
+            # Early stopping check (min_delta=0.0005)
+            if val_loss < best_val_loss - min_delta:
                 best_val_loss = val_loss
                 patience_counter = 0
                 best_model_state = model.model.state_dict().copy()
@@ -527,24 +555,24 @@ def run_gpu_arbitrage_training(pairs: List[str],
                 logger.info(f"Early stopping triggered after {epoch+1} epochs (no improvement for {patience} epochs)")
                 break
 
-            # Learning rate scheduling
-            scheduler.step()
+            # Learning rate scheduling (ReduceLROnPlateau)
+            scheduler.step(val_loss)
 
             # Save best model based on validation accuracy
             if val_acc > best_val_acc:
                 best_val_acc = val_acc
                 if save_models:
-                    model_path = f"models/strategies/arbitrage_{pair.lower().replace('/', '_')}_binance.pth"
+                    model_path = f"models/strategies/arbitrage_{pair.lower().replace('/', '_')}_{exchange}.pth"
                     os.makedirs(os.path.dirname(model_path), exist_ok=True)
                     model.save_model(model_path)
 
-        results[pair] = epoch_results
+            results[result_key] = epoch_results
 
-        # Save final model if requested
-        if save_models:
-            model_path = f"models/strategies/arbitrage_{pair.lower().replace('/', '_')}_binance.pth"
-            os.makedirs(os.path.dirname(model_path), exist_ok=True)
-            model.save_model(model_path)
+            # Save final model if requested
+            if save_models:
+                model_path = f"models/strategies/arbitrage_{pair.lower().replace('/', '_')}_{exchange}.pth"
+                os.makedirs(os.path.dirname(model_path), exist_ok=True)
+                model.save_model(model_path)
 
     training_time = datetime.now() - training_start
 
@@ -572,7 +600,7 @@ if __name__ == "__main__":
     logger.info(f"Model info: {info}")
 
     # Example prediction (random data)
-    batch_size, seq_len, input_dim = 2, 50, 10
+    batch_size, seq_len, input_dim = 2, 128, 17
     sample_data = torch.randn(batch_size, seq_len, input_dim)
 
     signal, confidence, spread = model.predict(sample_data)

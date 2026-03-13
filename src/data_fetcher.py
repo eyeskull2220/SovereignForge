@@ -26,7 +26,7 @@ class RealDataFetcher:
         self.exchanges = {}
 
         # Initialize exchanges and load markets
-        for name in ['binance', 'coinbase', 'kraken']:
+        for name in ['binance', 'coinbase', 'kraken', 'okx']:
             exchange = getattr(ccxt, name)()
             try:
                 exchange.load_markets()
@@ -37,8 +37,9 @@ class RealDataFetcher:
 
         # MiCA compliant pairs (only these are allowed)
         self.mica_pairs = [
-            'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC',
-            'LINK/USDC', 'IOTA/USDC', 'VET/USDC', 'BTC/USDC', 'ETH/USDC'
+            'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
+            'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
+            'XDC/USDC', 'ONDO/USDC',
         ]
 
         # Ensure data directory exists
@@ -46,7 +47,7 @@ class RealDataFetcher:
 
         logger.info("Real Data Fetcher initialized")
 
-    async def fetch_all_data(self, days: int = 90, timeframe: str = '1h') -> Dict:
+    async def fetch_all_data(self, days: int = 60, timeframe: str = '5m') -> Dict:
         """Fetch historical data for all MiCA pairs from all exchanges (parallel)"""
 
         logger.info(f"Fetching {days} days of {timeframe} data for {len(self.mica_pairs)} pairs")
@@ -54,7 +55,7 @@ class RealDataFetcher:
         all_data = {pair: {} for pair in self.mica_pairs}
 
         # Rate limit: max 2 concurrent requests per exchange
-        semaphore = asyncio.Semaphore(6)  # 2 per exchange × 3 exchanges
+        semaphore = asyncio.Semaphore(8)  # 2 per exchange × 4 exchanges
 
         async def _fetch_one(pair, exchange_name, exchange):
             async with semaphore:
@@ -133,6 +134,25 @@ class RealDataFetcher:
                 json.dump(serializable_data, f, default=str, indent=2)
 
             logger.info(f"Saved {pair} data to {filename}")
+
+    def save_historical_csvs(self, data: Dict, timeframe: str = '1h'):
+        """Save fetched data as per-exchange CSV files for training.
+
+        Saves to: data/historical/{exchange}/{PAIR}_{timeframe}.csv
+        """
+        hist_dir = os.path.join(self.data_directory, 'historical')
+
+        for pair, exchange_data in data.items():
+            pair_slug = pair.replace('/', '_')
+            for exchange_name, df in exchange_data.items():
+                exchange_dir = os.path.join(hist_dir, exchange_name)
+                os.makedirs(exchange_dir, exist_ok=True)
+
+                csv_path = os.path.join(exchange_dir, f"{pair_slug}_{timeframe}.csv")
+                # Reset index so timestamp becomes a column
+                df_out = df.reset_index() if 'timestamp' not in df.columns else df
+                df_out.to_csv(csv_path, index=False)
+                logger.info(f"Saved {csv_path} ({len(df_out)} rows)")
 
     def load_data(self, pair: str) -> Dict:
         """Load saved data for a pair"""
@@ -214,9 +234,9 @@ async def fetch_demo_data():
 
     fetcher = RealDataFetcher()
 
-    # Fetch 90 days of data for training
-    print("Fetching 90 days of hourly data...")
-    data = await fetcher.fetch_all_data(days=90, timeframe='1h')
+    # Fetch 60 days of data for training (45d train + 15d test)
+    print("Fetching 60 days of 5-minute data...")
+    data = await fetcher.fetch_all_data(days=60, timeframe='5m')
 
     print("\nData Summary:")
     for pair, exchange_data in data.items():

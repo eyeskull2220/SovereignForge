@@ -38,11 +38,15 @@ class BacktestDataProvider:
     def _generate_synthetic_data(self):
         """Generate synthetic historical data for backtesting"""
 
-        symbols = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'ADA/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC']
-        exchanges = ['binance', 'coinbase', 'kraken']
+        symbols = [
+            'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
+            'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
+            'XDC/USDC', 'ONDO/USDC',
+        ]
+        exchanges = ['binance', 'coinbase', 'kraken', 'okx']
 
-        # Generate 90 days of hourly data
-        start_date = datetime.now() - timedelta(days=90)
+        # Generate 60 days of 5-minute data (45d train + 15d test)
+        start_date = datetime.now() - timedelta(days=60)
         end_date = datetime.now()
 
         for symbol in symbols:
@@ -66,7 +70,12 @@ class BacktestDataProvider:
             'ADA/USDC': 0.45,
             'XLM/USDC': 0.12,
             'HBAR/USDC': 0.08,
-            'ALGO/USDC': 0.15
+            'ALGO/USDC': 0.15,
+            'LINK/USDC': 14.0,
+            'IOTA/USDC': 0.30,
+            'VET/USDC': 0.03,
+            'XDC/USDC': 0.04,
+            'ONDO/USDC': 1.20,
         }
 
         base_price = base_prices.get(symbol, 100)
@@ -75,14 +84,16 @@ class BacktestDataProvider:
         exchange_multipliers = {
             'binance': 1.0,      # Reference exchange
             'coinbase': 1.002,   # 0.2% premium
-            'kraken': 0.998      # 0.2% discount
+            'kraken': 0.998,     # 0.2% discount
+            'okx': 1.001,        # 0.1% slight premium
         }
 
         base_price *= exchange_multipliers.get(exchange, 1.0)
-        hours = int((end_date - start_date).total_seconds() / 3600)
+        # 5-minute candles: 12 per hour
+        hours = int((end_date - start_date).total_seconds() / 300)  # 5-min intervals
 
         # Generate timestamps
-        timestamps = [start_date + timedelta(hours=i) for i in range(hours)]
+        timestamps = [start_date + timedelta(minutes=5*i) for i in range(hours)]
 
         # Generate price series with:
         # - Random walk with drift
@@ -95,7 +106,12 @@ class BacktestDataProvider:
             'ADA/USDC': 0.035,  # 3.5% daily volatility
             'XLM/USDC': 0.045,  # 4.5% daily volatility
             'HBAR/USDC': 0.05,  # 5% daily volatility
-            'ALGO/USDC': 0.04   # 4% daily volatility
+            'ALGO/USDC': 0.04,  # 4% daily volatility
+            'LINK/USDC': 0.035, # 3.5% daily volatility
+            'IOTA/USDC': 0.05,  # 5% daily volatility
+            'VET/USDC': 0.045,  # 4.5% daily volatility
+            'XDC/USDC': 0.05,   # 5% daily volatility
+            'ONDO/USDC': 0.04,  # 4% daily volatility
         }
 
         volatility = volatility_multipliers.get(symbol, 0.03) / 16  # Hourly volatility
@@ -332,7 +348,7 @@ class ArbitrageBacktester:
 
         # Check minimum spread after estimated fees
         spread_pct = opportunity['spread_percentage']
-        estimated_fees_pct = 0.001  # 0.1% total fees (buy + sell)
+        estimated_fees_pct = 2 * (0.0005 + 0.0008)  # 0.26% round-trip (0.05% fee + 0.08% slippage × 2)
 
         if spread_pct <= estimated_fees_pct:
             return False
@@ -366,7 +382,7 @@ class ArbitrageBacktester:
         # Simulate trade execution
         buy_cost = opportunity['buy_price'] * quantity
         sell_revenue = opportunity['sell_price'] * quantity
-        fees = buy_cost * 0.001 + sell_revenue * 0.001  # 0.1% fees each side
+        fees = buy_cost * (0.0005 + 0.0008) + sell_revenue * (0.0005 + 0.0008)  # 0.05% fee + 0.08% slippage each side
 
         pnl = sell_revenue - buy_cost - fees
 

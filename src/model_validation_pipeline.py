@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 SovereignForge - Model Validation Pipeline
-Validates all 10 MiCA-compliant trading pair models and handles error recovery.
+Validates all 12 MiCA-compliant trading pair models and handles error recovery.
 
 Responsibilities:
-- Load all 10 pair models with robust error handling
+- Load all 12 pair models with robust error handling
 - Validate each against 80% accuracy threshold
 - Generate a JSON validation report
 - Auto-trigger hyperparameter retraining for failing models
@@ -31,9 +31,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
 
-# All 10 MiCA-compliant pairs
+# All 12 MiCA-compliant pairs
 ALL_PAIRS: List[str] = [
-    "BTC", "ETH", "XRP", "XLM", "HBAR", "ALGO", "ADA", "LINK", "IOTA", "VET"
+    "BTC", "ETH", "XRP", "XLM", "HBAR", "ALGO", "ADA", "LINK", "IOTA", "VET",
+    "XDC", "ONDO"
 ]
 
 ACCURACY_THRESHOLD = 0.80
@@ -119,7 +120,7 @@ def get_model_registry() -> ModelRegistry:
 
 class ModelValidationPipeline:
     """
-    Loads, validates, and optionally retrains all 10 trading pair models.
+    Loads, validates, and optionally retrains all 12 trading pair models.
     """
 
     def __init__(
@@ -255,10 +256,10 @@ class ModelValidationPipeline:
     ) -> Tuple[Optional[float], Optional[float], Optional[str]]:
         """Run a quick validation pass on synthetic test data."""
         try:
-            seq_len = 50
-            input_dim = 10
+            seq_len = 128
+            input_dim = 17  # 10 technicals + ADX + 6 session one-hot
             n_samples = 500
-            batch_size = 64
+            batch_size = 96
 
             X = torch.randn(n_samples, seq_len, input_dim)
             y = (torch.rand(n_samples) > 0.5).float()

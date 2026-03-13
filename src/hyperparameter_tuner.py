@@ -33,8 +33,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 logger = logging.getLogger(__name__)
 
-# All 10 MiCA-compliant pairs
-ALL_PAIRS = ["BTC", "ETH", "XRP", "XLM", "HBAR", "ALGO", "ADA", "LINK", "IOTA", "VET"]
+# All 12 MiCA-compliant pairs
+ALL_PAIRS = ["BTC", "ETH", "XRP", "XLM", "HBAR", "ALGO", "ADA", "LINK", "IOTA", "VET", "XDC", "ONDO"]
 ACCURACY_THRESHOLD = 0.80
 
 
@@ -46,8 +46,8 @@ class HyperparameterSpace:
     num_layers: List[int] = field(default_factory=lambda: [2, 4, 6])
     dim_feedforward: List[int] = field(default_factory=lambda: [512, 1024, 2048])
     dropout: List[float] = field(default_factory=lambda: [0.1, 0.2, 0.3])
-    learning_rate: List[float] = field(default_factory=lambda: [1e-4, 3e-4, 1e-3])
-    batch_size: List[int] = field(default_factory=lambda: [32, 64, 128])
+    learning_rate: List[float] = field(default_factory=lambda: [5e-5, 8e-5, 1e-4])
+    batch_size: List[int] = field(default_factory=lambda: [64, 96, 128])
     epochs: List[int] = field(default_factory=lambda: [20, 40, 60])
     weight_decay: List[float] = field(default_factory=lambda: [1e-5, 1e-4])
     warmup_steps: List[int] = field(default_factory=lambda: [100, 500])
@@ -61,13 +61,13 @@ class HyperparameterConfig:
     num_layers: int = 4
     dim_feedforward: int = 1024
     dropout: float = 0.1
-    learning_rate: float = 3e-4
-    batch_size: int = 64
+    learning_rate: float = 8e-5
+    batch_size: int = 96
     epochs: int = 40
     weight_decay: float = 1e-5
     warmup_steps: int = 500
-    max_seq_len: int = 100
-    input_dim: int = 10
+    max_seq_len: int = 128
+    input_dim: int = 17
 
 
 @dataclass
@@ -153,7 +153,7 @@ class HyperparameterTuner:
         return None
 
     async def tune_all_pairs(self, pairs: Optional[List[str]] = None) -> Dict[str, Optional[HyperparameterConfig]]:
-        """Tune all specified pairs (or all 10 if not specified)."""
+        """Tune all specified pairs (or all 12 if not specified)."""
         pairs = pairs or ALL_PAIRS
         results: Dict[str, Optional[HyperparameterConfig]] = {}
 

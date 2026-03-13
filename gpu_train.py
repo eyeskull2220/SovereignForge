@@ -4,7 +4,7 @@ SovereignForge GPU Training Script - Wave 7
 Complete GPU-accelerated arbitrage training with safety and monitoring
 
 Usage:
-    python gpu_train.py --pairs BTC/USDT ETH/USDT --epochs 50 --batch-size 64
+    python gpu_train.py --pairs BTC/USDC ETH/USDC --epochs 50 --batch-size 64
     python gpu_train.py --all-pairs --gpu-monitor --tensorboard
 """
 
@@ -191,10 +191,22 @@ class GPUTrainingOrchestrator:
             # Run the training
             training_results = self._execute_training()
 
-            # Save results and generate reports
+            # Post-training pipeline: backtest → report → version bump → handoff
             if training_results:
+                # Run backtesting on all trained models
+                backtest_results = self._run_post_training_backtest(training_results)
+                if backtest_results:
+                    training_results['backtest'] = backtest_results
+
+                # Save results and generate reports
                 self._save_training_results(training_results)
                 self._generate_training_report(training_results)
+
+                # Version bump + learnings log
+                new_version = self._bump_version(training_results)
+
+                # Git commit + handoff file
+                self._create_handoff(training_results, new_version)
 
             # Final logging
             training_time = time.time() - self.start_time
@@ -216,6 +228,7 @@ class GPUTrainingOrchestrator:
         config_info = f"""
 GPU Training Configuration:
 - Pairs: {self.args.pairs}
+- Exchanges: {getattr(self.args, 'exchanges', ['binance'])}
 - Epochs: {self.args.epochs}
 - Batch Size: {self.args.batch_size}
 - GPU Device: {self.args.gpu_device}
@@ -256,32 +269,35 @@ GPU Training Configuration:
         """Execute the actual training, dispatching by strategy"""
         try:
             strategy = getattr(self.args, 'strategy', 'arbitrage')
+            exchanges = getattr(self.args, 'exchanges', ['binance', 'coinbase', 'kraken', 'okx'])
 
             if strategy == 'arbitrage':
-                # Use existing GPU arbitrage training (unchanged)
+                # Use existing GPU arbitrage training across all exchanges
                 training_results = run_gpu_arbitrage_training(
                     pairs=self.args.pairs,
-                    exchanges=['binance', 'coinbase', 'kraken'],
+                    exchanges=exchanges,
                     num_epochs=self.args.epochs,
                     batch_size=self.args.batch_size,
                     save_models=True,
                     monitor_training=self.args.gpu_monitor
                 )
             elif strategy == 'all':
-                # Train all 4 strategies (collective brain)
-                logger.info("Training ALL strategies (collective brain mode)")
+                # Train all 4 strategies (collective brain) across all exchanges
+                logger.info(f"Training ALL strategies (collective brain) on {exchanges}")
                 training_results = train_all_strategies(
                     pairs=self.args.pairs,
+                    exchanges=exchanges,
                     epochs=self.args.epochs,
                     batch_size=self.args.batch_size,
                 )
             else:
-                # Train a specific non-arbitrage strategy
+                # Train a specific non-arbitrage strategy across all exchanges
                 strategy_type = StrategyType(strategy)
-                logger.info(f"Training {strategy} strategy")
+                logger.info(f"Training {strategy} strategy on {exchanges}")
                 training_results = train_strategy_model(
                     strategy=strategy_type,
                     pairs=self.args.pairs,
+                    exchanges=exchanges,
                     epochs=self.args.epochs,
                     batch_size=self.args.batch_size,
                 )
@@ -315,7 +331,7 @@ GPU Training Configuration:
             logger.error(f"Failed to save training results: {e}")
 
     def _generate_training_report(self, results: Dict[str, Any]):
-        """Generate comprehensive training report"""
+        """Generate comprehensive training report (legacy + new dashboard data)"""
         try:
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             report_file = f"reports/gpu_training_report_{timestamp}.md"
@@ -326,6 +342,16 @@ GPU Training Configuration:
                 f.write(report)
 
             logger.info(f"Training report generated: {report_file}")
+
+            # Generate new-format reports (dashboard JSON + charts data)
+            try:
+                from training_report_generator import TrainingReportGenerator
+                generator = TrainingReportGenerator()
+                backtest_results = results.get("backtest") if isinstance(results, dict) else None
+                generated = generator.generate_all(results, backtest_results)
+                logger.info(f"Dashboard reports generated: {list(generated.keys())}")
+            except ImportError:
+                logger.warning("training_report_generator not found, skipping dashboard reports")
 
         except Exception as e:
             logger.error(f"Failed to generate training report: {e}")
@@ -389,6 +415,57 @@ GPU Training Configuration:
 
         return report
 
+    def _run_post_training_backtest(self, training_results: Dict) -> Optional[Dict]:
+        """Run backtesting on all trained models with P&L simulation."""
+        try:
+            from post_training_backtest import PostTrainingBacktester
+            logger.info("Running post-training backtests...")
+            backtester = PostTrainingBacktester()
+            backtest_results = backtester.run_all_backtests(training_results)
+            summary = backtest_results.get("_summary", {})
+            if summary:
+                logger.info(
+                    f"Backtest summary: {summary.get('models_backtested', 0)} models, "
+                    f"avg Sharpe={summary.get('avg_sharpe', 0):.3f}, "
+                    f"total net P&L=${summary.get('total_net_pnl', 0):.2f}"
+                )
+            return backtest_results
+        except ImportError:
+            logger.warning("post_training_backtest module not found, skipping backtests")
+            return None
+        except Exception as e:
+            logger.error(f"Backtesting failed: {e}")
+            return None
+
+    def _bump_version(self, training_results: Dict) -> str:
+        """Bump patch version and log learnings after training run."""
+        try:
+            from version_manager import bump_version, log_learning
+            new_version = bump_version()
+            trained_count = sum(
+                1 for v in training_results.values()
+                if isinstance(v, dict) and v.get("status") == "trained"
+            )
+            log_learning(new_version, f"Training run: {trained_count} models trained")
+            return new_version
+        except ImportError:
+            logger.warning("version_manager not found, skipping version bump")
+            return "v1.0.4"
+        except Exception as e:
+            logger.error(f"Version bump failed: {e}")
+            return "v1.0.4"
+
+    def _create_handoff(self, training_results: Dict, version: str) -> None:
+        """Create git handoff after training completion."""
+        try:
+            from git_handoff import create_training_handoff
+            handoff_path = create_training_handoff(training_results, version)
+            logger.info(f"Handoff created: {handoff_path}")
+        except ImportError:
+            logger.warning("git_handoff not found, skipping handoff")
+        except Exception as e:
+            logger.error(f"Handoff creation failed: {e}")
+
     def _signal_handler(self, signum, frame):
         """Handle interrupt signals gracefully"""
         logger.info(f"Received signal {signum}, initiating graceful shutdown...")
@@ -413,6 +490,111 @@ GPU Training Configuration:
         except Exception as e:
             logger.error(f"Cleanup error: {e}")
 
+def run_cross_exchange_scan(args):
+    """Scan for cross-exchange arbitrage opportunities using trained models."""
+    import pandas as pd
+    from strategy_ensemble import create_ensemble_from_config, CrossExchangeScorer
+    from risk_management import get_risk_manager
+
+    print("\n" + "=" * 80)
+    print("SOVEREIGNFORGE CROSS-EXCHANGE ARBITRAGE SCANNER")
+    print("=" * 80)
+
+    exchanges = getattr(args, 'exchanges', ['binance', 'coinbase', 'kraken', 'okx'])
+    pairs = args.pairs
+
+    # Load ensemble and models
+    print(f"\nLoading models for {len(pairs)} pairs × {len(exchanges)} exchanges...")
+    ensemble = create_ensemble_from_config()
+    load_results = ensemble.load_all_models(pairs=pairs, exchanges=exchanges)
+    loaded = sum(1 for v in load_results.values() if v)
+    total = len(load_results)
+    print(f"Loaded {loaded}/{total} strategy models")
+
+    if loaded == 0:
+        print("\n[ERROR] No models loaded. Train models first:")
+        print("  python gpu_train.py --strategy all --all-pairs --exchanges binance coinbase kraken okx --epochs 200")
+        return
+
+    # Create scorer
+    risk_manager = get_risk_manager()
+    scorer = CrossExchangeScorer(
+        ensemble=ensemble,
+        risk_manager=risk_manager,
+        min_signal_spread=0.1,  # Lower threshold for scan to show more results
+        min_confidence=0.2,
+    )
+
+    # Load latest OHLCV data per exchange per pair
+    print(f"\nLoading market data from data/historical/...")
+    all_exchange_data = {}
+    for pair in pairs:
+        pair_slug = pair.replace('/', '_')
+        exchange_data = {}
+        for exchange in exchanges:
+            csv_path = os.path.join('data', 'historical', exchange, f'{pair_slug}_5m.csv')
+            if os.path.exists(csv_path):
+                try:
+                    df = pd.read_csv(csv_path)
+                    # Convert timestamp to numeric (epoch seconds) if string
+                    try:
+                        df['timestamp'] = pd.to_numeric(df['timestamp'], errors='coerce')
+                    except (ValueError, TypeError):
+                        pass
+                    if df['timestamp'].isna().any() or df['timestamp'].dtype == 'object':
+                        df['timestamp'] = pd.to_datetime(df['timestamp']).astype('int64') // 10**9
+                    ohlcv = df[['timestamp', 'open', 'high', 'low', 'close', 'volume']].values.astype(float)
+                    # Use last 100 candles for prediction
+                    exchange_data[exchange] = ohlcv[-100:]
+                except Exception as e:
+                    logger.warning(f"Failed to load {csv_path}: {e}")
+        if exchange_data:
+            all_exchange_data[pair] = exchange_data
+
+    if not all_exchange_data:
+        print("\n[ERROR] No market data found. Fetch data first:")
+        print("  python fetch_exchange_data.py --exchanges binance coinbase kraken okx")
+        return
+
+    # Run scan
+    print(f"\nScanning {len(all_exchange_data)} pairs across exchanges...\n")
+    results = scorer.scan_all_pairs(pairs, all_exchange_data)
+
+    # Display results table
+    if not results:
+        print("No cross-exchange arbitrage opportunities detected.")
+        print("(All signal spreads below threshold or insufficient model coverage)")
+        return
+
+    # Header
+    header = f"{'Pair':<12} {'Buy@':<10} {'Sell@':<10} {'Signal Spread':>14} {'Risk':>6} {'Reward/Risk':>12} {'Position%':>10}"
+    print(header)
+    print("-" * len(header))
+
+    for sig in results:
+        print(
+            f"{sig.pair:<12} "
+            f"{sig.buy_exchange:<10} "
+            f"{sig.sell_exchange:<10} "
+            f"{sig.signal_spread:>14.4f} "
+            f"{sig.risk_score:>6.2f} "
+            f"{sig.reward_risk_ratio:>12.2f} "
+            f"{sig.recommended_position_pct:>9.1f}%"
+        )
+
+    # Summary
+    print(f"\n{len(results)} opportunities detected")
+    top = results[0]
+    print(f"Best opportunity: {top.pair} — buy on {top.buy_exchange}, sell on {top.sell_exchange} "
+          f"(reward/risk: {top.reward_risk_ratio:.2f})")
+
+    # Per-exchange detail for top opportunity
+    print(f"\nDetailed breakdown for {top.pair}:")
+    for exchange, sig in top.per_exchange.items():
+        print(f"  {exchange:<10} action={sig.action:<5} confidence={sig.confidence:.3f} "
+              f"agreement={sig.agreement_score:.3f} strategies={sig.strategy_signals}")
+
+
 def main():
     """Main entry point for GPU training"""
     parser = argparse.ArgumentParser(
@@ -424,43 +606,55 @@ Examples:
   python gpu_train.py --all-pairs --gpu-monitor --tensorboard
 
   # Train specific pairs with custom settings
-  python gpu_train.py --pairs BTC/USDT ETH/USDT --epochs 100 --batch-size 64 --wandb
+  python gpu_train.py --pairs BTC/USDC ETH/USDC --epochs 100 --batch-size 64 --wandb
 
   # Quick training test
-  python gpu_train.py --pairs BTC/USDT --epochs 5 --batch-size 16
+  python gpu_train.py --pairs BTC/USDC --epochs 5 --batch-size 16
 
   # Train a specific strategy (fibonacci, grid, dca)
   python gpu_train.py --strategy fibonacci --all-pairs --epochs 100
 
-  # Train ALL strategies (collective brain)
+  # Train ALL strategies (collective brain) on all exchanges
   python gpu_train.py --strategy all --all-pairs --epochs 100 --gpu-monitor
+
+  # Train on specific exchanges only
+  python gpu_train.py --all-pairs --exchanges binance okx --strategy all --epochs 100
+
+  # Scan for cross-exchange arbitrage opportunities (requires trained models)
+  python gpu_train.py --scan --all-pairs --exchanges binance coinbase kraken okx
         """
     )
 
     # Pair selection
     parser.add_argument('--pairs', nargs='+',
-                       default=['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC'],
-                       help='Trading pairs to train (MiCA compliant USDC pairs)')
+                       default=['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC', 'XDC/USDC', 'ONDO/USDC'],
+                       help='Trading pairs to train (12 MiCA compliant USDC pairs)')
     parser.add_argument('--all-pairs', action='store_true',
-                       help='Train all 10 MiCA compliant pairs')
+                       help='Train all 12 MiCA compliant pairs')
 
     # Training parameters
     parser.add_argument('--epochs', type=int, default=200,
                        help='Number of training epochs (diagnostic report: need 100-300 for convergence)')
-    parser.add_argument('--batch-size', type=int, default=200,
-                       help='Training batch size (GPU Max: 200 with gradient accumulation)')
-    parser.add_argument('--learning-rate', type=float, default=1e-4,
-                       help='Learning rate')
+    parser.add_argument('--batch-size', type=int, default=96,
+                       help='Training batch size (96 optimal for 4060 Ti 16GB)')
+    parser.add_argument('--learning-rate', type=float, default=8e-5,
+                       help='Learning rate (8e-5 with ReduceLROnPlateau)')
+    parser.add_argument('--seq-len', type=int, default=128,
+                       help='Sequence length for input windows (128 for 5m candles)')
     parser.add_argument('--gradient-clip', type=float, default=1.0,
                        help='Gradient clipping value')
 
     # GPU configuration
     parser.add_argument('--gpu-device', type=int, default=0,
                        help='GPU device ID')
-    parser.add_argument('--memory-fraction', type=float, default=0.8,
-                       help='GPU memory fraction to use (0.8 = 12.8GB on 16GB card)')
-    parser.add_argument('--mixed-precision', action='store_true',
-                       help='Use mixed precision training')
+    parser.add_argument('--memory-fraction', type=float, default=0.82,
+                       help='GPU memory fraction to use (0.82 = 13.1GB on 16GB card)')
+    parser.add_argument('--mixed-precision', dest='mixed_precision',
+                       action='store_true', default=True,
+                       help='Use mixed precision training (default: enabled)')
+    parser.add_argument('--no-mixed-precision', dest='mixed_precision',
+                       action='store_false',
+                       help='Disable mixed precision training')
 
     # Monitoring and logging
     parser.add_argument('--gpu-monitor', action='store_true',
@@ -470,10 +664,19 @@ Examples:
     parser.add_argument('--wandb', action='store_true',
                        help='Enable Weights & Biases logging')
 
+    # Exchange selection
+    parser.add_argument('--exchanges', nargs='+',
+                       default=['binance', 'coinbase', 'kraken', 'okx'],
+                       help='Exchanges to train on (default: binance coinbase kraken okx)')
+
     # Strategy selection
     parser.add_argument('--strategy', choices=['arbitrage', 'fibonacci', 'grid', 'dca', 'all'],
                        default='arbitrage',
                        help='Strategy to train (default: arbitrage, use "all" for collective brain)')
+
+    # Scan mode (cross-exchange arbitrage detection)
+    parser.add_argument('--scan', action='store_true',
+                       help='Scan for cross-exchange arbitrage opportunities using trained models')
 
     # Safety options
     parser.add_argument('--safe-mode', action='store_true',
@@ -485,7 +688,7 @@ Examples:
 
     # Override pairs if --all-pairs is specified
     if args.all_pairs:
-        args.pairs = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC']
+        args.pairs = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC', 'XDC/USDC', 'ONDO/USDC']
 
     # Validate arguments
     if not args.pairs:
@@ -499,6 +702,11 @@ Examples:
 
     if not (0 < args.memory_fraction <= 1):
         parser.error("Memory fraction must be between 0 and 1")
+
+    # Scan mode: detect cross-exchange arbitrage opportunities
+    if args.scan:
+        run_cross_exchange_scan(args)
+        sys.exit(0)
 
     # Create orchestrator and run training
     orchestrator = GPUTrainingOrchestrator(args)

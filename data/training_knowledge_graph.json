@@ -1244,6 +1244,126 @@
       "val_loss": 0.01220246186066005,
       "epochs": 26,
       "id": "dca_xrp_usdc_okx_202603132323"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "XLM/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:24:30.188682",
+      "val_loss": 0.02543866059018506,
+      "epochs": 26,
+      "id": "arbitrage_xlm_usdc_binance_202603132324"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "XLM/USDC",
+      "exchange": "coinbase",
+      "timestamp": "2026-03-13T23:24:37.018035",
+      "val_loss": 0.012997905141673982,
+      "epochs": 28,
+      "id": "arbitrage_xlm_usdc_coinbase_202603132324"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "XLM/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T23:25:05.062114",
+      "val_loss": 0.02602695149059097,
+      "epochs": 26,
+      "id": "arbitrage_xlm_usdc_okx_202603132325"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "XLM/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:25:59.017336",
+      "val_loss": 0.041251241395043,
+      "epochs": 26,
+      "id": "fibonacci_xlm_usdc_binance_202603132325"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "XLM/USDC",
+      "exchange": "coinbase",
+      "timestamp": "2026-03-13T23:26:13.362652",
+      "val_loss": 0.026785007584840058,
+      "epochs": 31,
+      "id": "fibonacci_xlm_usdc_coinbase_202603132326"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "XLM/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T23:27:09.087353",
+      "val_loss": 0.039281188111959235,
+      "epochs": 27,
+      "id": "fibonacci_xlm_usdc_okx_202603132327"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "XLM/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:27:34.775294",
+      "val_loss": 0.0118708241937889,
+      "epochs": 26,
+      "id": "grid_xlm_usdc_binance_202603132327"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "XLM/USDC",
+      "exchange": "coinbase",
+      "timestamp": "2026-03-13T23:27:41.236663",
+      "val_loss": 0.007003437506500632,
+      "epochs": 29,
+      "id": "grid_xlm_usdc_coinbase_202603132327"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "XLM/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T23:28:06.635468",
+      "val_loss": 0.01763434586011701,
+      "epochs": 26,
+      "id": "grid_xlm_usdc_okx_202603132328"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "XLM/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:28:36.929815",
+      "val_loss": 0.012627809515429867,
+      "epochs": 29,
+      "id": "dca_xlm_usdc_binance_202603132328"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "XLM/USDC",
+      "exchange": "coinbase",
+      "timestamp": "2026-03-13T23:28:43.332991",
+      "val_loss": 0.006228887045290321,
+      "epochs": 27,
+      "id": "dca_xlm_usdc_coinbase_202603132328"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "XLM/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T23:29:12.386166",
+      "val_loss": 0.014384509126345316,
+      "epochs": 26,
+      "id": "dca_xlm_usdc_okx_202603132329"
     }
   ],
   "edges": [
@@ -3000,6 +3120,186 @@
     {
       "relation": "trains_exchange",
       "source": "dca_xrp_usdc_okx_202603132323",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_xlm_usdc_binance_202603132324",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_xlm_usdc_binance_202603132324",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_xlm_usdc_binance_202603132324",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_xlm_usdc_coinbase_202603132324",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_xlm_usdc_coinbase_202603132324",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_xlm_usdc_coinbase_202603132324",
+      "target": "coinbase"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_xlm_usdc_okx_202603132325",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_xlm_usdc_okx_202603132325",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_xlm_usdc_okx_202603132325",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_xlm_usdc_binance_202603132325",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_xlm_usdc_binance_202603132325",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_xlm_usdc_binance_202603132325",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_xlm_usdc_coinbase_202603132326",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_xlm_usdc_coinbase_202603132326",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_xlm_usdc_coinbase_202603132326",
+      "target": "coinbase"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_xlm_usdc_okx_202603132327",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_xlm_usdc_okx_202603132327",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_xlm_usdc_okx_202603132327",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_xlm_usdc_binance_202603132327",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_xlm_usdc_binance_202603132327",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_xlm_usdc_binance_202603132327",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_xlm_usdc_coinbase_202603132327",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_xlm_usdc_coinbase_202603132327",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_xlm_usdc_coinbase_202603132327",
+      "target": "coinbase"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_xlm_usdc_okx_202603132328",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_xlm_usdc_okx_202603132328",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_xlm_usdc_okx_202603132328",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_xlm_usdc_binance_202603132328",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_xlm_usdc_binance_202603132328",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_xlm_usdc_binance_202603132328",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_xlm_usdc_coinbase_202603132328",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_xlm_usdc_coinbase_202603132328",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_xlm_usdc_coinbase_202603132328",
+      "target": "coinbase"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_xlm_usdc_okx_202603132329",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_xlm_usdc_okx_202603132329",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_xlm_usdc_okx_202603132329",
       "target": "okx"
     }
   ]

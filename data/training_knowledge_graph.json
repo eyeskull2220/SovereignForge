@@ -1764,6 +1764,46 @@
       "val_loss": 0.01167412921656958,
       "epochs": 46,
       "id": "dca_iota_usdc_okx_202603132357"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "VET/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:57:41.713565",
+      "val_loss": 0.02468835160964065,
+      "epochs": 28,
+      "id": "arbitrage_vet_usdc_binance_202603132357"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "VET/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:58:46.284220",
+      "val_loss": 0.03680183841950364,
+      "epochs": 29,
+      "id": "fibonacci_vet_usdc_binance_202603132358"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "VET/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:59:24.736003",
+      "val_loss": 0.01102562624340256,
+      "epochs": 42,
+      "id": "grid_vet_usdc_binance_202603132359"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "VET/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:59:53.757721",
+      "val_loss": 0.010768108307901356,
+      "epochs": 30,
+      "id": "dca_vet_usdc_binance_202603132359"
     }
   ],
   "edges": [
@@ -4301,6 +4341,66 @@
       "relation": "trains_exchange",
       "source": "dca_iota_usdc_okx_202603132357",
       "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_vet_usdc_binance_202603132357",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_vet_usdc_binance_202603132357",
+      "target": "VET/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_vet_usdc_binance_202603132357",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_vet_usdc_binance_202603132358",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_vet_usdc_binance_202603132358",
+      "target": "VET/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_vet_usdc_binance_202603132358",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_vet_usdc_binance_202603132359",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_vet_usdc_binance_202603132359",
+      "target": "VET/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_vet_usdc_binance_202603132359",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_vet_usdc_binance_202603132359",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_vet_usdc_binance_202603132359",
+      "target": "VET/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_vet_usdc_binance_202603132359",
+      "target": "binance"
     }
   ]
 }

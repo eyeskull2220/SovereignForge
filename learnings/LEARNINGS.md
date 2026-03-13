@@ -41,3 +41,6 @@
 
 ## v1.0.14 — 2026-03-13 21:25
 - Training run: 0 models trained
+
+## v1.0.15 — 2026-03-13 21:25
+- Training run: 0 models trained

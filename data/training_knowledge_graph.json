@@ -62,6 +62,98 @@
       "val_loss": 0.043762267318864664,
       "epochs": 26,
       "id": "arbitrage_btc_usdc_okx_202603132110"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "BTC/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T21:28:17.627433",
+      "val_loss": 0.033048323686752056,
+      "epochs": 26,
+      "id": "arbitrage_btc_usdc_binance_202603132128"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "BTC/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T21:28:43.822571",
+      "val_loss": 0.043709319540195996,
+      "epochs": 26,
+      "id": "arbitrage_btc_usdc_okx_202603132128"
+    },
+    {
+      "type": "strategy",
+      "id": "fibonacci"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "BTC/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T21:30:10.497866",
+      "val_loss": 0.1334870171215799,
+      "epochs": 42,
+      "id": "fibonacci_btc_usdc_binance_202603132130"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "BTC/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T21:31:04.654104",
+      "val_loss": 0.13561398767762714,
+      "epochs": 26,
+      "id": "fibonacci_btc_usdc_okx_202603132131"
+    },
+    {
+      "type": "strategy",
+      "id": "grid"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "BTC/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T21:31:34.404698",
+      "val_loss": 0.00047439841404815926,
+      "epochs": 31,
+      "id": "grid_btc_usdc_binance_202603132131"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "BTC/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T21:32:03.523512",
+      "val_loss": 0.0004980729417487358,
+      "epochs": 26,
+      "id": "grid_btc_usdc_okx_202603132132"
+    },
+    {
+      "type": "strategy",
+      "id": "dca"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "BTC/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T21:32:34.172057",
+      "val_loss": 0.00035742992153649944,
+      "epochs": 28,
+      "id": "dca_btc_usdc_binance_202603132132"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "BTC/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T21:33:00.782663",
+      "val_loss": 0.0002043717456520729,
+      "epochs": 26,
+      "id": "dca_btc_usdc_okx_202603132133"
     }
   ],
   "edges": [
@@ -123,6 +215,126 @@
     {
       "relation": "trains_exchange",
       "source": "arbitrage_btc_usdc_okx_202603132110",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_btc_usdc_binance_202603132128",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_btc_usdc_binance_202603132128",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_btc_usdc_binance_202603132128",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_btc_usdc_okx_202603132128",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_btc_usdc_okx_202603132128",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_btc_usdc_okx_202603132128",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_btc_usdc_binance_202603132130",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_btc_usdc_binance_202603132130",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_btc_usdc_binance_202603132130",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_btc_usdc_okx_202603132131",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_btc_usdc_okx_202603132131",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_btc_usdc_okx_202603132131",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_btc_usdc_binance_202603132131",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_btc_usdc_binance_202603132131",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_btc_usdc_binance_202603132131",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_btc_usdc_okx_202603132132",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_btc_usdc_okx_202603132132",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_btc_usdc_okx_202603132132",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_btc_usdc_binance_202603132132",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_btc_usdc_binance_202603132132",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_btc_usdc_binance_202603132132",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_btc_usdc_okx_202603132133",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_btc_usdc_okx_202603132133",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_btc_usdc_okx_202603132133",
       "target": "okx"
     }
   ]

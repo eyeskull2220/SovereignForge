@@ -139,7 +139,7 @@ class ArbitrageTransformer(nn.Module):
         x = torch.mean(x, dim=1)  # [batch_size, d_model]
 
         # Output predictions
-        arbitrage_signal = torch.sigmoid(self.arbitrage_head(x))  # [batch_size, 1]
+        arbitrage_signal = self.arbitrage_head(x)  # [batch_size, 1] raw logits for BCEWithLogitsLoss
         confidence_score = torch.sigmoid(self.confidence_head(x))  # [batch_size, 1]
         predicted_spread = self.spread_head(x)  # [batch_size, 1]
 
@@ -274,6 +274,9 @@ class GPUArbitrageModel:
             try:
                 arbitrage_signal, confidence_score, predicted_spread = self.model(market_data)
 
+                # Apply sigmoid to convert logits to probabilities for inference
+                arbitrage_signal = torch.sigmoid(arbitrage_signal)
+
                 # Ensure proper output shapes
                 if arbitrage_signal.dim() == 1:
                     arbitrage_signal = arbitrage_signal.unsqueeze(-1)
@@ -291,6 +294,7 @@ class GPUArbitrageModel:
                     market_data_cpu = market_data.cpu()
                     with torch.no_grad():
                         arbitrage_signal, confidence_score, predicted_spread = self.model.cpu()(market_data_cpu)
+                        arbitrage_signal = torch.sigmoid(arbitrage_signal)
                         return arbitrage_signal, confidence_score, predicted_spread
                 except Exception as fallback_error:
                     logger.error(f"CPU fallback also failed: {fallback_error}")
@@ -385,7 +389,7 @@ def run_gpu_arbitrage_training(pairs: List[str],
         # Create model and optimizer with improved settings
         model = create_arbitrage_model()
         optimizer = torch.optim.Adam(model.model.parameters(), lr=1e-4, weight_decay=1e-5)  # Added L2 regularization
-        criterion = nn.BCELoss()  # Binary cross entropy for arbitrage signal
+        criterion = nn.BCEWithLogitsLoss()  # Numerically stable + autocast-safe
 
         # Add learning rate scheduler (cosine annealing)
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=num_epochs, eta_min=1e-6)
@@ -478,7 +482,7 @@ def run_gpu_arbitrage_training(pairs: List[str],
                 epoch_train_loss += loss.item()
 
                 # Calculate accuracy
-                predictions = (arbitrage_signal.squeeze() > 0.5).float()
+                predictions = (arbitrage_signal.squeeze() > 0.0).float()  # logits: 0.0 threshold
                 epoch_train_correct += (predictions == batch_labels).sum().item()
 
             # Validation
@@ -496,7 +500,7 @@ def run_gpu_arbitrage_training(pairs: List[str],
                         loss = criterion(arbitrage_signal.squeeze(), batch_labels)
 
                     val_loss += loss.item()
-                    predictions = (arbitrage_signal.squeeze() > 0.5).float()
+                    predictions = (arbitrage_signal.squeeze() > 0.0).float()  # logits: 0.0 threshold
                     val_correct += (predictions == batch_labels).sum().item()
 
             # Calculate metrics

@@ -830,6 +830,50 @@
       "val_loss": 0.00027016605749344714,
       "epochs": 36,
       "id": "dca_vet_usdc_binance_202603132221"
+    },
+    {
+      "type": "pair",
+      "id": "ONDO/USDC"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "ONDO/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T22:22:40.316465",
+      "val_loss": 0.06309255655441019,
+      "epochs": 31,
+      "id": "arbitrage_ondo_usdc_binance_202603132222"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "ONDO/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T22:24:36.367367",
+      "val_loss": 0.13138392898771498,
+      "epochs": 57,
+      "id": "fibonacci_ondo_usdc_binance_202603132224"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "ONDO/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T22:25:19.024787",
+      "val_loss": 0.0005506390248127799,
+      "epochs": 45,
+      "id": "grid_ondo_usdc_binance_202603132225"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ONDO/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T22:25:47.667540",
+      "val_loss": 0.0005425713964440446,
+      "epochs": 29,
+      "id": "dca_ondo_usdc_binance_202603132225"
     }
   ],
   "edges": [
@@ -1971,6 +2015,66 @@
     {
       "relation": "trains_exchange",
       "source": "dca_vet_usdc_binance_202603132221",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_ondo_usdc_binance_202603132222",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_ondo_usdc_binance_202603132222",
+      "target": "ONDO/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_ondo_usdc_binance_202603132222",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_ondo_usdc_binance_202603132224",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_ondo_usdc_binance_202603132224",
+      "target": "ONDO/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_ondo_usdc_binance_202603132224",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_ondo_usdc_binance_202603132225",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_ondo_usdc_binance_202603132225",
+      "target": "ONDO/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_ondo_usdc_binance_202603132225",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_ondo_usdc_binance_202603132225",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_ondo_usdc_binance_202603132225",
+      "target": "ONDO/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_ondo_usdc_binance_202603132225",
       "target": "binance"
     }
   ]

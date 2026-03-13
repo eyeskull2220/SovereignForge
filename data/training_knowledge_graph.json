@@ -1364,6 +1364,46 @@
       "val_loss": 0.014384509126345316,
       "epochs": 26,
       "id": "dca_xlm_usdc_okx_202603132329"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "HBAR/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:29:53.951355",
+      "val_loss": 0.02124378974032071,
+      "epochs": 29,
+      "id": "arbitrage_hbar_usdc_binance_202603132329"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "HBAR/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:30:51.920944",
+      "val_loss": 0.03471279585113128,
+      "epochs": 27,
+      "id": "fibonacci_hbar_usdc_binance_202603132330"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "HBAR/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:31:34.839035",
+      "val_loss": 0.009743280838140182,
+      "epochs": 43,
+      "id": "grid_hbar_usdc_binance_202603132331"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "HBAR/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:32:05.975913",
+      "val_loss": 0.00956378356139693,
+      "epochs": 30,
+      "id": "dca_hbar_usdc_binance_202603132332"
     }
   ],
   "edges": [
@@ -3301,6 +3341,66 @@
       "relation": "trains_exchange",
       "source": "dca_xlm_usdc_okx_202603132329",
       "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_hbar_usdc_binance_202603132329",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_hbar_usdc_binance_202603132329",
+      "target": "HBAR/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_hbar_usdc_binance_202603132329",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_hbar_usdc_binance_202603132330",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_hbar_usdc_binance_202603132330",
+      "target": "HBAR/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_hbar_usdc_binance_202603132330",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_hbar_usdc_binance_202603132331",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_hbar_usdc_binance_202603132331",
+      "target": "HBAR/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_hbar_usdc_binance_202603132331",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_hbar_usdc_binance_202603132332",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_hbar_usdc_binance_202603132332",
+      "target": "HBAR/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_hbar_usdc_binance_202603132332",
+      "target": "binance"
     }
   ]
 }

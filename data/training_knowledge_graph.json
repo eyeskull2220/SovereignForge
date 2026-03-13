@@ -1,0 +1,129 @@
+{
+  "directed": true,
+  "multigraph": false,
+  "graph": {},
+  "nodes": [
+    {
+      "type": "strategy",
+      "id": "arbitrage"
+    },
+    {
+      "type": "pair",
+      "id": "BTC/USDC"
+    },
+    {
+      "type": "exchange",
+      "id": "binance"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "BTC/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T20:28:36.680558",
+      "val_loss": 0.12689953350595065,
+      "epochs": 66,
+      "id": "arbitrage_btc_usdc_binance_202603132028"
+    },
+    {
+      "type": "pair",
+      "id": "ETH/USDC"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "ETH/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T20:37:45.193100",
+      "val_loss": 0.1565603321152074,
+      "epochs": 93,
+      "id": "arbitrage_eth_usdc_binance_202603132037"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "BTC/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T21:06:50.483744",
+      "val_loss": 0.03308786438364122,
+      "epochs": 33,
+      "id": "arbitrage_btc_usdc_binance_202603132106"
+    },
+    {
+      "type": "exchange",
+      "id": "okx"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "BTC/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T21:10:19.644840",
+      "val_loss": 0.043762267318864664,
+      "epochs": 26,
+      "id": "arbitrage_btc_usdc_okx_202603132110"
+    }
+  ],
+  "edges": [
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_btc_usdc_binance_202603132028",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_btc_usdc_binance_202603132028",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_btc_usdc_binance_202603132028",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_eth_usdc_binance_202603132037",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_eth_usdc_binance_202603132037",
+      "target": "ETH/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_eth_usdc_binance_202603132037",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_btc_usdc_binance_202603132106",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_btc_usdc_binance_202603132106",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_btc_usdc_binance_202603132106",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_btc_usdc_okx_202603132110",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_btc_usdc_okx_202603132110",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_btc_usdc_okx_202603132110",
+      "target": "okx"
+    }
+  ]
+}

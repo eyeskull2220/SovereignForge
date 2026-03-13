@@ -1524,6 +1524,86 @@
       "val_loss": 0.010010818479996589,
       "epochs": 31,
       "id": "dca_algo_usdc_binance_202603132340"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "ADA/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:40:58.333851",
+      "val_loss": 0.02852963185351756,
+      "epochs": 28,
+      "id": "arbitrage_ada_usdc_binance_202603132340"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "ADA/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T23:41:27.160152",
+      "val_loss": 0.03339811861515045,
+      "epochs": 26,
+      "id": "arbitrage_ada_usdc_okx_202603132341"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "ADA/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:42:30.432879",
+      "val_loss": 0.04242697956247462,
+      "epochs": 29,
+      "id": "fibonacci_ada_usdc_binance_202603132342"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "ADA/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T23:43:26.859535",
+      "val_loss": 0.04926686156541109,
+      "epochs": 26,
+      "id": "fibonacci_ada_usdc_okx_202603132343"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "ADA/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:44:10.616056",
+      "val_loss": 0.012720332444748945,
+      "epochs": 41,
+      "id": "grid_ada_usdc_binance_202603132344"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "ADA/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T23:44:41.088452",
+      "val_loss": 0.0167243636937605,
+      "epochs": 26,
+      "id": "grid_ada_usdc_okx_202603132344"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ADA/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T23:45:17.560054",
+      "val_loss": 0.013318340283715063,
+      "epochs": 33,
+      "id": "dca_ada_usdc_binance_202603132345"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ADA/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T23:45:46.385213",
+      "val_loss": 0.015364653461923202,
+      "epochs": 26,
+      "id": "dca_ada_usdc_okx_202603132345"
     }
   ],
   "edges": [
@@ -3701,6 +3781,126 @@
       "relation": "trains_exchange",
       "source": "dca_algo_usdc_binance_202603132340",
       "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_ada_usdc_binance_202603132340",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_ada_usdc_binance_202603132340",
+      "target": "ADA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_ada_usdc_binance_202603132340",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_ada_usdc_okx_202603132341",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_ada_usdc_okx_202603132341",
+      "target": "ADA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_ada_usdc_okx_202603132341",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_ada_usdc_binance_202603132342",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_ada_usdc_binance_202603132342",
+      "target": "ADA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_ada_usdc_binance_202603132342",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_ada_usdc_okx_202603132343",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_ada_usdc_okx_202603132343",
+      "target": "ADA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_ada_usdc_okx_202603132343",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_ada_usdc_binance_202603132344",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_ada_usdc_binance_202603132344",
+      "target": "ADA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_ada_usdc_binance_202603132344",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_ada_usdc_okx_202603132344",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_ada_usdc_okx_202603132344",
+      "target": "ADA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_ada_usdc_okx_202603132344",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_ada_usdc_binance_202603132345",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_ada_usdc_binance_202603132345",
+      "target": "ADA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_ada_usdc_binance_202603132345",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_ada_usdc_okx_202603132345",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_ada_usdc_okx_202603132345",
+      "target": "ADA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_ada_usdc_okx_202603132345",
+      "target": "okx"
     }
   ]
 }

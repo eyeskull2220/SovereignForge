@@ -702,6 +702,90 @@
       "val_loss": 0.00044289771169335126,
       "epochs": 26,
       "id": "dca_link_usdc_okx_202603132212"
+    },
+    {
+      "type": "pair",
+      "id": "IOTA/USDC"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "IOTA/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T22:13:31.573625",
+      "val_loss": 0.054895531179176435,
+      "epochs": 52,
+      "id": "arbitrage_iota_usdc_binance_202603132213"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "IOTA/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T22:14:05.030163",
+      "val_loss": 0.005451503997351716,
+      "epochs": 34,
+      "id": "arbitrage_iota_usdc_okx_202603132214"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "IOTA/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T22:15:38.624702",
+      "val_loss": 0.139072538084454,
+      "epochs": 46,
+      "id": "fibonacci_iota_usdc_binance_202603132215"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "IOTA/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T22:16:33.898053",
+      "val_loss": 0.0010544207179918885,
+      "epochs": 27,
+      "id": "fibonacci_iota_usdc_okx_202603132216"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "IOTA/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T22:17:06.438965",
+      "val_loss": 0.0004340120432769052,
+      "epochs": 34,
+      "id": "grid_iota_usdc_binance_202603132217"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "IOTA/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T22:17:48.121285",
+      "val_loss": 0.0007439543346562358,
+      "epochs": 44,
+      "id": "grid_iota_usdc_okx_202603132217"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "IOTA/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-13T22:18:17.770964",
+      "val_loss": 0.0003883708158456203,
+      "epochs": 30,
+      "id": "dca_iota_usdc_binance_202603132218"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "IOTA/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-13T22:18:43.424732",
+      "val_loss": 0.00026851989354731307,
+      "epochs": 26,
+      "id": "dca_iota_usdc_okx_202603132218"
     }
   ],
   "edges": [
@@ -1663,6 +1747,126 @@
     {
       "relation": "trains_exchange",
       "source": "dca_link_usdc_okx_202603132212",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_iota_usdc_binance_202603132213",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_iota_usdc_binance_202603132213",
+      "target": "IOTA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_iota_usdc_binance_202603132213",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_iota_usdc_okx_202603132214",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_iota_usdc_okx_202603132214",
+      "target": "IOTA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_iota_usdc_okx_202603132214",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_iota_usdc_binance_202603132215",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_iota_usdc_binance_202603132215",
+      "target": "IOTA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_iota_usdc_binance_202603132215",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_iota_usdc_okx_202603132216",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_iota_usdc_okx_202603132216",
+      "target": "IOTA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_iota_usdc_okx_202603132216",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_iota_usdc_binance_202603132217",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_iota_usdc_binance_202603132217",
+      "target": "IOTA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_iota_usdc_binance_202603132217",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_iota_usdc_okx_202603132217",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_iota_usdc_okx_202603132217",
+      "target": "IOTA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_iota_usdc_okx_202603132217",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_iota_usdc_binance_202603132218",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_iota_usdc_binance_202603132218",
+      "target": "IOTA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_iota_usdc_binance_202603132218",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_iota_usdc_okx_202603132218",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_iota_usdc_okx_202603132218",
+      "target": "IOTA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_iota_usdc_okx_202603132218",
       "target": "okx"
     }
   ]

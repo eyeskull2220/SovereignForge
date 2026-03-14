@@ -1924,6 +1924,86 @@
       "val_loss": 0.00877041965464337,
       "epochs": 26,
       "id": "dca_btc_usdc_okx_202603140139"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "XRP/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-14T01:39:42.520461",
+      "val_loss": 0.020572935862259733,
+      "epochs": 26,
+      "id": "arbitrage_xrp_usdc_binance_202603140139"
+    },
+    {
+      "type": "training_run",
+      "strategy": "arbitrage",
+      "pair": "XRP/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-14T01:40:07.778683",
+      "val_loss": 0.02704795662106739,
+      "epochs": 26,
+      "id": "arbitrage_xrp_usdc_okx_202603140140"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "XRP/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-14T01:40:57.902066",
+      "val_loss": 0.034872819317711724,
+      "epochs": 26,
+      "id": "fibonacci_xrp_usdc_binance_202603140140"
+    },
+    {
+      "type": "training_run",
+      "strategy": "fibonacci",
+      "pair": "XRP/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-14T01:41:49.332619",
+      "val_loss": 0.03897668104618788,
+      "epochs": 26,
+      "id": "fibonacci_xrp_usdc_okx_202603140141"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "XRP/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-14T01:42:13.916046",
+      "val_loss": 0.009737426169320114,
+      "epochs": 26,
+      "id": "grid_xrp_usdc_binance_202603140142"
+    },
+    {
+      "type": "training_run",
+      "strategy": "grid",
+      "pair": "XRP/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-14T01:42:38.756136",
+      "val_loss": 0.012342281515399615,
+      "epochs": 26,
+      "id": "grid_xrp_usdc_okx_202603140142"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "XRP/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-14T01:43:03.374262",
+      "val_loss": 0.010445915752400954,
+      "epochs": 26,
+      "id": "dca_xrp_usdc_binance_202603140143"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "XRP/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-14T01:43:29.796810",
+      "val_loss": 0.01236157894341482,
+      "epochs": 26,
+      "id": "dca_xrp_usdc_okx_202603140143"
     }
   ],
   "edges": [
@@ -4700,6 +4780,126 @@
     {
       "relation": "trains_exchange",
       "source": "dca_btc_usdc_okx_202603140139",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_xrp_usdc_binance_202603140139",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_xrp_usdc_binance_202603140139",
+      "target": "XRP/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_xrp_usdc_binance_202603140139",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "arbitrage_xrp_usdc_okx_202603140140",
+      "target": "arbitrage"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "arbitrage_xrp_usdc_okx_202603140140",
+      "target": "XRP/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "arbitrage_xrp_usdc_okx_202603140140",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_xrp_usdc_binance_202603140140",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_xrp_usdc_binance_202603140140",
+      "target": "XRP/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_xrp_usdc_binance_202603140140",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "fibonacci_xrp_usdc_okx_202603140141",
+      "target": "fibonacci"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "fibonacci_xrp_usdc_okx_202603140141",
+      "target": "XRP/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "fibonacci_xrp_usdc_okx_202603140141",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_xrp_usdc_binance_202603140142",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_xrp_usdc_binance_202603140142",
+      "target": "XRP/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_xrp_usdc_binance_202603140142",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "grid_xrp_usdc_okx_202603140142",
+      "target": "grid"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "grid_xrp_usdc_okx_202603140142",
+      "target": "XRP/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "grid_xrp_usdc_okx_202603140142",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_xrp_usdc_binance_202603140143",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_xrp_usdc_binance_202603140143",
+      "target": "XRP/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_xrp_usdc_binance_202603140143",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_xrp_usdc_okx_202603140143",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_xrp_usdc_okx_202603140143",
+      "target": "XRP/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_xrp_usdc_okx_202603140143",
       "target": "okx"
     }
   ]

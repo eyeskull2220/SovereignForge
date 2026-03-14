@@ -1,0 +1,195 @@
+{
+  "agent_name": "Risk Management Auditor",
+  "agent_type": "audit",
+  "timestamp": "2026-03-14T04:40:00",
+  "health_score": 28.0,
+  "findings": [
+    {
+      "severity": "critical",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 882,
+      "category": "mock",
+      "description": "MockRiskManager approves ALL opportunities. No production guard prevents pipeline running with mock.",
+      "recommendation": "Add startup assertion refusing trade execution with MockRiskManager"
+    },
+    {
+      "severity": "critical",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 696,
+      "category": "bypass",
+      "description": "_execute_trade uses hardcoded $10k base_capital. Bypasses all RiskManager sizing. $300 account sizes 33x too large.",
+      "recommendation": "Wire calculate_position_size from RiskManager/CapitalAllocator"
+    },
+    {
+      "severity": "critical",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 664,
+      "category": "bypass",
+      "description": "_execute_trade has no second risk gate. If MockRiskManager was used, zero risk checks on actual execution.",
+      "recommendation": "Add mandatory non-mockable risk validation inside _execute_trade"
+    },
+    {
+      "severity": "critical",
+      "file": "src/risk_management.py",
+      "line": 547,
+      "category": "emergency",
+      "description": "Emergency stop uses position.current_price which may be stale. In a crisis, closes at wrong price.",
+      "recommendation": "Fetch live prices before emergency close"
+    },
+    {
+      "severity": "critical",
+      "file": "src/risk_management.py",
+      "line": 85,
+      "category": "drawdown",
+      "description": "RiskManager never updates max_drawdown. Always returns 0.0. Drawdown never checked as trading gate.",
+      "recommendation": "Implement real-time drawdown tracking like TradingRiskManager"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 245,
+      "category": "kelly",
+      "description": "Kelly cap 25% in RiskManager vs 10% in TradingRiskManager. Wrong class = 2.5x larger positions.",
+      "recommendation": "Unify Kelly cap. Recommend 5% for MICRO tier"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 0,
+      "category": "limits",
+      "description": "No per-trade maximum loss limit. Only portfolio-level. No guard saying never lose more than $X.",
+      "recommendation": "Add max_loss_per_trade parameter"
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 311,
+      "category": "limits",
+      "description": "Partial fills treated as success (95% assumed). Remainder never cancelled, never tracked.",
+      "recommendation": "Implement fill-or-kill timeout"
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 134,
+      "category": "correlation",
+      "description": "If buy fills but sell fails, cancel may be impossible. Leaves unhedged directional exposure.",
+      "recommendation": "Attempt market sell to unwind. Log as critical risk event"
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 37,
+      "category": "bypass",
+      "description": "OrderExecutor accepts risk_manager but NEVER calls it. Field stored, never referenced.",
+      "recommendation": "Wire risk_manager into execute_arbitrage_trade"
+    },
+    {
+      "severity": "high",
+      "file": "src/dynamic_risk_adjustment.py",
+      "line": 0,
+      "category": "bypass",
+      "description": "DynamicRiskAdjustment not wired into pipeline. VaR thresholds and circuit breakers are dead code.",
+      "recommendation": "Import and integrate into LiveArbitragePipeline"
+    },
+    {
+      "severity": "high",
+      "file": "src/advanced_risk_metrics.py",
+      "line": 0,
+      "category": "bypass",
+      "description": "VaR and Expected Shortfall never consulted during trade decisions. Dead code in execution path.",
+      "recommendation": "Wire VaR limits into trade execution gate"
+    },
+    {
+      "severity": "high",
+      "file": "src/capital_allocator.py",
+      "line": 200,
+      "category": "limits",
+      "description": "record_trade can drive current_capital below zero. No floor check. Negative allocations possible.",
+      "recommendation": "Add minimum capital floor ($50). Halt trading below floor"
+    },
+    {
+      "severity": "medium",
+      "file": "src/capital_allocator.py",
+      "line": 210,
+      "category": "drawdown",
+      "description": "No portfolio-level circuit breaker. Multiple strategies at 4.9% each = 15%+ portfolio drawdown with no trigger.",
+      "recommendation": "Add aggregate portfolio drawdown circuit breaker at 8%"
+    },
+    {
+      "severity": "medium",
+      "file": "src/capital_allocator.py",
+      "line": 219,
+      "category": "limits",
+      "description": "Quarterly rebalance resets ALL circuit breakers unconditionally. No recovery evidence required.",
+      "recommendation": "Only reset if strategy shows positive P&L in last 7 days"
+    },
+    {
+      "severity": "medium",
+      "file": "src/risk_management.py",
+      "line": 486,
+      "category": "limits",
+      "description": "Daily loss check uses abs() - triggers on large GAINS too. Logic bug.",
+      "recommendation": "Use < -max_daily_loss_pct, not abs()"
+    },
+    {
+      "severity": "medium",
+      "file": "src/risk_management.py",
+      "line": 896,
+      "category": "emergency",
+      "description": "TradingRiskManager emergency_stop uses 0.1% slippage. In crash, slippage is 2-10%.",
+      "recommendation": "Use 3% crash slippage estimate"
+    },
+    {
+      "severity": "medium",
+      "file": "src/portfolio_optimization.py",
+      "line": 83,
+      "category": "limits",
+      "description": "Defaults to $10k capital ignoring config $300. min_diversification=5 impractical for $300.",
+      "recommendation": "Read from config, reduce to 2-3 for MICRO tier"
+    },
+    {
+      "severity": "medium",
+      "file": "src/paper_trading.py",
+      "line": 107,
+      "category": "bypass",
+      "description": "Paper trading uses own hardcoded risk constants. Not testing same risk path as live.",
+      "recommendation": "Use same risk management classes"
+    },
+    {
+      "severity": "medium",
+      "file": "src/paper_trading.py",
+      "line": 860,
+      "category": "kelly",
+      "description": "Paper sizing = MAX_POSITION_PCT * magnitude * confidence. Ignores Kelly entirely.",
+      "recommendation": "Use unified position sizing through risk layer"
+    },
+    {
+      "severity": "low",
+      "file": "src/risk_management.py",
+      "line": 580,
+      "category": "limits",
+      "description": "Singleton get_risk_manager() has no locking. Race conditions possible.",
+      "recommendation": "Add threading.Lock around state mutations"
+    },
+    {
+      "severity": "info",
+      "file": "src/risk_management.py",
+      "line": 616,
+      "category": "limits",
+      "description": "Two risk manager classes with different defaults, Kelly caps, drawdown logic, APIs.",
+      "recommendation": "Consolidate into single class"
+    }
+  ],
+  "summary": "5 critical: MockRiskManager approves everything with no guard, $10k hardcoded bypassing all sizing, no second risk gate on execution, emergency stop uses stale prices, drawdown never tracked (always 0). VaR/ES/DynamicRisk are dead code in execution path. Risk management is largely theater for a $300 account.",
+  "files_scanned": 8,
+  "execution_time_seconds": 217,
+  "recommendations": [
+    "URGENT: Block MockRiskManager from trade execution path",
+    "URGENT: Replace hardcoded $10k with actual portfolio value",
+    "Wire VaR and DynamicRiskAdjustment into pipeline",
+    "Implement per-trade loss limit",
+    "Add portfolio-level circuit breaker",
+    "Unify risk managers into single class"
+  ]
+}

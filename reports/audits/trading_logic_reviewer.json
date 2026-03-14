@@ -1,0 +1,177 @@
+{
+  "agent_name": "Trading Logic Reviewer",
+  "agent_type": "audit",
+  "timestamp": "2026-03-14T04:30:00",
+  "health_score": 52.0,
+  "findings": [
+    {
+      "severity": "critical",
+      "file": "src/risk_management.py",
+      "line": 745,
+      "category": "kelly",
+      "description": "TradingRiskManager._kelly_criterion swaps parameter semantics: spread_pct passed as win_probability, confidence as win_amount. Kelly formula computes with wrong inputs.",
+      "recommendation": "Fix call site at line 712 to pass parameters in correct order"
+    },
+    {
+      "severity": "critical",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 696,
+      "category": "hardcoded",
+      "description": "base_capital hardcoded to $10,000 ignoring actual portfolio value. $300 account sizes positions as if $10k = 33x too large.",
+      "recommendation": "Read from config capital_allocation.initial_capital or RiskManager portfolio_value"
+    },
+    {
+      "severity": "critical",
+      "file": "src/multi_strategy_training.py",
+      "line": 953,
+      "category": "consistency",
+      "description": "forward_windows dict missing 3 of 7 strategies (mean_reversion, pairs_arbitrage, momentum). Training crashes with KeyError.",
+      "recommendation": "Add MEAN_REVERSION:10, PAIRS_ARBITRAGE:20, MOMENTUM:48 to forward_windows"
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 197,
+      "category": "fees",
+      "description": "Flat 0.1% fee assumption for profitability check. Coinbase is 0.6% taker. 0.3% spread passes validation but loses money on Coinbase.",
+      "recommendation": "Use exchange-specific fee schedules"
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 588,
+      "category": "fees",
+      "description": "PaperTradingExecutor uses flat 0.1% fee. Real Coinbase fees are 6x higher. Paper results overly optimistic.",
+      "recommendation": "Use EXCHANGE_FEES dict"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 202,
+      "category": "kelly",
+      "description": "RiskManager Kelly inflates win_probability with spread_bonus and uses spread/costs as odds ratio producing unreasonably high fractions.",
+      "recommendation": "Use historical win rate data for probability estimation"
+    },
+    {
+      "severity": "high",
+      "file": "src/paper_trading.py",
+      "line": 77,
+      "category": "consistency",
+      "description": "Paper trading hardcodes 4-strategy weights {arb:0.4,fib:0.2,grid:0.2,dca:0.2} vs config 7-strategy weights. Inconsistent.",
+      "recommendation": "Load weights from trading_config.json"
+    },
+    {
+      "severity": "high",
+      "file": "src/paper_trading.py",
+      "line": 67,
+      "category": "consistency",
+      "description": "STRATEGIES list only has 4 strategies, missing mean_reversion, pairs_arbitrage, momentum.",
+      "recommendation": "Add all 7 strategies"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 300,
+      "category": "kelly",
+      "description": "calculate_kelly_metrics EV formula dimensionally inconsistent. Does not account for actual dollar amounts at risk.",
+      "recommendation": "Use: EV = p*(spread-costs) - q*costs"
+    },
+    {
+      "severity": "medium",
+      "file": "src/risk_management.py",
+      "line": 434,
+      "category": "consistency",
+      "description": "check_stop_losses only handles buy-side. Sell positions stop/TP logic is inverted but not implemented.",
+      "recommendation": "Add side-aware stop loss matching TradingRiskManager"
+    },
+    {
+      "severity": "medium",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 699,
+      "category": "fees",
+      "description": "Fee calc uses flat 0.1% for both exchanges. Real exchange fees differ significantly.",
+      "recommendation": "Use per-exchange fee rates"
+    },
+    {
+      "severity": "medium",
+      "file": "src/order_executor.py",
+      "line": 315,
+      "category": "slippage",
+      "description": "Partial fill hardcoded to 95%. Creates quantity mismatch between arb legs.",
+      "recommendation": "Check actual filled qty and adjust other leg"
+    },
+    {
+      "severity": "medium",
+      "file": "src/capital_allocator.py",
+      "line": 76,
+      "category": "rounding",
+      "description": "rolling_sharpe uses sqrt(N trades) annualization instead of time-based. Incomparable across strategies.",
+      "recommendation": "Use sqrt(365/window_days)"
+    },
+    {
+      "severity": "medium",
+      "file": "src/risk_management.py",
+      "line": 865,
+      "category": "rounding",
+      "description": "Sharpe ratio mixes per-trade returns with daily risk-free rate adjustments.",
+      "recommendation": "Match return frequency with risk-free rate period"
+    },
+    {
+      "severity": "medium",
+      "file": "src/strategy_ensemble.py",
+      "line": 371,
+      "category": "consistency",
+      "description": "CrossExchangeScorer recomputes signals as simple average, losing confidence-weighted info.",
+      "recommendation": "Use weighted final_signal from EnsembleSignal"
+    },
+    {
+      "severity": "low",
+      "file": "src/order_executor.py",
+      "line": 230,
+      "category": "slippage",
+      "description": "Symmetric 0.1% slippage model. Real slippage is asymmetric.",
+      "recommendation": "Consider asymmetric model"
+    },
+    {
+      "severity": "low",
+      "file": "src/risk_management.py",
+      "line": 186,
+      "category": "rounding",
+      "description": "Min position check uses 0.001*avg_price regardless of pair. XRP min = $0.0005, effectively none.",
+      "recommendation": "Use pair-specific minimums from _ASSET_CONFIGS"
+    },
+    {
+      "severity": "info",
+      "file": "src/risk_management.py",
+      "line": 0,
+      "category": "consistency",
+      "description": "Two separate RiskManager classes with different Kelly, stop-loss, fee assumptions. Pipeline uses one, backtester the other.",
+      "recommendation": "Consolidate or document clearly"
+    },
+    {
+      "severity": "info",
+      "file": "config/trading_config.json",
+      "line": 6,
+      "category": "hardcoded",
+      "description": "min_spread_threshold=0.5 (50%) seems wrong. Should be 0.005 (0.5%)?",
+      "recommendation": "Verify value"
+    },
+    {
+      "severity": "info",
+      "file": "config/trading_config.json",
+      "line": 14,
+      "category": "consistency",
+      "description": "risk/reward ratio inverted: stop_loss=2%, take_profit=1%. Risk 2x of reward.",
+      "recommendation": "Set take_profit > stop_loss"
+    }
+  ],
+  "summary": "3 critical issues: Kelly params swapped, $10k hardcoded capital (should be $300), training crashes for 3 new strategies. Fee model dangerously assumes flat 0.1% when Coinbase charges 0.6%. Paper trading limited to 4 of 7 strategies with stale weights.",
+  "files_scanned": 8,
+  "execution_time_seconds": 140,
+  "recommendations": [
+    "FIX IMMEDIATELY: forward_windows dict missing 3 strategies - training will crash",
+    "FIX IMMEDIATELY: Replace hardcoded $10k capital with config value",
+    "FIX: Per-exchange fee schedules instead of flat 0.1%",
+    "Consolidate or clearly separate the two RiskManager classes"
+  ]
+}

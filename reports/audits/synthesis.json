@@ -1,0 +1,683 @@
+{
+  "agent_name": "Synthesis",
+  "agent_type": "synthesis",
+  "timestamp": "2026-03-14T18:26:25.584888",
+  "health_score": 37.666666666666664,
+  "findings": [
+    {
+      "severity": "critical",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 812,
+      "category": "organization",
+      "description": "_cache_opportunity_bg outside class body. Runtime NameError",
+      "recommendation": "Move inside class"
+    },
+    {
+      "severity": "critical",
+      "file": "src/compliance.py",
+      "line": 29,
+      "category": "usdt",
+      "description": "DOGE in compliant_assets - unauthorized meme coin",
+      "recommendation": "Remove DOGE"
+    },
+    {
+      "severity": "critical",
+      "file": "src/compliance.py",
+      "line": 30,
+      "category": "inconsistency",
+      "description": "VECHAIN ticker but all files use VET. VET/USDC fails checks",
+      "recommendation": "Change to VET"
+    },
+    {
+      "severity": "critical",
+      "file": "src/compliance.py",
+      "line": 30,
+      "category": "inconsistency",
+      "description": "Missing LINK and IOTA from compliant_assets",
+      "recommendation": "Add LINK, IOTA, VET"
+    },
+    {
+      "severity": "critical",
+      "file": "k8s/sovereignforge-configmap.yaml",
+      "line": 20,
+      "category": "usdt",
+      "description": "K8s ConfigMap has ALL USDT pairs",
+      "recommendation": "Replace with USDC"
+    },
+    {
+      "severity": "critical",
+      "file": "models/training_results_20260306_154016.json",
+      "line": 2,
+      "category": "usdt",
+      "description": "Training results contain USDT pair data",
+      "recommendation": "Retrain on USDC only"
+    },
+    {
+      "severity": "critical",
+      "file": "src/order_executor.py",
+      "line": 66,
+      "category": "blocking_io",
+      "description": "Sync exchange.load_markets() blocks thread for seconds",
+      "recommendation": "Use ccxt.async_support"
+    },
+    {
+      "severity": "critical",
+      "file": "src/order_executor.py",
+      "line": 283,
+      "category": "blocking_io",
+      "description": "Sync exchange.create_order() in async method",
+      "recommendation": "Use ccxt.async_support"
+    },
+    {
+      "severity": "critical",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 758,
+      "category": "blocking_io",
+      "description": "Sync json.load/dump blocks event loop on every trade",
+      "recommendation": "Use aiofiles"
+    },
+    {
+      "severity": "critical",
+      "file": "src/data_integration_service.py",
+      "line": 125,
+      "category": "async",
+      "description": "Deprecated get_event_loop + run_until_complete can deadlock",
+      "recommendation": "Use get_running_loop().create_task()"
+    },
+    {
+      "severity": "critical",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 882,
+      "category": "mock",
+      "description": "MockRiskManager approves ALL opportunities. No production guard prevents pipeline running with mock.",
+      "recommendation": "Add startup assertion refusing trade execution with MockRiskManager"
+    },
+    {
+      "severity": "critical",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 696,
+      "category": "bypass",
+      "description": "_execute_trade uses hardcoded $10k base_capital. Bypasses all RiskManager sizing. $300 account sizes 33x too large.",
+      "recommendation": "Wire calculate_position_size from RiskManager/CapitalAllocator"
+    },
+    {
+      "severity": "critical",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 664,
+      "category": "bypass",
+      "description": "_execute_trade has no second risk gate. If MockRiskManager was used, zero risk checks on actual execution.",
+      "recommendation": "Add mandatory non-mockable risk validation inside _execute_trade"
+    },
+    {
+      "severity": "critical",
+      "file": "src/risk_management.py",
+      "line": 547,
+      "category": "emergency",
+      "description": "Emergency stop uses position.current_price which may be stale. In a crisis, closes at wrong price.",
+      "recommendation": "Fetch live prices before emergency close"
+    },
+    {
+      "severity": "critical",
+      "file": "src/risk_management.py",
+      "line": 85,
+      "category": "drawdown",
+      "description": "RiskManager never updates max_drawdown. Always returns 0.0. Drawdown never checked as trading gate.",
+      "recommendation": "Implement real-time drawdown tracking like TradingRiskManager"
+    },
+    {
+      "severity": "critical",
+      "file": "src/dashboard_api.py",
+      "line": 480,
+      "category": "auth",
+      "description": "All POST mutation endpoints have ZERO authentication",
+      "recommendation": "Add API key auth"
+    },
+    {
+      "severity": "critical",
+      "file": "src/dashboard_api.py",
+      "line": 899,
+      "category": "exposure",
+      "description": "Server binds 0.0.0.0 exposing all endpoints",
+      "recommendation": "Bind to 127.0.0.1"
+    },
+    {
+      "severity": "critical",
+      "file": "src/database.py",
+      "line": 277,
+      "category": "injection",
+      "description": "execute_query accepts raw SQL with no parameterization",
+      "recommendation": "Enforce parameterized queries"
+    },
+    {
+      "severity": "critical",
+      "file": "src/personal_security.py",
+      "line": 0,
+      "category": "secrets",
+      "description": "NO encryption for API keys anywhere in codebase",
+      "recommendation": "Implement Fernet encryption"
+    },
+    {
+      "severity": "critical",
+      "file": "src/risk_management.py",
+      "line": 745,
+      "category": "kelly",
+      "description": "TradingRiskManager._kelly_criterion swaps parameter semantics: spread_pct passed as win_probability, confidence as win_amount. Kelly formula computes with wrong inputs.",
+      "recommendation": "Fix call site at line 712 to pass parameters in correct order"
+    },
+    {
+      "severity": "critical",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 696,
+      "category": "hardcoded",
+      "description": "base_capital hardcoded to $10,000 ignoring actual portfolio value. $300 account sizes positions as if $10k = 33x too large.",
+      "recommendation": "Read from config capital_allocation.initial_capital or RiskManager portfolio_value"
+    },
+    {
+      "severity": "critical",
+      "file": "src/multi_strategy_training.py",
+      "line": 953,
+      "category": "consistency",
+      "description": "forward_windows dict missing 3 of 7 strategies (mean_reversion, pairs_arbitrage, momentum). Training crashes with KeyError.",
+      "recommendation": "Add MEAN_REVERSION:10, PAIRS_ARBITRAGE:20, MOMENTUM:48 to forward_windows"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 67,
+      "category": "duplication",
+      "description": "Two risk manager classes with overlapping 830 lines",
+      "recommendation": "Consolidate"
+    },
+    {
+      "severity": "high",
+      "file": "src/paper_trading.py",
+      "line": 69,
+      "category": "duplication",
+      "description": "STRATEGY_MODELS duplicated, only 4 of 7 strategies",
+      "recommendation": "Import from canonical source"
+    },
+    {
+      "severity": "high",
+      "file": "src/paper_trading.py",
+      "line": 144,
+      "category": "duplication",
+      "description": "130 lines feature engineering copy-pasted",
+      "recommendation": "Delete, import instead"
+    },
+    {
+      "severity": "high",
+      "file": "src/",
+      "line": 0,
+      "category": "duplication",
+      "description": "MiCA whitelist in 5 files with inconsistent contents",
+      "recommendation": "Single source in compliance.py"
+    },
+    {
+      "severity": "high",
+      "file": "src/",
+      "line": 0,
+      "category": "sys_path",
+      "description": "sys.path.insert in 12 files. No proper package structure",
+      "recommendation": "Add __init__.py"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 580,
+      "category": "singleton",
+      "description": "Mutable singletons not thread-safe",
+      "recommendation": "Use dependency injection"
+    },
+    {
+      "severity": "high",
+      "file": "config/trading_config.json",
+      "line": 3,
+      "category": "btc_eth",
+      "description": "BTC/USDC and ETH/USDC enabled. Flagged for personal deployment",
+      "recommendation": "Evaluate compliance"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 676,
+      "category": "inconsistency",
+      "description": "_ASSET_CONFIGS missing 5 pairs: LINK,IOTA,VET,XDC,ONDO",
+      "recommendation": "Add missing configs"
+    },
+    {
+      "severity": "high",
+      "file": "src/data_integration_service.py",
+      "line": 161,
+      "category": "inconsistency",
+      "description": "WebSocket pairs missing XDC/USDC and ONDO/USDC",
+      "recommendation": "Add missing pairs"
+    },
+    {
+      "severity": "high",
+      "file": "tests/test_integration.py",
+      "line": 247,
+      "category": "whitelist",
+      "description": "Test asserts DOGE/USDC is compliant. Wrong.",
+      "recommendation": "Fix after removing DOGE"
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 294,
+      "category": "async",
+      "description": "1s sleep after every order. Unacceptable for arbitrage",
+      "recommendation": "Poll with 50ms backoff"
+    },
+    {
+      "severity": "high",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 209,
+      "category": "memory",
+      "description": "_dedup_cache grows without bound",
+      "recommendation": "Use LRU cache"
+    },
+    {
+      "severity": "high",
+      "file": "src/realtime_inference.py",
+      "line": 517,
+      "category": "async",
+      "description": "Global lock serializes ALL inference",
+      "recommendation": "Use per-model locks"
+    },
+    {
+      "severity": "high",
+      "file": "src/realtime_inference.py",
+      "line": 533,
+      "category": "caching",
+      "description": "Single-sample inference. Batch params declared but unused",
+      "recommendation": "Implement batch inference"
+    },
+    {
+      "severity": "high",
+      "file": "src/dashboard_api.py",
+      "line": 338,
+      "category": "blocking_io",
+      "description": "All _load_json sync in async handlers",
+      "recommendation": "Use asyncio.to_thread"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 245,
+      "category": "kelly",
+      "description": "Kelly cap 25% in RiskManager vs 10% in TradingRiskManager. Wrong class = 2.5x larger positions.",
+      "recommendation": "Unify Kelly cap. Recommend 5% for MICRO tier"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 0,
+      "category": "limits",
+      "description": "No per-trade maximum loss limit. Only portfolio-level. No guard saying never lose more than $X.",
+      "recommendation": "Add max_loss_per_trade parameter"
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 311,
+      "category": "limits",
+      "description": "Partial fills treated as success (95% assumed). Remainder never cancelled, never tracked.",
+      "recommendation": "Implement fill-or-kill timeout"
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 134,
+      "category": "correlation",
+      "description": "If buy fills but sell fails, cancel may be impossible. Leaves unhedged directional exposure.",
+      "recommendation": "Attempt market sell to unwind. Log as critical risk event"
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 37,
+      "category": "bypass",
+      "description": "OrderExecutor accepts risk_manager but NEVER calls it. Field stored, never referenced.",
+      "recommendation": "Wire risk_manager into execute_arbitrage_trade"
+    },
+    {
+      "severity": "high",
+      "file": "src/dynamic_risk_adjustment.py",
+      "line": 0,
+      "category": "bypass",
+      "description": "DynamicRiskAdjustment not wired into pipeline. VaR thresholds and circuit breakers are dead code.",
+      "recommendation": "Import and integrate into LiveArbitragePipeline"
+    },
+    {
+      "severity": "high",
+      "file": "src/advanced_risk_metrics.py",
+      "line": 0,
+      "category": "bypass",
+      "description": "VaR and Expected Shortfall never consulted during trade decisions. Dead code in execution path.",
+      "recommendation": "Wire VaR limits into trade execution gate"
+    },
+    {
+      "severity": "high",
+      "file": "src/capital_allocator.py",
+      "line": 200,
+      "category": "limits",
+      "description": "record_trade can drive current_capital below zero. No floor check. Negative allocations possible.",
+      "recommendation": "Add minimum capital floor ($50). Halt trading below floor"
+    },
+    {
+      "severity": "high",
+      "file": "src/dashboard_api.py",
+      "line": 71,
+      "category": "auth",
+      "description": "Rate limiting missing (TODO). Vulnerable to DoS",
+      "recommendation": "Implement slowapi"
+    },
+    {
+      "severity": "high",
+      "file": "src/dashboard_api.py",
+      "line": 722,
+      "category": "auth",
+      "description": "WebSocket /ws has no auth. Leaks portfolio data",
+      "recommendation": "Add WebSocket auth"
+    },
+    {
+      "severity": "high",
+      "file": "src/exchange_connector.py",
+      "line": 32,
+      "category": "secrets",
+      "description": "api_key stored as plain instance attribute",
+      "recommendation": "Use secure credential store"
+    },
+    {
+      "severity": "high",
+      "file": "src/websocket_connector.py",
+      "line": 256,
+      "category": "validation",
+      "description": "Ticker parsers trust remote data types. NaN/Inf propagate",
+      "recommendation": "Validate numeric fields"
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 197,
+      "category": "fees",
+      "description": "Flat 0.1% fee assumption for profitability check. Coinbase is 0.6% taker. 0.3% spread passes validation but loses money on Coinbase.",
+      "recommendation": "Use exchange-specific fee schedules"
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 588,
+      "category": "fees",
+      "description": "PaperTradingExecutor uses flat 0.1% fee. Real Coinbase fees are 6x higher. Paper results overly optimistic.",
+      "recommendation": "Use EXCHANGE_FEES dict"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 202,
+      "category": "kelly",
+      "description": "RiskManager Kelly inflates win_probability with spread_bonus and uses spread/costs as odds ratio producing unreasonably high fractions.",
+      "recommendation": "Use historical win rate data for probability estimation"
+    },
+    {
+      "severity": "high",
+      "file": "src/paper_trading.py",
+      "line": 77,
+      "category": "consistency",
+      "description": "Paper trading hardcodes 4-strategy weights {arb:0.4,fib:0.2,grid:0.2,dca:0.2} vs config 7-strategy weights. Inconsistent.",
+      "recommendation": "Load weights from trading_config.json"
+    },
+    {
+      "severity": "high",
+      "file": "src/paper_trading.py",
+      "line": 67,
+      "category": "consistency",
+      "description": "STRATEGIES list only has 4 strategies, missing mean_reversion, pairs_arbitrage, momentum.",
+      "recommendation": "Add all 7 strategies"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 300,
+      "category": "kelly",
+      "description": "calculate_kelly_metrics EV formula dimensionally inconsistent. Does not account for actual dollar amounts at risk.",
+      "recommendation": "Use: EV = p*(spread-costs) - q*costs"
+    },
+    {
+      "severity": "medium",
+      "file": "src/order_executor.py",
+      "line": 532,
+      "category": "error_handling",
+      "description": "PaperTrading super().__init__ tries load_markets with empty configs",
+      "recommendation": "Override _init_exchanges"
+    },
+    {
+      "severity": "medium",
+      "file": "src/strategy_ensemble.py",
+      "line": 0,
+      "category": "types",
+      "description": "predict() no shape validation on input",
+      "recommendation": "Add shape check"
+    },
+    {
+      "severity": "medium",
+      "file": "src/compliance.py",
+      "line": 104,
+      "category": "stale",
+      "description": "last_updated hardcoded 2024-01-01",
+      "recommendation": "Use dynamic timestamp"
+    },
+    {
+      "severity": "medium",
+      "file": "src/multi_strategy_training.py",
+      "line": 336,
+      "category": "vectorization",
+      "description": "RSI/EMA/BB use Python loops. 10-100x slower than numpy",
+      "recommendation": "Vectorize"
+    },
+    {
+      "severity": "medium",
+      "file": "src/capital_allocator.py",
+      "line": 210,
+      "category": "drawdown",
+      "description": "No portfolio-level circuit breaker. Multiple strategies at 4.9% each = 15%+ portfolio drawdown with no trigger.",
+      "recommendation": "Add aggregate portfolio drawdown circuit breaker at 8%"
+    },
+    {
+      "severity": "medium",
+      "file": "src/capital_allocator.py",
+      "line": 219,
+      "category": "limits",
+      "description": "Quarterly rebalance resets ALL circuit breakers unconditionally. No recovery evidence required.",
+      "recommendation": "Only reset if strategy shows positive P&L in last 7 days"
+    },
+    {
+      "severity": "medium",
+      "file": "src/risk_management.py",
+      "line": 486,
+      "category": "limits",
+      "description": "Daily loss check uses abs() - triggers on large GAINS too. Logic bug.",
+      "recommendation": "Use < -max_daily_loss_pct, not abs()"
+    },
+    {
+      "severity": "medium",
+      "file": "src/risk_management.py",
+      "line": 896,
+      "category": "emergency",
+      "description": "TradingRiskManager emergency_stop uses 0.1% slippage. In crash, slippage is 2-10%.",
+      "recommendation": "Use 3% crash slippage estimate"
+    },
+    {
+      "severity": "medium",
+      "file": "src/portfolio_optimization.py",
+      "line": 83,
+      "category": "limits",
+      "description": "Defaults to $10k capital ignoring config $300. min_diversification=5 impractical for $300.",
+      "recommendation": "Read from config, reduce to 2-3 for MICRO tier"
+    },
+    {
+      "severity": "medium",
+      "file": "src/paper_trading.py",
+      "line": 107,
+      "category": "bypass",
+      "description": "Paper trading uses own hardcoded risk constants. Not testing same risk path as live.",
+      "recommendation": "Use same risk management classes"
+    },
+    {
+      "severity": "medium",
+      "file": "src/paper_trading.py",
+      "line": 860,
+      "category": "kelly",
+      "description": "Paper sizing = MAX_POSITION_PCT * magnitude * confidence. Ignores Kelly entirely.",
+      "recommendation": "Use unified position sizing through risk layer"
+    },
+    {
+      "severity": "medium",
+      "file": "src/dashboard_api.py",
+      "line": 0,
+      "category": "cors",
+      "description": "Wildcard methods/headers with credentials=True",
+      "recommendation": "Restrict to specific methods"
+    },
+    {
+      "severity": "medium",
+      "file": "src/dashboard_api.py",
+      "line": 897,
+      "category": "exposure",
+      "description": "No TLS/HTTPS configuration",
+      "recommendation": "Deploy behind TLS proxy"
+    },
+    {
+      "severity": "medium",
+      "file": "src/risk_management.py",
+      "line": 434,
+      "category": "consistency",
+      "description": "check_stop_losses only handles buy-side. Sell positions stop/TP logic is inverted but not implemented.",
+      "recommendation": "Add side-aware stop loss matching TradingRiskManager"
+    },
+    {
+      "severity": "medium",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 699,
+      "category": "fees",
+      "description": "Fee calc uses flat 0.1% for both exchanges. Real exchange fees differ significantly.",
+      "recommendation": "Use per-exchange fee rates"
+    },
+    {
+      "severity": "medium",
+      "file": "src/order_executor.py",
+      "line": 315,
+      "category": "slippage",
+      "description": "Partial fill hardcoded to 95%. Creates quantity mismatch between arb legs.",
+      "recommendation": "Check actual filled qty and adjust other leg"
+    },
+    {
+      "severity": "medium",
+      "file": "src/capital_allocator.py",
+      "line": 76,
+      "category": "rounding",
+      "description": "rolling_sharpe uses sqrt(N trades) annualization instead of time-based. Incomparable across strategies.",
+      "recommendation": "Use sqrt(365/window_days)"
+    },
+    {
+      "severity": "medium",
+      "file": "src/risk_management.py",
+      "line": 865,
+      "category": "rounding",
+      "description": "Sharpe ratio mixes per-trade returns with daily risk-free rate adjustments.",
+      "recommendation": "Match return frequency with risk-free rate period"
+    },
+    {
+      "severity": "medium",
+      "file": "src/strategy_ensemble.py",
+      "line": 371,
+      "category": "consistency",
+      "description": "CrossExchangeScorer recomputes signals as simple average, losing confidence-weighted info.",
+      "recommendation": "Use weighted final_signal from EnsembleSignal"
+    },
+    {
+      "severity": "low",
+      "file": "src/dashboard_api.py",
+      "line": 71,
+      "category": "todo",
+      "description": "Stale TODO for rate limiting",
+      "recommendation": "Implement or track"
+    },
+    {
+      "severity": "low",
+      "file": "src/risk_management.py",
+      "line": 580,
+      "category": "limits",
+      "description": "Singleton get_risk_manager() has no locking. Race conditions possible.",
+      "recommendation": "Add threading.Lock around state mutations"
+    },
+    {
+      "severity": "low",
+      "file": "src/order_executor.py",
+      "line": 230,
+      "category": "slippage",
+      "description": "Symmetric 0.1% slippage model. Real slippage is asymmetric.",
+      "recommendation": "Consider asymmetric model"
+    },
+    {
+      "severity": "low",
+      "file": "src/risk_management.py",
+      "line": 186,
+      "category": "rounding",
+      "description": "Min position check uses 0.001*avg_price regardless of pair. XRP min = $0.0005, effectively none.",
+      "recommendation": "Use pair-specific minimums from _ASSET_CONFIGS"
+    },
+    {
+      "severity": "info",
+      "file": "src/risk_management.py",
+      "line": 616,
+      "category": "limits",
+      "description": "Two risk manager classes with different defaults, Kelly caps, drawdown logic, APIs.",
+      "recommendation": "Consolidate into single class"
+    },
+    {
+      "severity": "info",
+      "file": "src/risk_management.py",
+      "line": 0,
+      "category": "consistency",
+      "description": "Two separate RiskManager classes with different Kelly, stop-loss, fee assumptions. Pipeline uses one, backtester the other.",
+      "recommendation": "Consolidate or document clearly"
+    },
+    {
+      "severity": "info",
+      "file": "config/trading_config.json",
+      "line": 6,
+      "category": "hardcoded",
+      "description": "min_spread_threshold=0.5 (50%) seems wrong. Should be 0.005 (0.5%)?",
+      "recommendation": "Verify value"
+    },
+    {
+      "severity": "info",
+      "file": "config/trading_config.json",
+      "line": 14,
+      "category": "consistency",
+      "description": "risk/reward ratio inverted: stop_loss=2%, take_profit=1%. Risk 2x of reward.",
+      "recommendation": "Set take_profit > stop_loss"
+    }
+  ],
+  "summary": "Synthesized 6 agent reports. Total findings: 82 (22 critical, 33 high, 19 medium). Overall health score: 38/100. Cross-cutting issues in 12 files flagged by multiple agents.",
+  "files_scanned": 65,
+  "execution_time_seconds": 0.0,
+  "recommendations": [
+    "FIX IMMEDIATELY: 22 critical issues",
+    "Fix soon: 33 high-severity issues",
+    "Multi-agent concern: src/ flagged by duplication, sys_path",
+    "Multi-agent concern: src/capital_allocator.py flagged by drawdown, limits, rounding",
+    "Multi-agent concern: src/compliance.py flagged by inconsistency, stale, usdt",
+    "Multi-agent concern: src/dashboard_api.py flagged by auth, blocking_io, cors, exposure",
+    "Multi-agent concern: src/data_integration_service.py flagged by async, inconsistency",
+    "Multi-agent concern: src/live_arbitrage_pipeline.py flagged by blocking_io, bypass, fees, hardcoded, memory, mock, organization",
+    "Multi-agent concern: src/multi_strategy_training.py flagged by consistency, vectorization",
+    "Multi-agent concern: src/order_executor.py flagged by async, blocking_io, bypass, correlation, error_handling, fees, limits, slippage",
+    "Multi-agent concern: src/paper_trading.py flagged by bypass, consistency, duplication, kelly",
+    "Multi-agent concern: src/realtime_inference.py flagged by async, caching",
+    "Multi-agent concern: src/risk_management.py flagged by consistency, drawdown, duplication, emergency, inconsistency, kelly, limits, rounding, singleton",
+    "Multi-agent concern: src/strategy_ensemble.py flagged by consistency, types"
+  ]
+}

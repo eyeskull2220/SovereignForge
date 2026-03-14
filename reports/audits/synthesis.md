@@ -1,0 +1,196 @@
+# Synthesis Audit Report
+**Type:** synthesis | **Score:** 37.666666666666664/100 | **Time:** 0.0s
+**Files Scanned:** 65 | **Findings:** 82
+
+## Summary
+Synthesized 6 agent reports. Total findings: 82 (22 critical, 33 high, 19 medium). Overall health score: 38/100. Cross-cutting issues in 12 files flagged by multiple agents.
+
+## CRITICAL (22)
+- **[organization]** `src/live_arbitrage_pipeline.py:812` — _cache_opportunity_bg outside class body. Runtime NameError
+  - Fix: Move inside class
+- **[usdt]** `src/compliance.py:29` — DOGE in compliant_assets - unauthorized meme coin
+  - Fix: Remove DOGE
+- **[inconsistency]** `src/compliance.py:30` — VECHAIN ticker but all files use VET. VET/USDC fails checks
+  - Fix: Change to VET
+- **[inconsistency]** `src/compliance.py:30` — Missing LINK and IOTA from compliant_assets
+  - Fix: Add LINK, IOTA, VET
+- **[usdt]** `k8s/sovereignforge-configmap.yaml:20` — K8s ConfigMap has ALL USDT pairs
+  - Fix: Replace with USDC
+- **[usdt]** `models/training_results_20260306_154016.json:2` — Training results contain USDT pair data
+  - Fix: Retrain on USDC only
+- **[blocking_io]** `src/order_executor.py:66` — Sync exchange.load_markets() blocks thread for seconds
+  - Fix: Use ccxt.async_support
+- **[blocking_io]** `src/order_executor.py:283` — Sync exchange.create_order() in async method
+  - Fix: Use ccxt.async_support
+- **[blocking_io]** `src/live_arbitrage_pipeline.py:758` — Sync json.load/dump blocks event loop on every trade
+  - Fix: Use aiofiles
+- **[async]** `src/data_integration_service.py:125` — Deprecated get_event_loop + run_until_complete can deadlock
+  - Fix: Use get_running_loop().create_task()
+- **[mock]** `src/live_arbitrage_pipeline.py:882` — MockRiskManager approves ALL opportunities. No production guard prevents pipeline running with mock.
+  - Fix: Add startup assertion refusing trade execution with MockRiskManager
+- **[bypass]** `src/live_arbitrage_pipeline.py:696` — _execute_trade uses hardcoded $10k base_capital. Bypasses all RiskManager sizing. $300 account sizes 33x too large.
+  - Fix: Wire calculate_position_size from RiskManager/CapitalAllocator
+- **[bypass]** `src/live_arbitrage_pipeline.py:664` — _execute_trade has no second risk gate. If MockRiskManager was used, zero risk checks on actual execution.
+  - Fix: Add mandatory non-mockable risk validation inside _execute_trade
+- **[emergency]** `src/risk_management.py:547` — Emergency stop uses position.current_price which may be stale. In a crisis, closes at wrong price.
+  - Fix: Fetch live prices before emergency close
+- **[drawdown]** `src/risk_management.py:85` — RiskManager never updates max_drawdown. Always returns 0.0. Drawdown never checked as trading gate.
+  - Fix: Implement real-time drawdown tracking like TradingRiskManager
+- **[auth]** `src/dashboard_api.py:480` — All POST mutation endpoints have ZERO authentication
+  - Fix: Add API key auth
+- **[exposure]** `src/dashboard_api.py:899` — Server binds 0.0.0.0 exposing all endpoints
+  - Fix: Bind to 127.0.0.1
+- **[injection]** `src/database.py:277` — execute_query accepts raw SQL with no parameterization
+  - Fix: Enforce parameterized queries
+- **[secrets]** `src/personal_security.py` — NO encryption for API keys anywhere in codebase
+  - Fix: Implement Fernet encryption
+- **[kelly]** `src/risk_management.py:745` — TradingRiskManager._kelly_criterion swaps parameter semantics: spread_pct passed as win_probability, confidence as win_amount. Kelly formula computes with wrong inputs.
+  - Fix: Fix call site at line 712 to pass parameters in correct order
+- **[hardcoded]** `src/live_arbitrage_pipeline.py:696` — base_capital hardcoded to $10,000 ignoring actual portfolio value. $300 account sizes positions as if $10k = 33x too large.
+  - Fix: Read from config capital_allocation.initial_capital or RiskManager portfolio_value
+- **[consistency]** `src/multi_strategy_training.py:953` — forward_windows dict missing 3 of 7 strategies (mean_reversion, pairs_arbitrage, momentum). Training crashes with KeyError.
+  - Fix: Add MEAN_REVERSION:10, PAIRS_ARBITRAGE:20, MOMENTUM:48 to forward_windows
+
+## HIGH (33)
+- **[duplication]** `src/risk_management.py:67` — Two risk manager classes with overlapping 830 lines
+  - Fix: Consolidate
+- **[duplication]** `src/paper_trading.py:69` — STRATEGY_MODELS duplicated, only 4 of 7 strategies
+  - Fix: Import from canonical source
+- **[duplication]** `src/paper_trading.py:144` — 130 lines feature engineering copy-pasted
+  - Fix: Delete, import instead
+- **[duplication]** `src/` — MiCA whitelist in 5 files with inconsistent contents
+  - Fix: Single source in compliance.py
+- **[sys_path]** `src/` — sys.path.insert in 12 files. No proper package structure
+  - Fix: Add __init__.py
+- **[singleton]** `src/risk_management.py:580` — Mutable singletons not thread-safe
+  - Fix: Use dependency injection
+- **[btc_eth]** `config/trading_config.json:3` — BTC/USDC and ETH/USDC enabled. Flagged for personal deployment
+  - Fix: Evaluate compliance
+- **[inconsistency]** `src/risk_management.py:676` — _ASSET_CONFIGS missing 5 pairs: LINK,IOTA,VET,XDC,ONDO
+  - Fix: Add missing configs
+- **[inconsistency]** `src/data_integration_service.py:161` — WebSocket pairs missing XDC/USDC and ONDO/USDC
+  - Fix: Add missing pairs
+- **[whitelist]** `tests/test_integration.py:247` — Test asserts DOGE/USDC is compliant. Wrong.
+  - Fix: Fix after removing DOGE
+- **[async]** `src/order_executor.py:294` — 1s sleep after every order. Unacceptable for arbitrage
+  - Fix: Poll with 50ms backoff
+- **[memory]** `src/live_arbitrage_pipeline.py:209` — _dedup_cache grows without bound
+  - Fix: Use LRU cache
+- **[async]** `src/realtime_inference.py:517` — Global lock serializes ALL inference
+  - Fix: Use per-model locks
+- **[caching]** `src/realtime_inference.py:533` — Single-sample inference. Batch params declared but unused
+  - Fix: Implement batch inference
+- **[blocking_io]** `src/dashboard_api.py:338` — All _load_json sync in async handlers
+  - Fix: Use asyncio.to_thread
+- **[kelly]** `src/risk_management.py:245` — Kelly cap 25% in RiskManager vs 10% in TradingRiskManager. Wrong class = 2.5x larger positions.
+  - Fix: Unify Kelly cap. Recommend 5% for MICRO tier
+- **[limits]** `src/risk_management.py` — No per-trade maximum loss limit. Only portfolio-level. No guard saying never lose more than $X.
+  - Fix: Add max_loss_per_trade parameter
+- **[limits]** `src/order_executor.py:311` — Partial fills treated as success (95% assumed). Remainder never cancelled, never tracked.
+  - Fix: Implement fill-or-kill timeout
+- **[correlation]** `src/order_executor.py:134` — If buy fills but sell fails, cancel may be impossible. Leaves unhedged directional exposure.
+  - Fix: Attempt market sell to unwind. Log as critical risk event
+- **[bypass]** `src/order_executor.py:37` — OrderExecutor accepts risk_manager but NEVER calls it. Field stored, never referenced.
+  - Fix: Wire risk_manager into execute_arbitrage_trade
+- **[bypass]** `src/dynamic_risk_adjustment.py` — DynamicRiskAdjustment not wired into pipeline. VaR thresholds and circuit breakers are dead code.
+  - Fix: Import and integrate into LiveArbitragePipeline
+- **[bypass]** `src/advanced_risk_metrics.py` — VaR and Expected Shortfall never consulted during trade decisions. Dead code in execution path.
+  - Fix: Wire VaR limits into trade execution gate
+- **[limits]** `src/capital_allocator.py:200` — record_trade can drive current_capital below zero. No floor check. Negative allocations possible.
+  - Fix: Add minimum capital floor ($50). Halt trading below floor
+- **[auth]** `src/dashboard_api.py:71` — Rate limiting missing (TODO). Vulnerable to DoS
+  - Fix: Implement slowapi
+- **[auth]** `src/dashboard_api.py:722` — WebSocket /ws has no auth. Leaks portfolio data
+  - Fix: Add WebSocket auth
+- **[secrets]** `src/exchange_connector.py:32` — api_key stored as plain instance attribute
+  - Fix: Use secure credential store
+- **[validation]** `src/websocket_connector.py:256` — Ticker parsers trust remote data types. NaN/Inf propagate
+  - Fix: Validate numeric fields
+- **[fees]** `src/order_executor.py:197` — Flat 0.1% fee assumption for profitability check. Coinbase is 0.6% taker. 0.3% spread passes validation but loses money on Coinbase.
+  - Fix: Use exchange-specific fee schedules
+- **[fees]** `src/order_executor.py:588` — PaperTradingExecutor uses flat 0.1% fee. Real Coinbase fees are 6x higher. Paper results overly optimistic.
+  - Fix: Use EXCHANGE_FEES dict
+- **[kelly]** `src/risk_management.py:202` — RiskManager Kelly inflates win_probability with spread_bonus and uses spread/costs as odds ratio producing unreasonably high fractions.
+  - Fix: Use historical win rate data for probability estimation
+- **[consistency]** `src/paper_trading.py:77` — Paper trading hardcodes 4-strategy weights {arb:0.4,fib:0.2,grid:0.2,dca:0.2} vs config 7-strategy weights. Inconsistent.
+  - Fix: Load weights from trading_config.json
+- **[consistency]** `src/paper_trading.py:67` — STRATEGIES list only has 4 strategies, missing mean_reversion, pairs_arbitrage, momentum.
+  - Fix: Add all 7 strategies
+- **[kelly]** `src/risk_management.py:300` — calculate_kelly_metrics EV formula dimensionally inconsistent. Does not account for actual dollar amounts at risk.
+  - Fix: Use: EV = p*(spread-costs) - q*costs
+
+## MEDIUM (19)
+- **[error_handling]** `src/order_executor.py:532` — PaperTrading super().__init__ tries load_markets with empty configs
+  - Fix: Override _init_exchanges
+- **[types]** `src/strategy_ensemble.py` — predict() no shape validation on input
+  - Fix: Add shape check
+- **[stale]** `src/compliance.py:104` — last_updated hardcoded 2024-01-01
+  - Fix: Use dynamic timestamp
+- **[vectorization]** `src/multi_strategy_training.py:336` — RSI/EMA/BB use Python loops. 10-100x slower than numpy
+  - Fix: Vectorize
+- **[drawdown]** `src/capital_allocator.py:210` — No portfolio-level circuit breaker. Multiple strategies at 4.9% each = 15%+ portfolio drawdown with no trigger.
+  - Fix: Add aggregate portfolio drawdown circuit breaker at 8%
+- **[limits]** `src/capital_allocator.py:219` — Quarterly rebalance resets ALL circuit breakers unconditionally. No recovery evidence required.
+  - Fix: Only reset if strategy shows positive P&L in last 7 days
+- **[limits]** `src/risk_management.py:486` — Daily loss check uses abs() - triggers on large GAINS too. Logic bug.
+  - Fix: Use < -max_daily_loss_pct, not abs()
+- **[emergency]** `src/risk_management.py:896` — TradingRiskManager emergency_stop uses 0.1% slippage. In crash, slippage is 2-10%.
+  - Fix: Use 3% crash slippage estimate
+- **[limits]** `src/portfolio_optimization.py:83` — Defaults to $10k capital ignoring config $300. min_diversification=5 impractical for $300.
+  - Fix: Read from config, reduce to 2-3 for MICRO tier
+- **[bypass]** `src/paper_trading.py:107` — Paper trading uses own hardcoded risk constants. Not testing same risk path as live.
+  - Fix: Use same risk management classes
+- **[kelly]** `src/paper_trading.py:860` — Paper sizing = MAX_POSITION_PCT * magnitude * confidence. Ignores Kelly entirely.
+  - Fix: Use unified position sizing through risk layer
+- **[cors]** `src/dashboard_api.py` — Wildcard methods/headers with credentials=True
+  - Fix: Restrict to specific methods
+- **[exposure]** `src/dashboard_api.py:897` — No TLS/HTTPS configuration
+  - Fix: Deploy behind TLS proxy
+- **[consistency]** `src/risk_management.py:434` — check_stop_losses only handles buy-side. Sell positions stop/TP logic is inverted but not implemented.
+  - Fix: Add side-aware stop loss matching TradingRiskManager
+- **[fees]** `src/live_arbitrage_pipeline.py:699` — Fee calc uses flat 0.1% for both exchanges. Real exchange fees differ significantly.
+  - Fix: Use per-exchange fee rates
+- **[slippage]** `src/order_executor.py:315` — Partial fill hardcoded to 95%. Creates quantity mismatch between arb legs.
+  - Fix: Check actual filled qty and adjust other leg
+- **[rounding]** `src/capital_allocator.py:76` — rolling_sharpe uses sqrt(N trades) annualization instead of time-based. Incomparable across strategies.
+  - Fix: Use sqrt(365/window_days)
+- **[rounding]** `src/risk_management.py:865` — Sharpe ratio mixes per-trade returns with daily risk-free rate adjustments.
+  - Fix: Match return frequency with risk-free rate period
+- **[consistency]** `src/strategy_ensemble.py:371` — CrossExchangeScorer recomputes signals as simple average, losing confidence-weighted info.
+  - Fix: Use weighted final_signal from EnsembleSignal
+
+## LOW (4)
+- **[todo]** `src/dashboard_api.py:71` — Stale TODO for rate limiting
+  - Fix: Implement or track
+- **[limits]** `src/risk_management.py:580` — Singleton get_risk_manager() has no locking. Race conditions possible.
+  - Fix: Add threading.Lock around state mutations
+- **[slippage]** `src/order_executor.py:230` — Symmetric 0.1% slippage model. Real slippage is asymmetric.
+  - Fix: Consider asymmetric model
+- **[rounding]** `src/risk_management.py:186` — Min position check uses 0.001*avg_price regardless of pair. XRP min = $0.0005, effectively none.
+  - Fix: Use pair-specific minimums from _ASSET_CONFIGS
+
+## INFO (4)
+- **[limits]** `src/risk_management.py:616` — Two risk manager classes with different defaults, Kelly caps, drawdown logic, APIs.
+  - Fix: Consolidate into single class
+- **[consistency]** `src/risk_management.py` — Two separate RiskManager classes with different Kelly, stop-loss, fee assumptions. Pipeline uses one, backtester the other.
+  - Fix: Consolidate or document clearly
+- **[hardcoded]** `config/trading_config.json:6` — min_spread_threshold=0.5 (50%) seems wrong. Should be 0.005 (0.5%)?
+  - Fix: Verify value
+- **[consistency]** `config/trading_config.json:14` — risk/reward ratio inverted: stop_loss=2%, take_profit=1%. Risk 2x of reward.
+  - Fix: Set take_profit > stop_loss
+
+## Top Recommendations
+- FIX IMMEDIATELY: 22 critical issues
+- Fix soon: 33 high-severity issues
+- Multi-agent concern: src/ flagged by duplication, sys_path
+- Multi-agent concern: src/capital_allocator.py flagged by drawdown, limits, rounding
+- Multi-agent concern: src/compliance.py flagged by inconsistency, stale, usdt
+- Multi-agent concern: src/dashboard_api.py flagged by auth, blocking_io, cors, exposure
+- Multi-agent concern: src/data_integration_service.py flagged by async, inconsistency
+- Multi-agent concern: src/live_arbitrage_pipeline.py flagged by blocking_io, bypass, fees, hardcoded, memory, mock, organization
+- Multi-agent concern: src/multi_strategy_training.py flagged by consistency, vectorization
+- Multi-agent concern: src/order_executor.py flagged by async, blocking_io, bypass, correlation, error_handling, fees, limits, slippage
+- Multi-agent concern: src/paper_trading.py flagged by bypass, consistency, duplication, kelly
+- Multi-agent concern: src/realtime_inference.py flagged by async, caching
+- Multi-agent concern: src/risk_management.py flagged by consistency, drawdown, duplication, emergency, inconsistency, kelly, limits, rounding, singleton
+- Multi-agent concern: src/strategy_ensemble.py flagged by consistency, types

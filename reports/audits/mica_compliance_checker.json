@@ -1,0 +1,97 @@
+{
+  "agent_name": "MiCA Compliance Checker",
+  "agent_type": "audit",
+  "timestamp": "2026-03-14T04:35:00",
+  "health_score": 38.0,
+  "findings": [
+    {
+      "severity": "critical",
+      "file": "src/compliance.py",
+      "line": 29,
+      "category": "usdt",
+      "description": "DOGE in compliant_assets - unauthorized meme coin",
+      "recommendation": "Remove DOGE"
+    },
+    {
+      "severity": "critical",
+      "file": "src/compliance.py",
+      "line": 30,
+      "category": "inconsistency",
+      "description": "VECHAIN ticker but all files use VET. VET/USDC fails checks",
+      "recommendation": "Change to VET"
+    },
+    {
+      "severity": "critical",
+      "file": "src/compliance.py",
+      "line": 30,
+      "category": "inconsistency",
+      "description": "Missing LINK and IOTA from compliant_assets",
+      "recommendation": "Add LINK, IOTA, VET"
+    },
+    {
+      "severity": "critical",
+      "file": "k8s/sovereignforge-configmap.yaml",
+      "line": 20,
+      "category": "usdt",
+      "description": "K8s ConfigMap has ALL USDT pairs",
+      "recommendation": "Replace with USDC"
+    },
+    {
+      "severity": "critical",
+      "file": "models/training_results_20260306_154016.json",
+      "line": 2,
+      "category": "usdt",
+      "description": "Training results contain USDT pair data",
+      "recommendation": "Retrain on USDC only"
+    },
+    {
+      "severity": "high",
+      "file": "config/trading_config.json",
+      "line": 3,
+      "category": "btc_eth",
+      "description": "BTC/USDC and ETH/USDC enabled. Flagged for personal deployment",
+      "recommendation": "Evaluate compliance"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 676,
+      "category": "inconsistency",
+      "description": "_ASSET_CONFIGS missing 5 pairs: LINK,IOTA,VET,XDC,ONDO",
+      "recommendation": "Add missing configs"
+    },
+    {
+      "severity": "high",
+      "file": "src/data_integration_service.py",
+      "line": 161,
+      "category": "inconsistency",
+      "description": "WebSocket pairs missing XDC/USDC and ONDO/USDC",
+      "recommendation": "Add missing pairs"
+    },
+    {
+      "severity": "high",
+      "file": "tests/test_integration.py",
+      "line": 247,
+      "category": "whitelist",
+      "description": "Test asserts DOGE/USDC is compliant. Wrong.",
+      "recommendation": "Fix after removing DOGE"
+    },
+    {
+      "severity": "medium",
+      "file": "src/compliance.py",
+      "line": 104,
+      "category": "stale",
+      "description": "last_updated hardcoded 2024-01-01",
+      "recommendation": "Use dynamic timestamp"
+    }
+  ],
+  "summary": "5 critical: DOGE in compliance, VECHAIN/VET mismatch, missing LINK/IOTA, USDT in K8s and training data. 11 divergent whitelists.",
+  "files_scanned": 24,
+  "execution_time_seconds": 136,
+  "recommendations": [
+    "Fix compliance.py assets",
+    "Replace USDT in K8s",
+    "Retrain USDT models",
+    "Single whitelist source"
+  ]
+}

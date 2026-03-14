@@ -1,0 +1,97 @@
+{
+  "agent_name": "Code Quality Guardian",
+  "agent_type": "audit",
+  "timestamp": "2026-03-14T04:35:00",
+  "health_score": 38.0,
+  "findings": [
+    {
+      "severity": "critical",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 812,
+      "category": "organization",
+      "description": "_cache_opportunity_bg outside class body. Runtime NameError",
+      "recommendation": "Move inside class"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 67,
+      "category": "duplication",
+      "description": "Two risk manager classes with overlapping 830 lines",
+      "recommendation": "Consolidate"
+    },
+    {
+      "severity": "high",
+      "file": "src/paper_trading.py",
+      "line": 69,
+      "category": "duplication",
+      "description": "STRATEGY_MODELS duplicated, only 4 of 7 strategies",
+      "recommendation": "Import from canonical source"
+    },
+    {
+      "severity": "high",
+      "file": "src/paper_trading.py",
+      "line": 144,
+      "category": "duplication",
+      "description": "130 lines feature engineering copy-pasted",
+      "recommendation": "Delete, import instead"
+    },
+    {
+      "severity": "high",
+      "file": "src/",
+      "line": 0,
+      "category": "duplication",
+      "description": "MiCA whitelist in 5 files with inconsistent contents",
+      "recommendation": "Single source in compliance.py"
+    },
+    {
+      "severity": "high",
+      "file": "src/",
+      "line": 0,
+      "category": "sys_path",
+      "description": "sys.path.insert in 12 files. No proper package structure",
+      "recommendation": "Add __init__.py"
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 580,
+      "category": "singleton",
+      "description": "Mutable singletons not thread-safe",
+      "recommendation": "Use dependency injection"
+    },
+    {
+      "severity": "medium",
+      "file": "src/order_executor.py",
+      "line": 532,
+      "category": "error_handling",
+      "description": "PaperTrading super().__init__ tries load_markets with empty configs",
+      "recommendation": "Override _init_exchanges"
+    },
+    {
+      "severity": "medium",
+      "file": "src/strategy_ensemble.py",
+      "line": 0,
+      "category": "types",
+      "description": "predict() no shape validation on input",
+      "recommendation": "Add shape check"
+    },
+    {
+      "severity": "low",
+      "file": "src/dashboard_api.py",
+      "line": 71,
+      "category": "todo",
+      "description": "Stale TODO for rate limiting",
+      "recommendation": "Implement or track"
+    }
+  ],
+  "summary": "2 critical: VECHAIN/VET mismatch, method outside class body. Major duplication across 5 whitelists, 2 risk managers, copy-pasted features.",
+  "files_scanned": 9,
+  "execution_time_seconds": 151,
+  "recommendations": [
+    "Fix _cache_opportunity_bg placement",
+    "Consolidate whitelists",
+    "Add src/__init__.py",
+    "Remove duplicated feature engineering"
+  ]
+}

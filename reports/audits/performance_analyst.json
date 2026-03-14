@@ -1,0 +1,97 @@
+{
+  "agent_name": "Performance Analyst",
+  "agent_type": "audit",
+  "timestamp": "2026-03-14T04:35:00",
+  "health_score": 38.0,
+  "findings": [
+    {
+      "severity": "critical",
+      "file": "src/order_executor.py",
+      "line": 66,
+      "category": "blocking_io",
+      "description": "Sync exchange.load_markets() blocks thread for seconds",
+      "recommendation": "Use ccxt.async_support"
+    },
+    {
+      "severity": "critical",
+      "file": "src/order_executor.py",
+      "line": 283,
+      "category": "blocking_io",
+      "description": "Sync exchange.create_order() in async method",
+      "recommendation": "Use ccxt.async_support"
+    },
+    {
+      "severity": "critical",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 758,
+      "category": "blocking_io",
+      "description": "Sync json.load/dump blocks event loop on every trade",
+      "recommendation": "Use aiofiles"
+    },
+    {
+      "severity": "critical",
+      "file": "src/data_integration_service.py",
+      "line": 125,
+      "category": "async",
+      "description": "Deprecated get_event_loop + run_until_complete can deadlock",
+      "recommendation": "Use get_running_loop().create_task()"
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 294,
+      "category": "async",
+      "description": "1s sleep after every order. Unacceptable for arbitrage",
+      "recommendation": "Poll with 50ms backoff"
+    },
+    {
+      "severity": "high",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 209,
+      "category": "memory",
+      "description": "_dedup_cache grows without bound",
+      "recommendation": "Use LRU cache"
+    },
+    {
+      "severity": "high",
+      "file": "src/realtime_inference.py",
+      "line": 517,
+      "category": "async",
+      "description": "Global lock serializes ALL inference",
+      "recommendation": "Use per-model locks"
+    },
+    {
+      "severity": "high",
+      "file": "src/realtime_inference.py",
+      "line": 533,
+      "category": "caching",
+      "description": "Single-sample inference. Batch params declared but unused",
+      "recommendation": "Implement batch inference"
+    },
+    {
+      "severity": "high",
+      "file": "src/dashboard_api.py",
+      "line": 338,
+      "category": "blocking_io",
+      "description": "All _load_json sync in async handlers",
+      "recommendation": "Use asyncio.to_thread"
+    },
+    {
+      "severity": "medium",
+      "file": "src/multi_strategy_training.py",
+      "line": 336,
+      "category": "vectorization",
+      "description": "RSI/EMA/BB use Python loops. 10-100x slower than numpy",
+      "recommendation": "Vectorize"
+    }
+  ],
+  "summary": "4 critical: sync ccxt in async, sync file I/O on hot paths, asyncio bridge deadlock. 1s sleep per order, no batch inference.",
+  "files_scanned": 9,
+  "execution_time_seconds": 163,
+  "recommendations": [
+    "Switch to ccxt.async_support",
+    "Non-blocking file I/O",
+    "Batch GPU inference",
+    "Vectorize features"
+  ]
+}

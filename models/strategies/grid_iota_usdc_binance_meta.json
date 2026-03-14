@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "IOTA/USDC",
+  "exchange": "binance",
+  "best_epoch": 14,
+  "best_val_loss": 0.04414429865888695,
+  "total_epochs": 14,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:31:55.730143",
+  "forward_window": 12
+}

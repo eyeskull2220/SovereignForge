@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "XLM/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 3,
+  "best_val_loss": 0.11233259710289611,
+  "total_epochs": 3,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:01:11.074170",
+  "forward_window": 6
+}

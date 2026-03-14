@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "HBAR/USDC",
+  "exchange": "binance",
+  "best_epoch": 8,
+  "best_val_loss": 0.14764356735482145,
+  "total_epochs": 8,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:24:24.625789",
+  "forward_window": 18
+}

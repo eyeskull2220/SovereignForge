@@ -45,9 +45,6 @@ class ArbitrageOpportunity:
     risk_score: float
     profit_potential: float
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 logger = logging.getLogger(__name__)
 
 # Import Phase 2 components
@@ -69,6 +66,15 @@ try:
 except ImportError as e:
     logger.warning(f"Personal Security Manager not available: {e}")
     PERSONAL_SECURITY_AVAILABLE = False
+
+# Import feature engineering for real-time inference
+try:
+    from multi_strategy_training import engineer_features
+    FEATURES_AVAILABLE = True
+    logger.info("Feature engineering (engineer_features) loaded successfully")
+except ImportError as e:
+    logger.warning(f"Feature engineering not available: {e}. Inference will be disabled.")
+    FEATURES_AVAILABLE = False
 
 @dataclass
 class ModelMetadata:
@@ -462,8 +468,31 @@ class RealTimeInferenceService:
         # If we have enough data and model is loaded, perform inference
         if len(self.buffers[pair_index]) >= 24 and pair in self.models:
             try:
-                # Prepare data for inference (simplified - would need proper feature extraction)
-                market_data = np.random.randn(24, 10)  # Placeholder for actual feature extraction
+                # Extract real features from buffered market data
+                if not FEATURES_AVAILABLE:
+                    logger.warning(f"Feature engineering unavailable, skipping inference for {pair}")
+                    return
+
+                buf = list(self.buffers[pair_index])
+
+                # Convert buffer entries to OHLCV array: [timestamp, open, high, low, close, volume]
+                # Buffer stores dicts with keys: timestamp, price, bid_price, ask_price, volume
+                # Approximate OHLCV from tick data: open=close=price, high=ask, low=bid
+                ohlcv = np.array([[
+                    entry.get('timestamp', 0),
+                    entry.get('price', 0),                                    # open
+                    entry.get('ask_price', entry.get('price', 0)),            # high
+                    entry.get('bid_price', entry.get('price', 0)),            # low
+                    entry.get('price', 0),                                    # close
+                    entry.get('volume', 0),
+                ] for entry in buf], dtype=np.float64)
+
+                seq_len = min(len(ohlcv) - 1, 23)
+                features, n_features = engineer_features(ohlcv, seq_len=seq_len)
+                if len(features) == 0:
+                    return  # Not enough data for feature engineering
+
+                market_data = features[-1]  # Latest feature sequence [seq_len, 17]
 
                 # Perform inference
                 result = self.infer_arbitrage_signal(pair, market_data)
@@ -508,7 +537,14 @@ class RealTimeInferenceService:
                               market_data: np.ndarray,
                               timeout_ms: Optional[int] = None) -> Optional[InferenceResult]:
         """
-        Perform real-time inference for arbitrage signal
+        Perform real-time inference for arbitrage signal.
+
+        Currently runs single-sample inference.  The class already stores
+        ``max_batch_size`` and ``batch_timeout_ms`` config params (plus
+        ``self.inference_batch`` / ``self.batch_lock`` infrastructure) to
+        support batched GPU inference.  Callers that have multiple pairs
+        ready simultaneously should prefer ``infer_batch()`` which stacks
+        features into a single forward pass for higher GPU throughput.
         """
         start_time = time.time()
         timeout = timeout_ms or self.inference_timeout_ms
@@ -526,6 +562,12 @@ class RealTimeInferenceService:
                 device = next(model.parameters()).device
                 input_tensor = torch.from_numpy(market_data).float().to(device)
 
+                # Single-sample inference: unsqueeze to [1, features] batch dim.
+                # For true batched inference across N samples, use infer_batch()
+                # which stacks N tensors and runs ONE forward pass, distributing
+                # results back to each caller.  Config knobs:
+                #   self.max_batch_size  (default 32)
+                #   self.batch_timeout_ms (default 50 ms — max wait before flushing)
                 if len(input_tensor.shape) == 1:
                     input_tensor = input_tensor.unsqueeze(0)
 
@@ -566,6 +608,112 @@ class RealTimeInferenceService:
             self._update_performance_stats(processing_time_ms, 0.0, success=False)
             logger.error(f"Inference failed for {trading_pair}: {e}")
             return None
+
+    def infer_batch(self,
+                    requests: List[Tuple[str, np.ndarray]],
+                    ) -> List[Optional[InferenceResult]]:
+        """
+        Batch inference: run multiple (pair, market_data) through the GPU in
+        one forward pass *per model*.
+
+        Parameters
+        ----------
+        requests : list of (trading_pair, market_data) tuples
+
+        Returns
+        -------
+        list of InferenceResult (or None for failed items), same order as input.
+
+        This uses ``self.max_batch_size`` to cap the batch dimension and is
+        the recommended path when the caller has accumulated several samples
+        (e.g. from ``process_market_data`` across multiple pairs that share
+        the same model architecture).
+        """
+        start_time = time.time()
+        results: List[Optional[InferenceResult]] = [None] * len(requests)
+
+        # Group requests by trading pair (same model)
+        pair_groups: Dict[str, List[Tuple[int, np.ndarray]]] = {}
+        for idx, (pair, data) in enumerate(requests):
+            pair_groups.setdefault(pair, []).append((idx, data))
+
+        with self.inference_lock:
+            for pair, items in pair_groups.items():
+                if pair not in self.model_loader.loaded_models:
+                    logger.warning(f"Model not loaded for {pair}, skipping {len(items)} batch items")
+                    continue
+
+                model, metadata = self.model_loader.loaded_models[pair]
+                device = next(model.parameters()).device
+
+                # Process in chunks of max_batch_size
+                for chunk_start in range(0, len(items), self.max_batch_size):
+                    chunk = items[chunk_start:chunk_start + self.max_batch_size]
+                    batch_start = time.time()
+
+                    try:
+                        # Stack all feature arrays into a single batch tensor
+                        tensors = []
+                        for _, data in chunk:
+                            t = torch.from_numpy(data).float()
+                            if t.dim() == 1:
+                                t = t.unsqueeze(0)
+                            tensors.append(t)
+                        batch_tensor = torch.cat(tensors, dim=0).to(device)
+
+                        # ONE forward pass for the entire batch
+                        with torch.no_grad(), torch.cuda.amp.autocast():
+                            batch_output = model(batch_tensor)
+
+                        gpu_memory_used = 0.0
+                        if torch.cuda.is_available():
+                            gpu_memory_used = torch.cuda.memory_allocated() / 1024 / 1024
+
+                        batch_time_ms = (time.time() - batch_start) * 1000
+
+                        # Distribute results back to individual callers
+                        for i, (orig_idx, _) in enumerate(chunk):
+                            try:
+                                results[orig_idx] = InferenceResult(
+                                    trading_pair=pair,
+                                    arbitrage_signal=batch_output[i, 0].item(),
+                                    confidence_score=torch.sigmoid(batch_output[i, 1]).item(),
+                                    predicted_spread=batch_output[i, 2].item(),
+                                    timestamp=datetime.now(),
+                                    model_version=metadata.model_version,
+                                    processing_time_ms=batch_time_ms / len(chunk),
+                                    gpu_memory_used_mb=gpu_memory_used,
+                                )
+                                self._update_performance_stats(
+                                    batch_time_ms / len(chunk), gpu_memory_used, success=True,
+                                )
+                            except Exception as item_err:
+                                logger.error(f"Batch result extraction failed for item {orig_idx}: {item_err}")
+                                self._update_performance_stats(
+                                    batch_time_ms / len(chunk), gpu_memory_used, success=False,
+                                )
+
+                        # Update batch-level stats
+                        self.performance_stats["batches_processed"] += 1
+                        total_batches = self.performance_stats["batches_processed"]
+                        prev_avg = self.performance_stats["average_batch_size"]
+                        self.performance_stats["average_batch_size"] = (
+                            (prev_avg * (total_batches - 1) + len(chunk)) / total_batches
+                        )
+
+                    except Exception as e:
+                        batch_time_ms = (time.time() - batch_start) * 1000
+                        logger.error(f"Batch inference failed for {pair} (batch of {len(chunk)}): {e}")
+                        for orig_idx, _ in chunk:
+                            self._update_performance_stats(batch_time_ms / len(chunk), 0.0, success=False)
+
+        total_ms = (time.time() - start_time) * 1000
+        logger.info(
+            f"Batch inference complete: {len(requests)} items, "
+            f"{sum(1 for r in results if r is not None)} succeeded, "
+            f"{total_ms:.1f}ms total"
+        )
+        return results
 
     def _update_performance_stats(self, processing_time: float, gpu_memory: float, success: bool):
         """Update performance monitoring statistics"""

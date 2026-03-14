@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "HBAR/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 1,
+  "best_val_loss": 0.15335792941179607,
+  "total_epochs": 1,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:55:38.240999",
+  "forward_window": 18
+}

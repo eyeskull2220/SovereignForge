@@ -12,9 +12,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
 from cache_layer import CacheManager, LRUCache, get_cache
 from exchange_rate_limiter import (
     ExchangeLimits,

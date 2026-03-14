@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "ADA/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 4,
+  "best_val_loss": 0.16774258489655977,
+  "total_epochs": 4,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:00:24.609549",
+  "forward_window": 18
+}

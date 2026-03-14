@@ -26,6 +26,12 @@ from multi_strategy_training import (
     engineer_features,
 )
 
+try:
+    from regime_detector import RegimeDetector
+    REGIME_AVAILABLE = True
+except ImportError:
+    REGIME_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 
@@ -43,7 +49,7 @@ class EnsembleSignal:
 
 class StrategyEnsemble:
     """
-    Collective brain — loads models for all 4 strategies and combines
+    Collective brain — loads models for all 7 strategies and combines
     their predictions using confidence-weighted aggregation.
 
     Each strategy produces (signal, confidence, magnitude).
@@ -86,6 +92,13 @@ class StrategyEnsemble:
         self.exchanges: List[str] = []  # Populated during load
 
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
+        self._regime_detector = None
+        if REGIME_AVAILABLE:
+            try:
+                self._regime_detector = RegimeDetector()
+            except Exception:
+                pass
 
         logger.info(
             f"StrategyEnsemble initialized: "
@@ -152,7 +165,6 @@ class StrategyEnsemble:
                         model_key = f"{pair}:{exchange}" if exchange else pair
                         self.models[strategy][model_key] = model
                         del checkpoint
-                        gc.collect()
                         results[key] = True
                         logger.info(f"Loaded {strategy.value} model for {pair}@{exchange or 'default'}")
 
@@ -160,6 +172,7 @@ class StrategyEnsemble:
                         logger.error(f"Failed to load {strategy.value} model for {pair}@{exchange}: {e}")
                         results[key] = False
 
+        gc.collect()  # once after all models loaded
         loaded_count = sum(1 for v in results.values() if v)
         total = len(results)
         logger.info(f"Loaded {loaded_count}/{total} strategy models")
@@ -192,6 +205,20 @@ class StrategyEnsemble:
         # Use the last sequence for prediction — single tensor allocation
         input_tensor = torch.FloatTensor(features[-1:]).to(self.device)
 
+        # Regime-adjusted weights
+        regime_multipliers = {}
+        if self._regime_detector is not None and market_data is not None:
+            try:
+                # market_data is an OHLCV numpy array [N, 6]
+                if len(market_data) >= 30:
+                    high = market_data[:, 2] if market_data.shape[1] > 2 else market_data[:, 0]
+                    low = market_data[:, 3] if market_data.shape[1] > 3 else market_data[:, 0]
+                    close = market_data[:, 4] if market_data.shape[1] > 4 else market_data[:, 0]
+                    regime = self._regime_detector.detect(high, low, close)
+                    regime_multipliers = self._regime_detector.get_strategy_weights(regime)
+            except Exception:
+                pass
+
         with torch.no_grad():
             for strategy in StrategyType:
                 if not self.strategy_enabled.get(strategy, True):
@@ -216,8 +243,11 @@ class StrategyEnsemble:
                     strategy_signals[label] = raw_signal
                     strategy_confidences[label] = model_confidence
 
-                    # Effective weight = config_weight * model_confidence
-                    effective_weight = self.strategy_weights[strategy] * model_confidence
+                    # Effective weight = config_weight * regime_multiplier * model_confidence
+                    config_weight = self.strategy_weights[strategy]
+                    regime_mult = regime_multipliers.get(strategy.value, 1.0)
+                    adjusted_weight = config_weight * regime_mult
+                    effective_weight = adjusted_weight * model_confidence
                     weighted_signal += raw_signal * effective_weight
                     total_effective_weight += effective_weight
 

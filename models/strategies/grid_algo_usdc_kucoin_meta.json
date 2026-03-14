@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "ALGO/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 5,
+  "best_val_loss": 0.06384465771515181,
+  "total_epochs": 5,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:44:20.624018",
+  "forward_window": 12
+}

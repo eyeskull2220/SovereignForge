@@ -6,6 +6,7 @@ Ensures all trading activities comply with EU MiCA regulations
 
 import logging
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
@@ -26,13 +27,15 @@ class MiCAComplianceEngine:
         if personal_deployment:
             # Personal trading allows major assets + MiCA compliant
             self.compliant_assets = {
-                'BTC', 'ETH', 'DOGE',  # Major assets for personal trading
-                'XRP', 'ADA', 'XLM', 'HBAR', 'ALGO', 'VECHAIN', 'ONDO', 'XDC'  # MiCA compliant
+                'XRP', 'XLM', 'HBAR', 'ALGO', 'ADA',
+                'LINK', 'IOTA', 'VET', 'XDC', 'ONDO',
+                'BTC', 'ETH',  # Included for personal deployment flexibility
             }
         else:
             # Strict MiCA compliance (Article 3)
             self.compliant_assets = {
-                'XRP', 'ADA', 'XLM', 'HBAR', 'ALGO', 'VECHAIN', 'ONDO', 'XDC'
+                'XRP', 'XLM', 'HBAR', 'ALGO', 'ADA',
+                'LINK', 'IOTA', 'VET', 'XDC', 'ONDO',
             }
 
         # Strict MiCA compliance (Article 5) - NO USDT ALLOWED IN PERSONAL DEPLOYMENT
@@ -94,6 +97,10 @@ class MiCAComplianceEngine:
 
         return True
 
+    def get_compliant_pairs(self) -> list:
+        """Return all compliant trading pairs."""
+        return sorted(self.compliant_pairs)
+
     def get_compliance_report(self) -> Dict[str, Any]:
         """Generate MiCA compliance report"""
         return {
@@ -101,7 +108,7 @@ class MiCAComplianceEngine:
             'compliant_stablecoins': len(self.compliant_stablecoins),
             'compliant_pairs': len(self.compliant_pairs),
             'mica_version': 'EU_2023_1114',
-            'last_updated': '2024-01-01',
+            'last_updated': datetime.now().strftime('%Y-%m-%d'),
             'status': 'ACTIVE'
         }
 

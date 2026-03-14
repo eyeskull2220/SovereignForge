@@ -6,6 +6,7 @@ Automated search for optimal model hyperparameters per trading pair.
 Supports:
 - Random search (default, fast)
 - Grid search (exhaustive)
+- Bayesian optimization via Optuna TPE sampler (preferred)
 - Objective: maximize validation accuracy > 80% threshold
 - Saves best config per pair to models/<PAIR>_best_hparams.json
 """
@@ -28,10 +29,20 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import torch
 
-# Add parent directory to path
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+try:
+    import optuna
+    optuna.logging.set_verbosity(optuna.logging.WARNING)
+    OPTUNA_AVAILABLE = True
+except ImportError:
+    OPTUNA_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
+# Strategy types matching multi_strategy_training.StrategyType enum values
+STRATEGY_CHOICES = [
+    'arbitrage', 'fibonacci', 'grid', 'dca',
+    'mean_reversion', 'pairs_arbitrage', 'momentum',
+]
 
 # All 12 MiCA-compliant pairs
 ALL_PAIRS = ["BTC", "ETH", "XRP", "XLM", "HBAR", "ALGO", "ADA", "LINK", "IOTA", "VET", "XDC", "ONDO"]
@@ -418,6 +429,139 @@ class HyperparameterTuner:
 
 
 # ---------------------------------------------------------------------------
+# Optuna Bayesian Optimization Tuner
+# ---------------------------------------------------------------------------
+
+class OptunaHyperparameterTuner:
+    """Bayesian hyperparameter optimization using Optuna TPE sampler.
+
+    Replaces random/grid search with intelligent Bayesian search that:
+    - Uses Tree-structured Parzen Estimator (TPE) for sample efficiency
+    - Prunes bad trials early with MedianPruner
+    - Supports multi-objective (Sharpe + drawdown)
+    - Persists studies to SQLite for resumability
+    """
+
+    def __init__(
+        self,
+        strategy: str = 'arbitrage',
+        pair: str = 'BTC/USDC',
+        exchange: str = 'binance',
+        n_trials: int = 50,
+        storage_path: str = 'data/optuna_studies.db',
+    ):
+        self.strategy = strategy
+        self.pair = pair
+        self.exchange = exchange
+        self.n_trials = n_trials
+        self.storage = f'sqlite:///{storage_path}'
+
+    def _objective(self, trial):
+        """Optuna objective function wrapping the backtester."""
+        # Model architecture params
+        d_model = trial.suggest_categorical('d_model', [64, 128, 192, 256])
+        nhead = trial.suggest_categorical('nhead', [2, 4, 8])
+        num_layers = trial.suggest_int('num_layers', 1, 4)
+        dropout = trial.suggest_float('dropout', 0.05, 0.4)
+        learning_rate = trial.suggest_float('learning_rate', 1e-5, 5e-4, log=True)
+        batch_size = trial.suggest_categorical('batch_size', [32, 64, 96, 128])
+        hidden_size = trial.suggest_categorical('hidden_size', [64, 96, 128, 192, 256])
+
+        # Strategy-specific params
+        if self.strategy == 'grid':
+            trial.suggest_float('grid_spacing_pct', 0.5, 5.0)
+            trial.suggest_int('num_levels', 2, 8)
+        elif self.strategy == 'mean_reversion':
+            trial.suggest_int('rsi_oversold', 15, 40)
+            trial.suggest_int('rsi_overbought', 60, 85)
+        elif self.strategy == 'momentum':
+            trial.suggest_int('ema_period', 5, 30)
+            trial.suggest_int('adx_min', 15, 35)
+        elif self.strategy == 'pairs_arbitrage':
+            trial.suggest_float('zscore_threshold', 1.0, 3.5)
+            trial.suggest_int('spread_window', 20, 80)
+
+        # Risk params
+        kelly_fraction = trial.suggest_float('kelly_fraction', 0.05, 0.50)
+        stop_loss = trial.suggest_float('stop_loss_pct', 1.0, 8.0)
+        take_profit = trial.suggest_float('take_profit_pct', 1.5, 12.0)
+
+        # Build config and run backtest
+        try:
+            from backtester import ArbitrageBacktester
+            config = {
+                'd_model': d_model, 'nhead': nhead, 'num_layers': num_layers,
+                'dropout': dropout, 'learning_rate': learning_rate,
+                'batch_size': batch_size, 'hidden_size': hidden_size,
+                'kelly_fraction': kelly_fraction,
+                'stop_loss_pct': stop_loss, 'take_profit_pct': take_profit,
+            }
+            config.update(trial.params)
+
+            backtester = ArbitrageBacktester(initial_capital=300.0)
+            results = backtester.run_backtest(
+                strategy=self.strategy, pair=self.pair,
+                exchange=self.exchange, config=config
+            )
+
+            sharpe = results.get('sharpe_ratio', 0.0)
+            max_dd = results.get('max_drawdown', 1.0)
+
+            # Constraint: reject if drawdown > 15%
+            if max_dd > 0.15:
+                return float('-inf')
+
+            return sharpe
+
+        except Exception as e:
+            logger.warning(f"Trial failed: {e}")
+            return float('-inf')
+
+    def optimize(self) -> dict:
+        """Run Optuna optimization study."""
+        if not OPTUNA_AVAILABLE:
+            logger.warning("Optuna not installed. Run: pip install optuna")
+            return {}
+
+        study_name = f"{self.strategy}_{self.pair.replace('/', '_')}_{self.exchange}"
+        study = optuna.create_study(
+            study_name=study_name,
+            direction='maximize',
+            storage=self.storage,
+            load_if_exists=True,
+            sampler=optuna.samplers.TPESampler(seed=42),
+            pruner=optuna.pruners.MedianPruner(n_warmup_steps=5),
+        )
+
+        study.optimize(self._objective, n_trials=self.n_trials, n_jobs=1)
+
+        best = study.best_trial
+        logger.info(f"Best trial: Sharpe={best.value:.4f}, params={best.params}")
+
+        return {
+            'best_params': best.params,
+            'best_sharpe': best.value,
+            'n_trials': len(study.trials),
+            'study_name': study_name,
+        }
+
+    def get_study_summary(self) -> dict:
+        """Get summary of existing study."""
+        if not OPTUNA_AVAILABLE:
+            return {}
+        try:
+            study_name = f"{self.strategy}_{self.pair.replace('/', '_')}_{self.exchange}"
+            study = optuna.load_study(study_name=study_name, storage=self.storage)
+            return {
+                'n_trials': len(study.trials),
+                'best_value': study.best_value,
+                'best_params': study.best_params,
+            }
+        except Exception:
+            return {}
+
+
+# ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
 async def _main():
@@ -443,4 +587,29 @@ async def _main():
 
 
 if __name__ == "__main__":
-    asyncio.run(_main())
+    import argparse as _argparse
+
+    # Check if Optuna CLI mode is requested
+    _pre_parser = _argparse.ArgumentParser(add_help=False)
+    _pre_parser.add_argument("--optuna", action="store_true", default=False)
+    _pre_args, _ = _pre_parser.parse_known_args()
+
+    if _pre_args.optuna:
+        # Optuna Bayesian optimization mode
+        parser = _argparse.ArgumentParser(description="SovereignForge Hyperparameter Optimizer (Optuna)")
+        parser.add_argument("--optuna", action="store_true", help="Use Optuna Bayesian optimizer")
+        parser.add_argument("--strategy", default="arbitrage", choices=STRATEGY_CHOICES)
+        parser.add_argument("--pair", default="BTC/USDC")
+        parser.add_argument("--exchange", default="binance")
+        parser.add_argument("--trials", type=int, default=50)
+        args = parser.parse_args()
+
+        if OPTUNA_AVAILABLE:
+            tuner = OptunaHyperparameterTuner(args.strategy, args.pair, args.exchange, args.trials)
+            result = tuner.optimize()
+            print(f"Best: {result}")
+        else:
+            print("Install optuna: pip install optuna")
+    else:
+        # Legacy random/grid search mode
+        asyncio.run(_main())

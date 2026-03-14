@@ -223,3 +223,29 @@ async def send_system_alert(title: str, message: str, level: str = "info") -> No
     """Send system alert (convenience function)"""
     system = get_telegram_alert_system()
     await system.send_system_alert(title, message, level)
+
+
+async def send_test_alert() -> Dict[str, Any]:
+    """Send a test alert to verify Telegram configuration."""
+    from datetime import datetime
+    message = (
+        "SovereignForge Test Alert\n"
+        f"Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        "Status: Telegram alerts are working!\n"
+        "System: 7 strategies, 7 exchanges\n"
+        "Mode: Paper Trading"
+    )
+    system = get_telegram_alert_system()
+    if not system.config.enabled:
+        return {"success": False, "error": "Telegram alerts are disabled"}
+    if not system.config.token:
+        return {"success": False, "error": "No bot token configured"}
+    if not system.is_running:
+        await system.initialize()
+    if not system.is_running:
+        return {"success": False, "error": "Failed to initialize Telegram bot"}
+    try:
+        await system.send_system_alert("Test Alert", message, level="success")
+        return {"success": True, "message": "Test alert sent successfully"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}

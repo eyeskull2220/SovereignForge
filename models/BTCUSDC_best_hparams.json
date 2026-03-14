@@ -1,0 +1,22 @@
+{
+  "pair": "BTC",
+  "val_accuracy": 0.5250000357627869,
+  "val_loss": 0.7093515396118164,
+  "epochs_run": 9,
+  "passed_threshold": false,
+  "timestamp": "2026-03-14T18:03:06.864212",
+  "config": {
+    "d_model": 128,
+    "nhead": 4,
+    "num_layers": 2,
+    "dim_feedforward": 2048,
+    "dropout": 0.1,
+    "learning_rate": 8e-05,
+    "batch_size": 128,
+    "epochs": 20,
+    "weight_decay": 0.0001,
+    "warmup_steps": 500,
+    "max_seq_len": 128,
+    "input_dim": 17
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "HBAR/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 2,
+  "best_val_loss": 0.05802135943149281,
+  "total_epochs": 2,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:43:29.935904",
+  "forward_window": 12
+}

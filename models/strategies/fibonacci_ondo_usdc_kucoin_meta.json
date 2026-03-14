@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "ONDO/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 3,
+  "best_val_loss": 0.1871397514449488,
+  "total_epochs": 3,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:04:52.769697",
+  "forward_window": 18
+}

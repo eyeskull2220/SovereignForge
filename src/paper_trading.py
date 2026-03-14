@@ -18,8 +18,10 @@ import logging
 import math
 import os
 import random
+import shutil
 import signal
 import sys
+import tempfile
 import time
 import traceback
 from dataclasses import asdict, dataclass, field
@@ -28,20 +30,19 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-
-# ---------------------------------------------------------------------------
-# Path setup
-# ---------------------------------------------------------------------------
+import torch
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
-SRC_DIR = PROJECT_ROOT / "src"
-sys.path.insert(0, str(SRC_DIR))
-sys.path.insert(0, str(PROJECT_ROOT))
 
-import torch
+try:
+    from risk_management import get_risk_manager
+    _risk_mgr = get_risk_manager()
+except Exception:
+    _risk_mgr = None
 
 # Local imports (deferred where needed to avoid hard crashes)
 from multi_strategy_training import (
+    STRATEGY_MODELS as _MST_MODELS,
     StrategyType,
     TradingGRU,
     TradingLSTM,
@@ -49,8 +50,8 @@ from multi_strategy_training import (
     create_gru_model,
     create_lstm_model,
     create_transformer_model,
+    engineer_features,
 )
-from session_regime import compute_adx, session_one_hot
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -64,22 +65,28 @@ MICA_PAIRS = [
 
 EXCHANGES = ["binance", "coinbase", "kraken", "okx"]
 
-STRATEGIES = ["arbitrage", "fibonacci", "grid", "dca"]
+STRATEGIES = ["arbitrage", "fibonacci", "grid", "dca", "mean_reversion", "pairs_arbitrage", "momentum"]
 
-STRATEGY_MODELS = {
-    "arbitrage": create_lstm_model,
-    "fibonacci": create_transformer_model,
-    "grid": create_gru_model,
-    "dca": create_lstm_model,
-}
+# Convert enum-keyed dict to string-keyed for paper trading compatibility
+STRATEGY_MODELS = {st.value: factory for st, factory in _MST_MODELS.items()}
 
-# Strategy weights from trading_config.json
-STRATEGY_WEIGHTS = {
-    "arbitrage": 0.4,
-    "fibonacci": 0.2,
-    "grid": 0.2,
-    "dca": 0.2,
-}
+# Load weights from config instead of hardcoding
+def _load_strategy_weights():
+    try:
+        import json
+        from pathlib import Path
+        config_path = Path(__file__).parent.parent / "config" / "trading_config.json"
+        with open(config_path) as f:
+            cfg = json.load(f)
+        weights = {}
+        for name, scfg in cfg.get("strategies", {}).items():
+            if isinstance(scfg, dict):
+                weights[name] = scfg.get("weight", 0.1)
+        return weights if weights else {"arbitrage": 0.25, "fibonacci": 0.10, "grid": 0.15, "dca": 0.10, "mean_reversion": 0.15, "pairs_arbitrage": 0.15, "momentum": 0.10}
+    except Exception:
+        return {"arbitrage": 0.25, "fibonacci": 0.10, "grid": 0.15, "dca": 0.10, "mean_reversion": 0.15, "pairs_arbitrage": 0.15, "momentum": 0.10}
+
+STRATEGY_WEIGHTS = _load_strategy_weights()
 
 INPUT_DIM = 17
 OUTPUT_SIZE = 3  # signal, confidence, magnitude
@@ -104,10 +111,10 @@ TRANSFER_FEES = {
     "okx":      1.0,   # ~$1
 }
 
-MAX_POSITION_PCT = 0.05             # 5% of portfolio per trade
+MAX_POSITION_PCT = 0.03             # 3% of portfolio per trade
 MAX_POSITIONS_PER_PAIR = 3
 SIGNAL_THRESHOLD = 0.015              # Calibrated to actual model output range
-CONFIDENCE_THRESHOLD = 0.52            # Just above random (sigmoid(0) = 0.5)
+CONFIDENCE_THRESHOLD = 0.55            # Raised from 0.52 to reduce noise
 STOP_LOSS_PCT = 0.02                # 2% stop loss
 TAKE_PROFIT_PCT = 0.03              # 3% take profit
 MAX_DAILY_LOSS_PCT = 0.05           # 5% daily loss circuit breaker
@@ -126,7 +133,11 @@ REPORT_DIR.mkdir(parents=True, exist_ok=True)
 logger = logging.getLogger("paper_trading")
 logger.setLevel(logging.DEBUG)
 
-_fh = logging.FileHandler(LOG_DIR / "paper_trading.log", encoding="utf-8")
+from logging.handlers import RotatingFileHandler as _RotatingFileHandler
+
+_fh = _RotatingFileHandler(
+    LOG_DIR / "paper_trading.log", maxBytes=100 * 1024 * 1024, backupCount=5, encoding="utf-8"
+)
 _fh.setLevel(logging.DEBUG)
 _fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
 logger.addHandler(_fh)
@@ -136,145 +147,6 @@ _ch.setLevel(logging.INFO)
 _ch.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
 logger.addHandler(_ch)
 
-
-# ---------------------------------------------------------------------------
-# Feature engineering (self-contained replica of multi_strategy_training)
-# ---------------------------------------------------------------------------
-
-def _compute_rsi(close: np.ndarray, period: int = 14) -> np.ndarray:
-    rsi = np.zeros_like(close)
-    deltas = np.diff(close)
-    for i in range(period, len(close)):
-        gains = np.maximum(deltas[i - period:i], 0)
-        losses = np.abs(np.minimum(deltas[i - period:i], 0))
-        avg_gain = np.mean(gains) + 1e-10
-        avg_loss = np.mean(losses) + 1e-10
-        rs = avg_gain / avg_loss
-        rsi[i] = (2 * rs / (1 + rs)) - 1
-    return rsi
-
-
-def _ema(data: np.ndarray, period: int) -> np.ndarray:
-    result = np.zeros_like(data)
-    result[0] = data[0]
-    alpha = 2 / (period + 1)
-    for i in range(1, len(data)):
-        result[i] = alpha * data[i] + (1 - alpha) * result[i - 1]
-    return result
-
-
-def _compute_macd(close: np.ndarray) -> np.ndarray:
-    ema12 = _ema(close, 12)
-    ema26 = _ema(close, 26)
-    macd = ema12 - ema26
-    std = np.std(macd) + 1e-10
-    return macd / std
-
-
-def _compute_bb_position(close: np.ndarray, period: int = 20) -> np.ndarray:
-    bb_pos = np.zeros_like(close)
-    for i in range(period, len(close)):
-        window = close[i - period:i]
-        mean = np.mean(window)
-        std = np.std(window) + 1e-10
-        bb_pos[i] = (close[i] - mean) / (2 * std)
-    return np.clip(bb_pos, -1, 1)
-
-
-def engineer_features(ohlcv: np.ndarray, seq_len: int = SEQ_LEN) -> Tuple[np.ndarray, int]:
-    """Build 17-feature sequences from OHLCV array.
-
-    Input columns: [timestamp, open, high, low, close, volume]
-    Returns: (sequences [N, seq_len, 17], 17)
-    """
-    N_FEATURES = 17
-    if len(ohlcv) < seq_len + 1:
-        return np.empty((0, seq_len, N_FEATURES)), N_FEATURES
-
-    timestamps = ohlcv[:, 0].astype(float)
-    open_price = ohlcv[:, 1].astype(float)
-    high = ohlcv[:, 2].astype(float)
-    low = ohlcv[:, 3].astype(float)
-    close = ohlcv[:, 4].astype(float)
-    volume = ohlcv[:, 5].astype(float)
-
-    N = len(close)
-
-    # Feature 1: returns
-    returns = np.diff(close) / (close[:-1] + 1e-10)
-    returns = np.concatenate([[0], returns])
-
-    # Feature 2: log volume ratio
-    vol_mean = np.mean(volume) + 1e-10
-    log_vol_ratio = np.log(volume / vol_mean + 1e-10)
-
-    # Feature 3: high-low range
-    hl_range = (high - low) / (close + 1e-10)
-
-    # Feature 4: close-open direction
-    co_direction = (close - open_price) / (open_price + 1e-10)
-
-    # Feature 5: RSI
-    rsi = _compute_rsi(close, period=14)
-
-    # Feature 6: MACD
-    macd = _compute_macd(close)
-
-    # Feature 7: Bollinger Band position
-    bb_pos = _compute_bb_position(close, period=20)
-
-    # Feature 8: volume momentum
-    vol_cumsum = np.cumsum(np.insert(volume, 0, 0))
-    vol_ma5 = np.zeros_like(volume)
-    if N > 5:
-        vol_ma5[5:] = (vol_cumsum[6:] - vol_cumsum[1:N - 4]) / 5.0
-    vol_mom = np.where(vol_ma5 > 1e-10, (volume - vol_ma5) / vol_ma5, 0.0)
-
-    # Feature 9: price momentum
-    price_mom = np.zeros_like(close)
-    if N > 10:
-        price_mom[10:] = (close[10:] - close[:-10]) / (close[:-10] + 1e-10)
-
-    # Feature 10: volatility
-    ret_cumsum = np.cumsum(np.insert(returns, 0, 0))
-    ret_sq_cumsum = np.cumsum(np.insert(returns ** 2, 0, 0))
-    volatility = np.zeros_like(close)
-    n_win = 20
-    if N > n_win:
-        mean_r = (ret_cumsum[n_win + 1:] - ret_cumsum[1:N - n_win + 1]) / n_win
-        mean_r2 = (ret_sq_cumsum[n_win + 1:] - ret_sq_cumsum[1:N - n_win + 1]) / n_win
-        volatility[n_win:] = np.sqrt(np.maximum(mean_r2 - mean_r ** 2, 0))
-
-    # Feature 11: ADX
-    adx = compute_adx(high, low, close, period=14)
-    adx_normalized = adx / 100.0
-
-    # Features 12-17: session one-hot
-    sess_onehot = session_one_hot(timestamps)
-
-    features = np.column_stack([
-        returns, log_vol_ratio, hl_range, co_direction,
-        rsi, macd, bb_pos, vol_mom, price_mom, volatility,
-        adx_normalized, sess_onehot,
-    ])
-
-    features = np.nan_to_num(features, nan=0.0, posinf=0.0, neginf=0.0)
-
-    # Normalize first 11 numeric features
-    col_mean = features[:, :11].mean(axis=0)
-    col_std = features[:, :11].std(axis=0)
-    col_std[col_std < 1e-10] = 1.0
-    features[:, :11] = (features[:, :11] - col_mean) / col_std
-
-    features = np.nan_to_num(features, nan=0.0, posinf=0.0, neginf=0.0)
-
-    sequences = []
-    for i in range(seq_len, len(features)):
-        sequences.append(features[i - seq_len:i])
-
-    if not sequences:
-        return np.empty((0, seq_len, N_FEATURES)), N_FEATURES
-    return np.array(sequences), N_FEATURES
 
 
 # ---------------------------------------------------------------------------
@@ -898,9 +770,17 @@ class PaperTradingEngine:
 
             side = "buy" if signal_val > 0 else "sell"
 
-            # Position sizing: scale by magnitude and confidence, cap at MAX_POSITION_PCT
-            raw_pct = MAX_POSITION_PCT * magnitude * confidence
-            position_pct = min(raw_pct, MAX_POSITION_PCT)
+            # Use RiskManager limits if available, otherwise fall back to local constants
+            if _risk_mgr is not None:
+                max_pos_pct = _risk_mgr.risk_limits.max_position_size_pct
+                max_loss_pct = _risk_mgr.risk_limits.max_loss_per_trade_pct
+            else:
+                max_pos_pct = MAX_POSITION_PCT
+                max_loss_pct = 0.015
+
+            # Position sizing: scale by magnitude and confidence, cap at max_pos_pct
+            raw_pct = max_pos_pct * magnitude * confidence
+            position_pct = min(raw_pct, max_pos_pct)
             size_usdc = self.balance * position_pct
 
             if size_usdc < 1.0:
@@ -1163,6 +1043,28 @@ class PaperTradingEngine:
     # State persistence
     # ------------------------------------------------------------------
 
+    @staticmethod
+    def _atomic_write_json(data: dict, path: Path):
+        """Write JSON atomically: write to temp file, then rename."""
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=path.parent, suffix='.tmp')
+        try:
+            with os.fdopen(tmp_fd, 'w') as f:
+                json.dump(data, f, indent=2, default=str)
+            # Keep one backup
+            backup = path.with_suffix('.json.bak')
+            if path.exists():
+                try:
+                    shutil.copy2(path, backup)
+                except Exception:
+                    pass
+            os.replace(tmp_path, path)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+            raise
+
     def save_state(self):
         """Write full state to reports/paper_trading_state.json."""
         state = {
@@ -1193,8 +1095,7 @@ class PaperTradingEngine:
 
         try:
             STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-            with open(STATE_FILE, "w", encoding="utf-8") as f:
-                json.dump(state, f, indent=2, default=str)
+            self._atomic_write_json(state, STATE_FILE)
             logger.debug(f"State saved to {STATE_FILE}")
         except Exception as exc:
             logger.error(f"Failed to save state: {exc}")

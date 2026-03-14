@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "ADA/USDC",
+  "exchange": "binance",
+  "best_epoch": 6,
+  "best_val_loss": 0.16775332669268794,
+  "total_epochs": 6,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:27:42.270682",
+  "forward_window": 18
+}

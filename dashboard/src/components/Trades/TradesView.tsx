@@ -117,7 +117,7 @@ const TradesView: React.FC = () => {
     fetch('http://localhost:8420/api/trades')
       .then(r => r.json())
       .then(d => { if (!cancelled) { setTrades(Array.isArray(d) ? d : (d?.trades ?? [])); setLoading(false); } })
-      .catch(() => { if (!cancelled) { setTrades(makeDemoTrades()); setLoading(false); } });
+      .catch(() => { if (!cancelled) { setTrades([]); setLoading(false); } });
     return () => { cancelled = true; };
   }, []);
 

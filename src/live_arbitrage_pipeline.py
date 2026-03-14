@@ -9,25 +9,48 @@ Supports two modes:
 """
 
 import asyncio
+import json
 import logging
+import os
+import shutil
+import tempfile
 import time
 from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Callable, Deque, Dict, List, Optional
 
 import numpy as np
 
+try:
+    from dynamic_risk_adjustment import DynamicRiskAdjustment
+    DYNAMIC_RISK_AVAILABLE = True
+except ImportError:
+    DYNAMIC_RISK_AVAILABLE = False
+
+try:
+    from regime_detector import RegimeDetector
+    REGIME_DETECTOR_AVAILABLE = True
+except ImportError:
+    REGIME_DETECTOR_AVAILABLE = False
+
+try:
+    from cointegration_detector import CointegrationDetector
+    COINTEGRATION_AVAILABLE = True
+except ImportError:
+    COINTEGRATION_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
-# MiCA-compliant trading pairs (USDC and RLUSD only — no USDT)
-MICA_COMPLIANT_PAIRS = [
-    'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
-    'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
-    'XDC/USDC', 'ONDO/USDC',
-    'XRP/RLUSD', 'XLM/RLUSD', 'HBAR/RLUSD', 'ALGO/RLUSD', 'ADA/RLUSD',
-    'LINK/RLUSD', 'IOTA/RLUSD', 'VET/RLUSD', 'XDC/RLUSD', 'ONDO/RLUSD',
-]
+# MiCA-compliant trading pairs — derived from compliance engine (no USDT)
+try:
+    from compliance import MiCAComplianceEngine
+    _compliance_engine = MiCAComplianceEngine()
+    MICA_COMPLIANT_PAIRS = _compliance_engine.get_compliant_pairs()
+except ImportError:
+    # Minimal fallback — should never happen in production
+    MICA_COMPLIANT_PAIRS = [f"{asset}/USDC" for asset in ['XRP', 'XLM', 'HBAR', 'ALGO', 'ADA', 'LINK', 'IOTA', 'VET', 'XDC', 'ONDO', 'BTC', 'ETH']]
 
 
 @dataclass
@@ -191,6 +214,9 @@ class LiveArbitragePipeline:
         # ── Alerting ──────────────────────────────────────────────────
         self.alert_system = self._init_alert_system()
 
+        # ── Order execution ────────────────────────────────────────────
+        self.order_executor = self._init_order_executor()
+
         # ── Optional services (degrade gracefully in all modes) ───────
         self.cache = self._init_optional('cache_layer', 'get_cache',
                                          "CacheManager initialised (Redis + LRU fallback)")
@@ -199,13 +225,66 @@ class LiveArbitragePipeline:
         self.alert_router = self._init_optional('multi_channel_alerts', 'get_alert_router',
                                                 "AlertRouter initialised (multi-channel)")
 
+        # ── Safety: opportunity dedup cache (pair+exchanges → timestamp) ──
+        self._dedup_cache: Dict[str, float] = {}
+        self._dedup_window = config.get('dedup_window_seconds', 60)
+
+        # ── Fee config ────────────────────────────────────────────────
+        self._default_taker_fee = config.get('default_taker_fee', 0.001)  # 0.1%
+        self._exchange_fees = {
+            'binance': 0.001,    # 0.1% taker
+            'coinbase': 0.004,   # 0.4% taker (Advanced Trade)
+            'kraken': 0.0026,    # 0.26% taker
+            'kucoin': 0.001,     # 0.1% taker
+            'okx': 0.001,        # 0.1% taker
+            'bybit': 0.001,      # 0.1% taker
+            'gate': 0.002,       # 0.2% taker
+        }
+        self._min_net_profit = config.get('min_net_profit', 0.25)  # $0.25 minimum
+
+        # ── State persistence paths ───────────────────────────────────
+        self._project_root = Path(__file__).resolve().parent.parent
+        self._pipeline_state_path = self._project_root / "reports" / "pipeline_state.json"
+        self._paper_trading_state_path = self._project_root / "reports" / "paper_trading_state.json"
+
         # Pipeline statistics
         self.stats = {
             'opportunities_detected': 0,
             'opportunities_filtered': 0,
+            'opportunities_executed': 0,
             'alerts_sent': 0,
+            'trades_successful': 0,
+            'trades_failed': 0,
+            'total_pnl': 0.0,
             'start_time': time.time()
         }
+
+        # Dynamic risk adjustment (VaR-based circuit breakers)
+        self._dynamic_risk = None
+        if DYNAMIC_RISK_AVAILABLE:
+            try:
+                self._dynamic_risk = DynamicRiskAdjustment()
+                logger.info("Dynamic risk adjustment initialized")
+            except Exception as e:
+                logger.warning(f"Dynamic risk adjustment unavailable: {e}")
+
+        # Market regime detector
+        self._regime_detector = None
+        if REGIME_DETECTOR_AVAILABLE:
+            try:
+                self._regime_detector = RegimeDetector()
+                logger.info("Market regime detector initialized")
+            except Exception as e:
+                logger.warning(f"Regime detector unavailable: {e}")
+
+        # Cointegration detector for pairs arbitrage
+        self._cointegration_detector = None
+        if COINTEGRATION_AVAILABLE:
+            try:
+                self._cointegration_detector = CointegrationDetector()
+                logger.info("Cointegration detector initialized")
+            except Exception as e:
+                logger.warning(f"Cointegration detector unavailable: {e}")
 
         logger.info(f"LiveArbitragePipeline initialized (mode={self.mode})")
 
@@ -307,6 +386,46 @@ class LiveArbitragePipeline:
         except ImportError:
             logger.warning("TelegramAlertSystem not available — using MockAlertSystem")
             return MockAlertSystem()
+
+    def _init_order_executor(self):
+        """Initialize order executor (paper trading by default)."""
+        trading_config = self.config.get('trading', {})
+        dry_run = trading_config.get('dry_run_mode', True)
+        trading_enabled = trading_config.get('trading_enabled', False)
+
+        # Exchange configs for paper trading (dummy keys, no real API calls)
+        cross_exchange_config = self.config.get('cross_exchange', {})
+        configured_exchanges = cross_exchange_config.get('exchanges', ['binance', 'coinbase', 'kraken', 'okx'])
+
+        try:
+            from order_executor import PaperTradingExecutor, OrderExecutor, create_demo_executor
+
+            if dry_run or not trading_enabled:
+                executor = create_demo_executor()
+                logger.info("PaperTradingExecutor loaded — trades will be simulated")
+                return executor
+
+            # Live trading: requires exchange configs with API keys
+            exchange_configs = {}
+            try:
+                api_keys_path = Path(__file__).resolve().parent.parent / "config" / "api_keys.json"
+                if api_keys_path.exists():
+                    with open(api_keys_path) as f:
+                        exchange_configs = json.load(f)
+            except Exception as e:
+                logger.warning(f"Could not load API keys: {e}")
+
+            if exchange_configs:
+                executor = OrderExecutor(exchange_configs)
+                logger.warning("LIVE OrderExecutor loaded — REAL TRADES WILL BE PLACED")
+                return executor
+
+            logger.warning("No API keys found — falling back to PaperTradingExecutor")
+            return create_demo_executor()
+
+        except ImportError:
+            logger.warning("OrderExecutor not available — trade execution disabled")
+            return None
 
     def _init_optional(self, module_name: str, factory_name: str, success_msg: str):
         """Initialize an optional service that degrades gracefully in all modes."""
@@ -507,6 +626,21 @@ class LiveArbitragePipeline:
         self.stats['opportunities_detected'] += 1
 
         try:
+            # ── Periodic market condition assessment (every 50 opportunities) ──
+            if self._dynamic_risk and self.stats.get('opportunities_detected', 0) % 50 == 0:
+                try:
+                    # Build recent returns from market buffer for this pair
+                    buf = self._market_buffers.get(opportunity.pair)
+                    if buf and len(buf) >= 10:
+                        closes = np.array([row[4] for row in buf], dtype=np.float64)
+                        recent_returns = np.diff(closes) / closes[:-1]
+                        conditions = self._dynamic_risk.assess_market_conditions(recent_returns.reshape(-1, 1))
+                        if conditions:
+                            self._last_market_conditions = conditions
+                            logger.info(f"Market conditions updated: regime={conditions.regime.value}")
+                except Exception:
+                    pass  # Market assessment is advisory — never block the hot path
+
             # ── Ensemble confirmation (collective brain) ──────────────
             ensemble_signal = None
             if self.ensemble is not None and opportunity.pair in self._market_buffers:
@@ -589,10 +723,202 @@ class LiveArbitragePipeline:
                 await self.alert_system.send_opportunity_alert(opportunity)
                 self.stats['alerts_sent'] += 1
 
+            # ── Trade execution ───────────────────────────────────────
+            if self.order_executor is not None:
+                await self._execute_trade(opportunity)
+
             logger.info(f"Processed opportunity for {opportunity.pair}: {opportunity.probability:.3f}")
 
         except Exception as e:
             logger.error(f"Error handling opportunity: {e}")
+
+    async def _execute_trade(self, opportunity: ArbitrageOpportunity):
+        """Execute a trade for a confirmed opportunity with safety checks."""
+        # SAFETY: Block trade execution with mock risk manager
+        if hasattr(self.opportunity_filter, '_is_mock') or type(self.opportunity_filter).__name__ == 'MockRiskManager':
+            logger.critical("BLOCKED: Cannot execute trades with MockRiskManager. Set mode to 'production'.")
+            return
+
+        # Dynamic risk check — circuit breaker and emergency stop gate
+        if self._dynamic_risk is not None:
+            try:
+                if self._dynamic_risk.emergency_stop_active:
+                    logger.critical(f"EMERGENCY STOP active — blocking trade for {opportunity.pair}")
+                    self.stats['circuit_breaker_blocks'] = self.stats.get('circuit_breaker_blocks', 0) + 1
+                    return
+                if self._dynamic_risk.circuit_breaker_active:
+                    logger.warning(f"Circuit breaker active — blocking trade for {opportunity.pair}")
+                    self.stats['circuit_breaker_blocks'] = self.stats.get('circuit_breaker_blocks', 0) + 1
+                    return
+            except Exception as e:
+                logger.debug(f"Dynamic risk check skipped: {e}")
+
+        try:
+            # Dedup check: skip if same opportunity was recently executed
+            dedup_key = f"{opportunity.pair}:{'-'.join(sorted(opportunity.exchanges))}"
+            now = time.time()
+            if dedup_key in self._dedup_cache:
+                if now - self._dedup_cache[dedup_key] < self._dedup_window:
+                    logger.debug(f"Dedup: skipping {opportunity.pair} (executed {now - self._dedup_cache[dedup_key]:.0f}s ago)")
+                    return
+
+            # Evict stale dedup entries
+            stale_keys = [k for k, t in self._dedup_cache.items() if now - t > self._dedup_window * 2]
+            for k in stale_keys:
+                del self._dedup_cache[k]
+
+            # Determine buy/sell exchanges from prices
+            if len(opportunity.prices) < 2:
+                logger.warning(f"Need ≥2 exchange prices for arbitrage, got {len(opportunity.prices)}")
+                return
+
+            buy_exchange = min(opportunity.prices, key=opportunity.prices.get)
+            sell_exchange = max(opportunity.prices, key=opportunity.prices.get)
+
+            buy_price = opportunity.prices[buy_exchange]
+            sell_price = opportunity.prices[sell_exchange]
+
+            if buy_price <= 0 or sell_price <= 0:
+                return
+
+            # Fee-inclusive profit calculation
+            spread = sell_price - buy_price
+            spread_pct = spread / buy_price
+
+            # Position sizing: use max_position_size_percent from config
+            trading_config = self.config.get('trading', {})
+            max_position_pct = trading_config.get('max_position_size_percent', 2.0) / 100.0
+            # Use real portfolio value from risk manager, fallback to config
+            if hasattr(self.opportunity_filter, 'portfolio_value') and self.opportunity_filter.portfolio_value > 0:
+                base_capital = self.opportunity_filter.portfolio_value
+            else:
+                try:
+                    cfg_path = Path(__file__).resolve().parent.parent / "config" / "trading_config.json"
+                    with open(cfg_path) as f:
+                        _cfg = json.load(f)
+                    base_capital = _cfg.get('capital_allocation', {}).get('initial_capital', 300.0)
+                except Exception:
+                    base_capital = 300.0  # Safe fallback — never assume $10k
+            quantity = (base_capital * max_position_pct) / buy_price
+
+            buy_fee_rate = self._exchange_fees.get(buy_exchange, 0.001)
+            sell_fee_rate = self._exchange_fees.get(sell_exchange, 0.001)
+            buy_fee = buy_price * quantity * buy_fee_rate
+            sell_fee = sell_price * quantity * sell_fee_rate
+            net_profit = (spread * quantity) - buy_fee - sell_fee
+
+            if net_profit < self._min_net_profit:
+                logger.debug(
+                    f"Net profit ${net_profit:.2f} below minimum ${self._min_net_profit:.2f} "
+                    f"for {opportunity.pair} (spread={spread_pct:.4%})"
+                )
+                self.stats['opportunities_filtered'] += 1
+                return
+
+            # Build executor-compatible dict
+            trade_request = {
+                'symbol': opportunity.pair,
+                'buy_exchange': buy_exchange,
+                'sell_exchange': sell_exchange,
+                'spread_percentage': spread_pct,
+                'quantity': quantity,
+                'buy_price': buy_price,
+                'sell_price': sell_price,
+            }
+
+            # Execute
+            logger.info(
+                f"Executing trade: {opportunity.pair} "
+                f"BUY@{buy_exchange}=${buy_price:.4f} → SELL@{sell_exchange}=${sell_price:.4f} "
+                f"qty={quantity:.6f} est_profit=${net_profit:.2f}"
+            )
+
+            result = await self.order_executor.execute_arbitrage_trade(trade_request)
+
+            # Update stats and dedup cache
+            self._dedup_cache[dedup_key] = now
+            self.stats['opportunities_executed'] += 1
+
+            if result.get('success'):
+                self.stats['trades_successful'] += 1
+                self.stats['total_pnl'] += result.get('pnl', 0)
+                logger.info(f"Trade SUCCESS: {opportunity.pair} P&L=${result.get('pnl', 0):.2f}")
+            else:
+                self.stats['trades_failed'] += 1
+                logger.warning(f"Trade FAILED: {opportunity.pair} — {result.get('errors', [])}")
+
+            # Persist pipeline state for dashboard
+            await self._persist_pipeline_state(opportunity, result)
+
+        except Exception as e:
+            logger.error(f"Trade execution error for {opportunity.pair}: {e}")
+            self.stats['trades_failed'] += 1
+
+    @staticmethod
+    def _atomic_write_json(data: dict, path: Path):
+        """Write JSON atomically: write to temp file, then rename."""
+        tmp_fd, tmp_path = tempfile.mkstemp(dir=path.parent, suffix='.tmp')
+        try:
+            with os.fdopen(tmp_fd, 'w') as f:
+                json.dump(data, f, indent=2, default=str)
+            # Keep one backup
+            backup = path.with_suffix('.json.bak')
+            if path.exists():
+                try:
+                    shutil.copy2(path, backup)
+                except Exception:
+                    pass
+            os.replace(tmp_path, path)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+            raise
+
+    async def _persist_pipeline_state(self, opportunity: ArbitrageOpportunity, trade_result: Dict):
+        """Persist pipeline state to JSON for dashboard consumption."""
+        try:
+            self._pipeline_state_path.parent.mkdir(parents=True, exist_ok=True)
+
+            # Load existing state or create new
+            state = {}
+            if self._pipeline_state_path.exists():
+                with open(self._pipeline_state_path) as f:
+                    state = json.load(f)
+
+            state['is_running'] = self.is_running
+            state['last_updated'] = datetime.now().isoformat()
+            state['opportunities_detected'] = self.stats['opportunities_detected']
+            state['trades_successful'] = self.stats['trades_successful']
+            state['trades_failed'] = self.stats['trades_failed']
+            state['total_pnl'] = self.stats['total_pnl']
+
+            # Track connected exchanges
+            if hasattr(self.data_service, 'get_connection_health'):
+                health = self.data_service.get_connection_health()
+                state['connected_exchanges'] = [
+                    ex for ex, h in health.items() if h.get('healthy', False)
+                ]
+
+            # Keep last 50 opportunities
+            recent = state.get('recent_opportunities', [])
+            recent.insert(0, {
+                'pair': opportunity.pair,
+                'probability': opportunity.probability,
+                'confidence': opportunity.confidence,
+                'exchanges': opportunity.exchanges,
+                'profit_potential': opportunity.profit_potential,
+                'trade_success': trade_result.get('success', False),
+                'trade_pnl': trade_result.get('pnl', 0),
+                'timestamp': datetime.now().isoformat(),
+            })
+            state['recent_opportunities'] = recent[:50]
+
+            self._atomic_write_json(state, self._pipeline_state_path)
+
+        except Exception as e:
+            logger.debug(f"Failed to persist pipeline state: {e}")
 
     def get_pipeline_status(self) -> Dict[str, Any]:
         """Get pipeline status"""
@@ -606,10 +932,20 @@ class LiveArbitragePipeline:
         }
         if self.ensemble is not None:
             status['ensemble'] = self.ensemble.get_loaded_summary()
+        if self._dynamic_risk is not None:
+            last_cond = getattr(self, '_last_market_conditions', None)
+            status['dynamic_risk'] = {
+                'enabled': True,
+                'circuit_breaker_active': self._dynamic_risk.circuit_breaker_active,
+                'emergency_stop_active': self._dynamic_risk.emergency_stop_active,
+                'circuit_breaker_blocks': self.stats.get('circuit_breaker_blocks', 0),
+                'last_regime': last_cond.regime.value if last_cond else None,
+            }
+        if self._regime_detector is not None and self._regime_detector.last_regime is not None:
+            status['market_regime'] = self._regime_detector.last_regime.value
+        if self._cointegration_detector is not None:
+            status['cointegration'] = self._cointegration_detector.get_status()
         return status
-
-
-# ── Mock classes (development mode only) ─────────────────────────────────
 
     async def _cache_opportunity_bg(self, opportunity: ArbitrageOpportunity):
         """Background cache write — non-blocking."""
@@ -628,11 +964,14 @@ class LiveArbitragePipeline:
             pass  # Cache failure is non-fatal
 
 
+# ── Mock classes (development mode only) ─────────────────────────────────
+
+
 class MockDataService:
     """Mock data service — used only in development mode."""
 
     def __init__(self):
-        self.data_sources = ['binance', 'coinbase', 'kraken', 'kucoin', 'okx']
+        self.data_sources = ['binance', 'coinbase', 'kraken', 'kucoin', 'okx', 'bybit']
         self._callbacks = []
 
     def add_data_callback(self, callback):
@@ -683,6 +1022,7 @@ class MockInferenceService:
 
 class MockRiskManager:
     """Mock risk manager — approves all opportunities."""
+    _is_mock = True
 
     def validate_opportunity(self, opportunity):
         return True

@@ -79,7 +79,7 @@ const RiskGauge: React.FC<{ score: number }> = ({ score }) => {
 // ---------------------------------------------------------------------------
 const RiskView: React.FC = () => {
   const [data, setData] = useState<PortfolioData | null>(null);
-  const [ddData] = useState(demoDrawdown);
+  const [ddData, setDdData] = useState(demoDrawdown);
 
   useEffect(() => {
     fetch('http://localhost:8420/api/portfolio')
@@ -108,6 +108,12 @@ const RiskView: React.FC = () => {
         });
       })
       .catch(() => setData(demoPortfolio()));
+
+    // Fetch real drawdown data
+    fetch('http://localhost:8420/api/portfolio/drawdown')
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d) && d.length > 0) setDdData(d); })
+      .catch(() => {}); // keep demo drawdown on failure
   }, []);
 
   if (!data) return <div style={{ ...card, textAlign: 'center', padding: 40 }}>Loading risk data...</div>;

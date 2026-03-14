@@ -10,9 +10,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Add src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
 from telegram_alerts import ArbitrageOpportunity, TelegramAlertSystem, TelegramConfig
 
 

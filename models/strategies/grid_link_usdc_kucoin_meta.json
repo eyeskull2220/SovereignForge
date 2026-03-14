@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "LINK/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 4,
+  "best_val_loss": 0.05578708903181671,
+  "total_epochs": 4,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:46:00.412798",
+  "forward_window": 12
+}

@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 
 import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Header';
@@ -16,6 +16,15 @@ import StrategyView from './components/Strategy/StrategyView';
 import SentimentView from './components/Sentiment/SentimentView';
 import SettingsView from './components/Settings/SettingsView';
 import SignalsView from './components/Signals/SignalsView';
+import AuditView from './components/Audit/AuditView';
+import ExchangeStatusGrid from './components/Exchanges/ExchangeStatusGrid';
+import CapitalView from './components/Capital/CapitalView';
+import ResearchView from './components/Research/ResearchView';
+import CointegrationView from './components/Cointegration/CointegrationView';
+import MarketRegimeWidget from './components/MarketRegime/MarketRegimeWidget';
+import { ToastProvider, useToast } from './components/Toast';
+import ErrorBoundary from './components/ErrorBoundary';
+import { useWebSocket, type WebSocketMessage } from './useWebSocket';
 
 import {
   useHealth,
@@ -92,6 +101,22 @@ const DashboardPage: React.FC = () => {
   const { data: signals } = useSignals();
   const { data: metrics } = useMetrics();
 
+  const [regime, setRegime] = useState<string | null>(null);
+  const [multipliers, setMultipliers] = useState<Record<string, number>>({
+    arbitrage: 1.0, fibonacci: 0.8, grid: 1.2, dca: 0.6, mean_reversion: 1.1, momentum: 0.4, breakout: 0.9,
+  });
+
+  useEffect(() => {
+    fetch('http://localhost:8420/api/pipeline/status')
+      .then(r => r.json())
+      .then(d => {
+        if (d.regime) setRegime(d.regime);
+        if (d.multipliers && typeof d.multipliers === 'object') setMultipliers(d.multipliers);
+        else if (d.strategy_multipliers && typeof d.strategy_multipliers === 'object') setMultipliers(d.strategy_multipliers);
+      })
+      .catch(() => {}); // keep defaults on failure
+  }, []);
+
   const positions = mapPositions(portfolio);
   const openPositions = positions.filter(p => p.status === 'open');
   const alerts = signalsToAlerts(signals);
@@ -116,6 +141,9 @@ const DashboardPage: React.FC = () => {
         totalTrades={portfolio?.total_trades ?? metrics?.total_trades ?? 0}
         maxDrawdown={portfolio?.max_drawdown ?? metrics?.max_drawdown ?? 0}
       />
+
+      {/* Market Regime Widget */}
+      <MarketRegimeWidget regime={regime} multipliers={multipliers} />
 
       {/* Charts row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -464,27 +492,57 @@ const PageLoading: React.FC<{ label: string }> = ({ label }) => (
 // ---------------------------------------------------------------------------
 const AppContent: React.FC = () => {
   const { data: health, dataUpdatedAt } = useHealth();
-  const isConnected = health?.status === 'ok' || health?.status === 'healthy';
+  const qc = useQueryClient();
+  const { addToast } = useToast();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // WebSocket for real-time updates
+  const onWsMessage = useCallback((msg: WebSocketMessage) => {
+    const { type } = msg;
+    if (type === 'trade_executed') {
+      qc.invalidateQueries({ queryKey: ['trades'] });
+      qc.invalidateQueries({ queryKey: ['portfolio'] });
+      addToast('Trade executed', 'success');
+    } else if (type === 'opportunity') {
+      qc.invalidateQueries({ queryKey: ['signals'] });
+    } else if (type === 'alert') {
+      addToast(String((msg.payload as any)?.message ?? 'New alert'), 'warning');
+    }
+    // pipeline_status updates are handled by polling already
+  }, [qc, addToast]);
+
+  const { status: wsStatus } = useWebSocket('ws://localhost:8420/ws', {
+    onMessage: onWsMessage,
+  });
+
+  const isConnected = wsStatus === 'open' || health?.status === 'ok' || health?.status === 'healthy';
   const lastUpdate = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : '--';
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0d1117', color: '#e2e8f0', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <Sidebar />
+      <Sidebar mobileOpen={mobileMenuOpen} onMobileClose={() => setMobileMenuOpen(false)} />
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-        <Header isConnected={isConnected} lastUpdate={lastUpdate} />
+        <Header isConnected={isConnected} lastUpdate={lastUpdate} onMenuToggle={() => setMobileMenuOpen(o => !o)} />
         <main style={{ maxWidth: 1400, width: '100%', margin: '0 auto', padding: 20 }}>
-          <Routes>
-            <Route path="/" element={<DashboardPage />} />
-            <Route path="/signals" element={<SignalsView />} />
-            <Route path="/models" element={<ModelsPage />} />
-            <Route path="/training" element={<TrainingPage />} />
-            <Route path="/charts" element={<ChartsPage />} />
-            <Route path="/risk" element={<RiskView />} />
-            <Route path="/trades" element={<TradesView />} />
-            <Route path="/strategy" element={<StrategyView />} />
-            <Route path="/sentiment" element={<SentimentView />} />
-            <Route path="/settings" element={<SettingsView />} />
-          </Routes>
+          <ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<DashboardPage />} />
+              <Route path="/signals" element={<SignalsView />} />
+              <Route path="/models" element={<ModelsPage />} />
+              <Route path="/training" element={<TrainingPage />} />
+              <Route path="/charts" element={<ChartsPage />} />
+              <Route path="/risk" element={<RiskView />} />
+              <Route path="/trades" element={<TradesView />} />
+              <Route path="/strategy" element={<StrategyView />} />
+              <Route path="/sentiment" element={<SentimentView />} />
+              <Route path="/settings" element={<SettingsView />} />
+              <Route path="/audit" element={<AuditView />} />
+              <Route path="/exchanges" element={<ExchangeStatusGrid />} />
+              <Route path="/capital" element={<CapitalView />} />
+              <Route path="/research" element={<ResearchView />} />
+              <Route path="/cointegration" element={<CointegrationView />} />
+            </Routes>
+          </ErrorBoundary>
         </main>
       </div>
     </div>
@@ -496,9 +554,11 @@ const AppContent: React.FC = () => {
 // ---------------------------------------------------------------------------
 const App: React.FC = () => (
   <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </ToastProvider>
   </QueryClientProvider>
 );
 

@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "XLM/USDC",
+  "exchange": "binance",
+  "best_epoch": 2,
+  "best_val_loss": 0.11478263100803789,
+  "total_epochs": 2,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T20:45:31.620192",
+  "forward_window": 6
+}

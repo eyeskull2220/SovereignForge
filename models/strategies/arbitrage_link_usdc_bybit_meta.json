@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "LINK/USDC",
+  "exchange": "bybit",
+  "best_epoch": 6,
+  "best_val_loss": 0.11617155157324702,
+  "total_epochs": 6,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:15:16.515923",
+  "forward_window": 6
+}

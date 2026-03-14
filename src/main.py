@@ -18,9 +18,6 @@ from typing import Any, Dict, Optional
 
 import numpy as np
 
-# Add src directory to path
-sys.path.insert(0, os.path.dirname(__file__))
-
 # Optional production imports — degrade gracefully if missing
 try:
     from dotenv import load_dotenv
@@ -321,7 +318,7 @@ class ProductionArbitrageSystem:
         if symbols is None:
             symbols = os.getenv(
                 'TRADING_SYMBOLS',
-                'BTC/USDC,ETH/USDC,XRP/USDC,XLM/USDC,HBAR/USDC,ALGO/USDC,ADA/USDC,LINK/USDC,IOTA/USDC,VET/USDC'
+                'BTC/USDC,ETH/USDC,XRP/USDC,XLM/USDC,HBAR/USDC,ALGO/USDC,ADA/USDC,LINK/USDC,IOTA/USDC,VET/USDC,XDC/USDC,ONDO/USDC'
             ).split(',')
 
         logger.info(f"Starting arbitrage detection for symbols: {symbols}")

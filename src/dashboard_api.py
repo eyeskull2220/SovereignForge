@@ -10,6 +10,7 @@ Usage:
     # Starts on http://localhost:8420
 """
 
+import asyncio
 import json
 import logging
 import math
@@ -22,7 +23,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -64,10 +65,18 @@ COINS = [
 # Secrets that must never leak via /api/config
 CONFIG_SECRET_KEYS = {"telegram_bot_token", "api_key", "api_secret", "passphrase", "password"}
 
+API_KEY = os.environ.get("SOVEREIGNFORGE_API_KEY", "")
+
+async def verify_api_key(x_api_key: str = Header(default="")):
+    """Require API key for mutation endpoints. Skip if no key configured."""
+    if API_KEY and x_api_key != API_KEY:
+        raise HTTPException(status_code=401, detail="Invalid API key")
+
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
-# TODO: Add slowapi rate limiting for production deployment (pip install slowapi)
+# Rate limiting: deferred. API key auth added as primary protection.
+# For production, add slowapi: pip install slowapi
 app = FastAPI(
     title="SovereignForge Dashboard API",
     version="1.0.0",
@@ -195,6 +204,11 @@ def _load_json(path: Path) -> Optional[Any]:
             return _sanitize_floats(json.load(f))
     except Exception:
         return None
+
+
+async def _load_json_async(path):
+    """Non-blocking JSON file read for async handlers."""
+    return await asyncio.to_thread(_load_json, path)
 
 
 def _load_knowledge_graph_raw() -> Optional[Dict]:
@@ -334,7 +348,7 @@ async def startup_scan():
 @app.get("/api/health")
 async def health():
     """System health: model count, config present, exchanges configured."""
-    config = _load_json(CONFIG_PATH)
+    config = await _load_json_async(CONFIG_PATH)
     exchanges_configured = []
     if config:
         exchanges_configured = (
@@ -399,7 +413,7 @@ async def training_history():
 @app.get("/api/portfolio")
 async def portfolio():
     """Paper trading portfolio state."""
-    data = _load_json(PAPER_TRADING_STATE_PATH)
+    data = await _load_json_async(PAPER_TRADING_STATE_PATH)
     if data is None:
         raise HTTPException(
             status_code=404,
@@ -411,7 +425,7 @@ async def portfolio():
 @app.get("/api/trades")
 async def trades():
     """Trade history from paper trading state."""
-    data = _load_json(PAPER_TRADING_STATE_PATH)
+    data = await _load_json_async(PAPER_TRADING_STATE_PATH)
     if data is None:
         raise HTTPException(
             status_code=404,
@@ -424,7 +438,7 @@ async def trades():
 @app.get("/api/signals")
 async def signals():
     """Latest signals from paper trading state."""
-    data = _load_json(PAPER_TRADING_STATE_PATH)
+    data = await _load_json_async(PAPER_TRADING_STATE_PATH)
     if data is None:
         raise HTTPException(
             status_code=404,
@@ -437,7 +451,7 @@ async def signals():
 @app.get("/api/signals/missed")
 async def missed_signals():
     """Signals that were generated but not executed (skipped)."""
-    data = _load_json(PAPER_TRADING_STATE_PATH)
+    data = await _load_json_async(PAPER_TRADING_STATE_PATH)
     if data is None:
         return {"missed": [], "count": 0}
     missed = data.get("skipped_signals", [])
@@ -477,7 +491,7 @@ async def paper_trading_status():
 
 
 @app.post("/api/paper-trading/start")
-async def paper_trading_start():
+async def paper_trading_start(_auth=Depends(verify_api_key)):
     if _pt_pid_alive():
         return {"status": "already_running", "pid": _pt_pid_alive()}
 
@@ -501,7 +515,7 @@ async def paper_trading_start():
 
 
 @app.post("/api/paper-trading/stop")
-async def paper_trading_stop():
+async def paper_trading_stop(_auth=Depends(verify_api_key)):
     pid = _pt_pid_alive()
     if not pid:
         return {"status": "not_running"}
@@ -515,13 +529,14 @@ async def paper_trading_stop():
         logger.info(f"Paper trading stopped (PID {pid})")
         return {"status": "stopped", "pid": pid}
     except Exception as e:
-        return {"status": "error", "detail": str(e)}
+        logger.error(f"Failed to stop: {e}")
+        return {"status": "error", "detail": "Operation failed. Check server logs."}
 
 
 @app.get("/api/config")
 async def config():
     """Current trading config (secrets redacted)."""
-    raw = _load_json(CONFIG_PATH)
+    raw = await _load_json_async(CONFIG_PATH)
     if raw is None:
         raise HTTPException(status_code=404, detail="Config file not found")
     return _sanitize_config(raw)
@@ -547,9 +562,9 @@ def _save_config(cfg: Dict) -> None:
 
 
 @app.post("/api/config/toggle-pair")
-async def toggle_pair(req: TogglePairRequest):
+async def toggle_pair(req: TogglePairRequest, _auth=Depends(verify_api_key)):
     """Enable or disable a trading pair."""
-    raw = _load_json(CONFIG_PATH)
+    raw = await _load_json_async(CONFIG_PATH)
     if raw is None:
         raise HTTPException(status_code=404, detail="Config file not found")
 
@@ -576,9 +591,9 @@ async def toggle_pair(req: TogglePairRequest):
 
 
 @app.post("/api/config/toggle-strategy")
-async def toggle_strategy(req: ToggleStrategyRequest):
+async def toggle_strategy(req: ToggleStrategyRequest, _auth=Depends(verify_api_key)):
     """Enable or disable a strategy."""
-    raw = _load_json(CONFIG_PATH)
+    raw = await _load_json_async(CONFIG_PATH)
     if raw is None:
         raise HTTPException(status_code=404, detail="Config file not found")
 
@@ -593,9 +608,9 @@ async def toggle_strategy(req: ToggleStrategyRequest):
 
 
 @app.post("/api/config/toggle-exchange")
-async def toggle_exchange(req: ToggleExchangeRequest):
+async def toggle_exchange(req: ToggleExchangeRequest, _auth=Depends(verify_api_key)):
     """Enable or disable an exchange."""
-    raw = _load_json(CONFIG_PATH)
+    raw = await _load_json_async(CONFIG_PATH)
     if raw is None:
         raise HTTPException(status_code=404, detail="Config file not found")
 
@@ -684,6 +699,437 @@ async def metrics():
 
 
 # ---------------------------------------------------------------------------
+# WebSocket broadcast
+# ---------------------------------------------------------------------------
+MAX_WS_CONNECTIONS = 10
+
+
+class ConnectionManager:
+    """Manage WebSocket connections for real-time dashboard updates."""
+
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+
+    async def connect(self, websocket: WebSocket):
+        if len(self.active_connections) >= MAX_WS_CONNECTIONS:
+            await websocket.close(code=1008, reason="Too many connections")
+            return
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        logger.info(f"WebSocket client connected ({len(self.active_connections)} total)")
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+        logger.info(f"WebSocket client disconnected ({len(self.active_connections)} total)")
+
+    async def broadcast(self, message: Dict[str, Any]):
+        """Broadcast message to all connected clients."""
+        disconnected = []
+        for connection in self.active_connections:
+            try:
+                await connection.send_json(message)
+            except Exception:
+                disconnected.append(connection)
+        for conn in disconnected:
+            if conn in self.active_connections:
+                self.active_connections.remove(conn)
+
+
+ws_manager = ConnectionManager()
+
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time dashboard updates."""
+    await ws_manager.connect(websocket)
+    try:
+        await websocket.send_json({
+            "type": "pipeline_status",
+            "payload": {
+                "connected": True,
+                "models_loaded": len(_model_cache),
+                "paper_trading_running": _pt_pid_alive() is not None,
+            }
+        })
+        while True:
+            data = await websocket.receive_text()
+            try:
+                msg = json.loads(data)
+                if msg.get("type") == "ping":
+                    await websocket.send_json({
+                        "type": "pong",
+                        "payload": {"timestamp": datetime.utcnow().isoformat()}
+                    })
+            except json.JSONDecodeError:
+                pass
+    except WebSocketDisconnect:
+        ws_manager.disconnect(websocket)
+
+
+_pipeline_broadcast_task = None
+
+
+async def _broadcast_pipeline_status():
+    """Periodically broadcast pipeline status to all WebSocket clients."""
+    while True:
+        try:
+            await asyncio.sleep(5)
+            if not ws_manager.active_connections:
+                continue
+
+            pt_data = await _load_json_async(PAPER_TRADING_STATE_PATH)
+            pipeline_state = await _load_json_async(PROJECT_ROOT / "reports" / "pipeline_state.json")
+
+            payload: Dict[str, Any] = {
+                "paper_trading_running": _pt_pid_alive() is not None,
+                "models_loaded": len(_model_cache),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+
+            if pt_data:
+                payload["portfolio_value"] = pt_data.get("total_value", pt_data.get("portfolio_value"))
+                payload["daily_pnl"] = pt_data.get("daily_pnl", pt_data.get("pnl"))
+                payload["total_trades"] = len(pt_data.get("trades", pt_data.get("trade_history", [])))
+
+            if pipeline_state:
+                payload["pipeline_running"] = pipeline_state.get("is_running", False)
+                payload["opportunities_detected"] = pipeline_state.get("opportunities_detected", 0)
+                payload["connected_exchanges"] = pipeline_state.get("connected_exchanges", [])
+
+            await ws_manager.broadcast({"type": "pipeline_status", "payload": payload})
+        except Exception as e:
+            logger.debug(f"Pipeline status broadcast error: {e}")
+
+
+@app.on_event("startup")
+async def start_ws_broadcast():
+    global _pipeline_broadcast_task
+    _pipeline_broadcast_task = asyncio.create_task(_broadcast_pipeline_status())
+
+
+# ---------------------------------------------------------------------------
+# Pipeline control
+# ---------------------------------------------------------------------------
+PIPELINE_PID_FILE = PROJECT_ROOT / ".pipeline.pid"
+
+
+def _pipeline_pid_alive() -> Optional[int]:
+    """Return PID if pipeline is alive, else None."""
+    if not PIPELINE_PID_FILE.exists():
+        return None
+    try:
+        pid = int(PIPELINE_PID_FILE.read_text().strip())
+        if platform.system() == "Windows":
+            r = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"],
+                               capture_output=True, text=True, timeout=5)
+            if str(pid) in r.stdout:
+                return pid
+        else:
+            os.kill(pid, 0)
+            return pid
+    except Exception:
+        pass
+    PIPELINE_PID_FILE.unlink(missing_ok=True)
+    return None
+
+
+@app.get("/api/pipeline/status")
+async def pipeline_status():
+    """Get pipeline status."""
+    pid = _pipeline_pid_alive()
+    state = await _load_json_async(PROJECT_ROOT / "reports" / "pipeline_state.json")
+    return {"running": pid is not None, "pid": pid, "state": state}
+
+
+@app.post("/api/pipeline/start")
+async def pipeline_start(_auth=Depends(verify_api_key)):
+    """Start the live arbitrage pipeline."""
+    if _pipeline_pid_alive():
+        return {"status": "already_running", "pid": _pipeline_pid_alive()}
+
+    script = PROJECT_ROOT / "src" / "main.py"
+    log_path = LOGS_DIR / "pipeline.log"
+    LOGS_DIR.mkdir(exist_ok=True)
+
+    with open(log_path, "a") as log_f:
+        log_f.write(f"\n{'='*60}\n[{datetime.now().isoformat()}] Pipeline started via dashboard API\n{'='*60}\n")
+        proc = subprocess.Popen(
+            [sys.executable, str(script), "production", "--dry-run"],
+            cwd=str(PROJECT_ROOT),
+            stdout=log_f,
+            stderr=subprocess.STDOUT,
+            env={**os.environ, "PAPER_TRADING_MODE": "true"},
+            creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if platform.system() == "Windows" else 0,
+        )
+    PIPELINE_PID_FILE.write_text(str(proc.pid))
+    logger.info(f"Pipeline started (PID {proc.pid})")
+    return {"status": "started", "pid": proc.pid}
+
+
+@app.post("/api/pipeline/stop")
+async def pipeline_stop(_auth=Depends(verify_api_key)):
+    """Stop the live arbitrage pipeline."""
+    pid = _pipeline_pid_alive()
+    if not pid:
+        return {"status": "not_running"}
+    try:
+        if platform.system() == "Windows":
+            subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+                           capture_output=True, timeout=10)
+        else:
+            os.kill(pid, 15)
+        PIPELINE_PID_FILE.unlink(missing_ok=True)
+        logger.info(f"Pipeline stopped (PID {pid})")
+        return {"status": "stopped", "pid": pid}
+    except Exception as e:
+        logger.error(f"Failed to stop: {e}")
+        return {"status": "error", "detail": "Operation failed. Check server logs."}
+
+
+@app.get("/api/pipeline/opportunities")
+async def pipeline_opportunities():
+    """Get recent detected opportunities."""
+    state = await _load_json_async(PROJECT_ROOT / "reports" / "pipeline_state.json")
+    if state is None:
+        return {"opportunities": [], "count": 0}
+    opps = state.get("recent_opportunities", [])
+    return {"opportunities": opps, "count": len(opps)}
+
+
+@app.get("/api/pipeline/cointegration")
+async def get_cointegration_status():
+    """Get cointegration pair detection status."""
+    try:
+        state = await _load_json_async(PROJECT_ROOT / "reports" / "pipeline_state.json")
+        if state and 'cointegration' in state:
+            return state['cointegration']
+        return {'cached_pairs': 0, 'pairs': [], 'statsmodels_available': False}
+    except Exception:
+        return {'cached_pairs': 0, 'pairs': []}
+
+
+# ---------------------------------------------------------------------------
+# Exchange & Capital Status Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/exchanges/status")
+async def get_exchange_status():
+    """Get connection status for all configured exchanges."""
+    try:
+        config = await _load_json_async(CONFIG_PATH)
+        exchanges = config.get('cross_exchange', {}).get('exchanges', [])
+
+        # Exchange fees from the pipeline or hardcoded
+        fees = {
+            'binance': 0.001, 'coinbase': 0.004, 'kraken': 0.0026,
+            'kucoin': 0.001, 'okx': 0.001, 'bybit': 0.001, 'gate': 0.002,
+        }
+
+        # Pair counts per exchange
+        pairs = config.get('trading', {}).get('enabled_pairs', [])
+
+        statuses = []
+        for ex in exchanges:
+            statuses.append({
+                'name': ex,
+                'connected': True,  # Would need WebSocket status for real value
+                'fee_pct': fees.get(ex, 0.001) * 100,
+                'pairs': len(pairs),
+            })
+
+        return {'exchanges': statuses, 'total': len(exchanges)}
+    except Exception as e:
+        return {'exchanges': [], 'error': str(e)}
+
+
+@app.get("/api/capital/status")
+async def get_capital_status():
+    """Get capital allocation and tier information."""
+    try:
+        config = await _load_json_async(CONFIG_PATH)
+        cap = config.get('capital_allocation', {})
+        strategies = config.get('strategies', {})
+
+        initial = cap.get('initial_capital', 300)
+        target = cap.get('target_capital', 5000)
+
+        # Read current portfolio value if available
+        portfolio_data = await _load_json_async(PAPER_TRADING_STATE_PATH)
+        current = portfolio_data.get('balance', initial) if portfolio_data else initial
+
+        # Determine tier
+        if current <= 500: tier = 'micro'
+        elif current <= 2000: tier = 'small'
+        elif current <= 5000: tier = 'medium'
+        else: tier = 'standard'
+
+        # Strategy allocations
+        allocations = {}
+        for name, scfg in strategies.items():
+            if isinstance(scfg, dict):
+                weight = scfg.get('weight', 0)
+                allocations[name] = {
+                    'weight': weight,
+                    'amount': round(current * weight, 2),
+                    'enabled': scfg.get('enabled', True),
+                }
+
+        return {
+            'current_capital': current,
+            'initial_capital': initial,
+            'target_capital': target,
+            'growth_pct': round((current - initial) / initial * 100, 2) if initial > 0 else 0,
+            'tier': tier,
+            'allocations': allocations,
+        }
+    except Exception as e:
+        return {'error': str(e)}
+
+
+# ---------------------------------------------------------------------------
+# Agent System Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/agents/reports")
+async def get_agent_reports():
+    """List all available audit reports."""
+    try:
+        reports_dir = Path(__file__).parent.parent / "reports" / "audits"
+        if not reports_dir.exists():
+            return {"reports": []}
+
+        reports = []
+        for json_file in sorted(reports_dir.glob("*.json")):
+            try:
+                data = json.loads(json_file.read_text(encoding="utf-8"))
+                reports.append({
+                    "name": data.get("agent_name", json_file.stem),
+                    "type": data.get("agent_type", "audit"),
+                    "health_score": data.get("health_score", 0),
+                    "findings_count": len(data.get("findings", [])),
+                    "timestamp": data.get("timestamp", ""),
+                    "file": json_file.name,
+                })
+            except Exception:
+                continue
+        return {"reports": reports}
+    except Exception as e:
+        logger.error(f"Error listing reports: {e}")
+        return {"reports": []}
+
+
+@app.get("/api/agents/reports/{agent_name}")
+async def get_agent_report(agent_name: str):
+    """Get a specific agent's full report."""
+    try:
+        reports_dir = Path(__file__).parent.parent / "reports" / "audits"
+        # Try exact match and normalized name
+        for name in [agent_name, agent_name.lower().replace(" ", "_")]:
+            json_file = reports_dir / f"{name}.json"
+            if json_file.exists():
+                return json.loads(json_file.read_text(encoding="utf-8"))
+        return {"error": "Report not found", "available": [f.stem for f in reports_dir.glob("*.json")]}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/agents/synthesis")
+async def get_synthesis_report():
+    """Get the consolidated synthesis report."""
+    try:
+        synthesis_path = Path(__file__).parent.parent / "reports" / "audits" / "synthesis.json"
+        if synthesis_path.exists():
+            return json.loads(synthesis_path.read_text(encoding="utf-8"))
+        return {"error": "No synthesis report found. Run: python src/agents/runner.py synthesize"}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+@app.get("/api/agents/health")
+async def get_system_health():
+    """Get overall system health score from latest synthesis."""
+    try:
+        synthesis_path = Path(__file__).parent.parent / "reports" / "audits" / "synthesis.json"
+        if synthesis_path.exists():
+            data = json.loads(synthesis_path.read_text(encoding="utf-8"))
+            findings = data.get("findings", [])
+            return {
+                "health_score": data.get("health_score", 0),
+                "critical": sum(1 for f in findings if f.get("severity") == "critical"),
+                "high": sum(1 for f in findings if f.get("severity") == "high"),
+                "medium": sum(1 for f in findings if f.get("severity") == "medium"),
+                "total_findings": len(findings),
+                "timestamp": data.get("timestamp", ""),
+            }
+        return {"health_score": None, "error": "No audit data available"}
+    except Exception as e:
+        return {"health_score": None, "error": str(e)}
+
+
+@app.get("/api/agents/research")
+async def run_research_agents():
+    """Run all research agents and return results."""
+    results = {}
+    try:
+        from agents.research_sentiment import MarketSentimentAgent
+        results['sentiment'] = MarketSentimentAgent().analyze()
+    except Exception as e:
+        results['sentiment'] = {"error": str(e)}
+
+    try:
+        from agents.research_performance import StrategyPerformanceAgent
+        results['performance'] = StrategyPerformanceAgent().analyze()
+    except Exception as e:
+        results['performance'] = {"error": str(e)}
+
+    # Technical analysis is slower (fetches from exchange) — include summary only
+    try:
+        from agents.research_technical import TechnicalAnalysisAgent
+        ta = TechnicalAnalysisAgent().analyze()
+        results['technical'] = {
+            'pairs_analyzed': ta.get('pairs_analyzed', 0),
+            'cross_pair_signals': ta.get('cross_pair_signals', []),
+            'execution_time': ta.get('execution_time', 0),
+        }
+    except Exception as e:
+        results['technical'] = {"error": str(e)}
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Telegram Alerts
+# ---------------------------------------------------------------------------
+
+@app.post("/api/alerts/test")
+async def send_test_alert_endpoint(_auth=Depends(verify_api_key)):
+    """Send a test Telegram alert."""
+    try:
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+        from telegram_alerts import send_test_alert
+        result = await send_test_alert()
+        return result
+    except ImportError as e:
+        return {"success": False, "error": f"telegram_alerts module not available: {e}"}
+    except Exception as e:
+        logger.error(f"Test alert failed: {e}")
+        return {"success": False, "error": str(e)}
+
+
+@app.get("/api/alerts/status")
+async def alerts_status():
+    """Get Telegram alert system status."""
+    try:
+        sys.path.insert(0, str(PROJECT_ROOT / "src"))
+        from telegram_alerts import get_telegram_alert_system
+        system = get_telegram_alert_system()
+        return system.get_status()
+    except ImportError:
+        return {"enabled": False, "error": "telegram_alerts module not available"}
+
+
+# ---------------------------------------------------------------------------
 # Static file serving (dashboard SPA)
 # ---------------------------------------------------------------------------
 if DASHBOARD_DIST.exists():
@@ -703,7 +1149,7 @@ if __name__ == "__main__":
     logger.info(f"Starting SovereignForge Dashboard API on port {port}")
     uvicorn.run(
         "dashboard_api:app",
-        host="0.0.0.0",
+        host="127.0.0.1",
         port=port,
         reload=False,
         log_level="info",

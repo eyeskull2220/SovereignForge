@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-SovereignForge is a GPU-accelerated cryptocurrency arbitrage detection system with real-time monitoring, AI-powered opportunity filtering, and MiCA compliance enforcement. It is a hybrid Python/TypeScript monorepo combining a Python ML/trading backend with a React dashboard frontend.
+SovereignForge is a GPU-accelerated cryptocurrency arbitrage detection system with real-time monitoring, AI-powered opportunity filtering, MiCA compliance enforcement, and multi-personality agent auditing. Hybrid Python/TypeScript monorepo.
 
-**Status**: Production-ready (Phase 12 complete, 92%+ completion).
+**Status**: 7 strategies, 7 exchanges, 15 dashboard pages, 9 agent personalities, 3 optimization tools. Health score: 92/100.
 
 ---
 
@@ -12,261 +12,165 @@ SovereignForge is a GPU-accelerated cryptocurrency arbitrage detection system wi
 
 ```
 SovereignForge/
-├── src/                    # Python backend (43 modules) — core trading, ML, compliance
-├── dashboard/              # React TypeScript frontend (trading dashboard)
-│   └── src/components/     # PositionsTable, RiskMetrics, PnlChart, AlertsPanel, etc.
-├── tests/                  # pytest test suite (9 files, 71/73 passing)
-├── models/                 # Trained PyTorch model checkpoints (.pth) and metadata
-│   ├── strategies/         # Per-strategy models (arbitrage, DCA, grid, fibonacci)
-│   └── registry/           # Model metadata registry
-├── config/                 # Application configuration (trading, deployment, risk, API keys)
-├── k8s/                    # Kubernetes manifests (deployment, service, configmap, secrets, PVC, RBAC)
-├── docker/                 # Docker build/run scripts
-├── monitoring/             # Prometheus/Grafana dashboards and system monitoring
-├── data/                   # Historical and processed market data
-├── .github/workflows/      # CI/CD: test.yml, build.yml, lint.yml
-├── crewai_agents/          # CrewAI agent definitions
-├── litserve_api/           # LitServe model serving API
-├── mcp_server/             # Model Context Protocol server
-└── core/                   # Core utilities and config
-```
-
-### Key Entry Points
-
-| Purpose | Path |
-|---------|------|
-| Backend CLI | `src/main.py` (production entry: `python3 src/main.py production`) |
-| Dashboard | `dashboard/src/App.tsx` |
-| GPU Training | `gpu_train.py` |
-| Tests | `python -m pytest tests/ -v` |
-| Docker dev | `docker-compose up` |
-| K8s deploy | `kubectl apply -f k8s/` |
-
----
-
-## Tech Stack
-
-### Backend (Python 3.10+)
-- **Framework**: FastAPI + Uvicorn (async)
-- **ML/AI**: PyTorch 2.0+ (CUDA 12.1), Hugging Face transformers (163M-param models)
-- **Data**: pandas, numpy, scikit-learn
-- **Exchange connectivity**: CCXT (Binance, Coinbase, Kraken)
-- **Real-time**: WebSockets, aiohttp, asyncio
-- **Database**: aiosqlite (SQLite), asyncpg (PostgreSQL optional)
-- **Caching**: Redis (async), in-memory fallback
-- **Monitoring**: Prometheus, structlog
-- **Alerts**: python-telegram-bot, twilio (SMS)
-
-### Frontend (TypeScript/React)
-- **Framework**: React 19, TypeScript 4.9, Create React App
-- **UI**: Tailwind CSS 3.4, Lucide React icons
-- **Charts**: Chart.js 4.5, Recharts 2.8
-- **Real-time**: Custom WebSocket hook (`useWebSocket.ts`)
-
-### DevOps
-- **Containers**: Docker (multi-stage, CUDA 12.1 base), Docker Compose
-- **Orchestration**: Kubernetes (11 manifests)
-- **CI/CD**: GitHub Actions (3 workflows)
-- **GPU**: NVIDIA CUDA 12.1, RTX 4060 Ti optimized
-
----
-
-## Build & Development Commands
-
-### Python Backend
-```bash
-# Install dependencies
-pip install -r requirements.txt          # CPU
-pip install -r requirements-gpu.txt      # GPU (CUDA 12.1)
-
-# Run production server
-python3 src/main.py production
-
-# Run tests
-python -m pytest tests/ -v --tb=short
-
-# Run specific test suites
-python -m pytest tests/test_compliance_models.py -v
-python -m pytest tests/test_arbitrage_detector.py -v
-python -m pytest tests/test_integration.py -v
-
-# GPU tests (requires NVIDIA GPU)
-python test_cuda.py
-python gpu_status_check.py
-
-# Linting
-ruff check src/ --select E,W,F,I --ignore E501,W503,F401,E402,F841,E741
-ruff check tests/ --select E,W,F,I --ignore E501,W503,F401,E402
-```
-
-### Dashboard (React)
-```bash
-cd dashboard
-npm ci                  # Install dependencies
-npm start               # Dev server
-npm run build           # Production build
-npm test                # Run tests
-npx tsc --noEmit        # Type checking
-```
-
-### Docker
-```bash
-docker-compose up                              # Full stack (app + Redis + Prometheus + Grafana)
-docker build -t sovereignforge .               # Build image
-docker build --target runtime -t sovereignforge .  # Runtime-only stage
+├── src/                    # Python backend (51+ modules)
+│   ├── agents/             # 6 audit + 3 research agent personalities
+│   ├── multi_strategy_training.py  # 7-strategy ML training pipeline
+│   ├── live_arbitrage_pipeline.py  # Real-time execution with risk gates
+│   ├── strategy_ensemble.py        # Confidence-weighted ensemble with regime detection
+│   ├── order_executor.py           # Async ccxt exchange execution
+│   ├── capital_allocator.py        # Tier-based capital allocation ($300→$5000)
+│   ├── regime_detector.py          # Market regime classification
+│   ├── cointegration_detector.py   # Statistical pairs arbitrage detection
+│   ├── autotuner.py                # Karpathy-style overnight param optimization
+│   ├── swarm_optimizer.py          # Evolutionary optimizer with Research DAG
+│   ├── hyperparameter_tuner.py     # Optuna Bayesian optimization
+│   ├── model_backup.py             # Model backup/restore utility
+│   └── dashboard_api.py            # FastAPI backend (20+ endpoints)
+├── dashboard/              # React 19 frontend (15 pages)
+│   └── src/components/     # Audit, Exchanges, Capital, Research, Cointegration, etc.
+├── tests/                  # pytest suite (24/24 passing)
+├── models/strategies/      # 109+ trained PyTorch models (.pth + _meta.json)
+├── config/                 # trading_config.json, api_keys.json
+├── data/historical/        # OHLCV data (7 exchanges × 12 pairs)
+├── reports/audits/         # Agent audit reports (JSON + Markdown)
+├── health_watchdog.py      # Production health check daemon
+├── setup_telegram.py       # Interactive Telegram alert setup
+├── refresh_training_data.py # Multi-exchange OHLCV data fetcher
+└── gpu_train.py            # GPU training CLI (7 strategies)
 ```
 
 ---
 
-## CI/CD Workflows
+## Quick Reference Commands
 
-### test.yml — Python Tests
-- **Triggers**: Push to any branch, PRs to main/master
-- **Environment**: Python 3.11, CPU-only PyTorch
-- **Runs**: `pytest tests/` (excluding GPU, network, slow tests; 60s timeout)
-- **MiCA compliance check**: Scans `src/` for USDT references — fails if any found
-- **PYTHONPATH**: Set to `src/` in CI
+```bash
+# Training (resume remaining 4 strategies)
+python gpu_train.py --strategy dca --all-pairs --exchanges binance okx kucoin bybit --epochs 200 --batch-size 64 --learning-rate 8e-5 --memory-fraction 0.88 --mixed-precision --gpu-monitor
 
-### lint.yml — Code Quality
-- **Linter**: ruff (E, W, F, I rules)
-- **Checks**: CRLF detection, hardcoded Windows paths (`E:\\`), model metadata path validation
-- **Status**: Advisory-only (non-blocking)
+# Paper trading
+python launcher.py start --paper
 
-### build.yml — Docker & Dashboard
-- **Triggers**: Push to master/main, version tags (`v*`)
-- **Docker**: Multi-stage build with BuildKit caching
-- **Dashboard**: Node 20, `npm ci`, TypeScript check, `npm run build`
+# Optimization (run overnight)
+python src/autotuner.py --max-experiments 200
+python src/swarm_optimizer.py "maximize Sharpe ratio" --generations 50
+python src/hyperparameter_tuner.py --optuna --strategy momentum --trials 50
+
+# Agents
+python src/agents/runner.py list              # Show all 9 agents
+python src/agents/runner.py audit --all       # Run 6 audit agents
+python src/agents/runner.py research          # Run 3 research agents
+python src/agents/runner.py synthesize        # Consolidate reports
+
+# Data refresh
+python refresh_training_data.py               # All 7 exchanges
+python refresh_training_data.py --exchanges kraken --force  # Kraken trades workaround
+
+# Dashboard
+cd dashboard && npm start                     # Dev server on :3000
+# API on :8420 (bound to 127.0.0.1, API key auth on POST endpoints)
+
+# Tests
+PYTHONPATH=src python -m pytest tests/test_integration.py tests/test_risk_management.py -v
+
+# Health monitoring
+python health_watchdog.py                     # Polls /api/health every 30s
+
+# Telegram setup
+python setup_telegram.py                      # Interactive bot configuration
+
+# Model backup
+python -c "from model_backup import backup_models; backup_models('pre_training')"
+```
+
+---
+
+## 7 Trading Strategies
+
+| Strategy | Architecture | Forward Window | Best For |
+|----------|-------------|---------------|----------|
+| arbitrage | LSTM | 6 candles (30m) | Cross-exchange spread detection |
+| fibonacci | Transformer | 18 candles (90m) | Fib retracement patterns |
+| grid | GRU | 12 candles (1h) | Mean-reversion in ranging markets |
+| dca | LSTM | 48 candles (4h) | Optimal DCA entry timing |
+| mean_reversion | GRU | 12 candles (1h) | Bollinger Band + RSI oversold/overbought |
+| pairs_arbitrage | LSTM | 15 candles (75m) | Cointegrated pair spread trading |
+| momentum | Transformer | 36 candles (3h) | Trend continuation with ADX confirmation |
+
+Ensemble weights (from config): arb=0.20, fib=0.10, grid=0.18, dca=0.10, mr=0.17, pairs=0.12, mom=0.13
+
+---
+
+## 7 Exchanges
+
+| Exchange | Fee | WebSocket | Status |
+|----------|-----|-----------|--------|
+| Binance | 0.1% | BinanceWebSocket | Full support |
+| Coinbase | 0.4% | CoinbaseWebSocket | Full support |
+| Kraken | 0.26% | KrakenWebSocket | Full support (OHLCV limited to 720 candles) |
+| KuCoin | 0.1% | KuCoinWebSocket | Full support |
+| OKX | 0.1% | OKXWebSocket | Full support |
+| Bybit | 0.1% | BybitWebSocket | Full support (MiCA licensed, Austria) |
+| Gate.io | 0.2% | GateWebSocket | Full support (MiCA licensed, Malta) |
 
 ---
 
 ## MiCA Compliance — CRITICAL RULES
 
-**MiCA compliance is the top priority. Never violate these rules.**
+**NEVER use USDT. Only USDC and RLUSD stablecoins.**
 
-### Allowed Trading Pairs (Whitelist)
+### Allowed Pairs
 - XRP/USDC, XLM/USDC, HBAR/USDC, ALGO/USDC, ADA/USDC
-- LINK/USDC, IOTA/USDC, XDC/USDC, ONDO/USDC, VET/USDC
-- XRP/RLUSD, XLM/RLUSD, ADA/RLUSD
+- LINK/USDC, IOTA/USDC, VET/USDC, XDC/USDC, ONDO/USDC
+- BTC/USDC, ETH/USDC (personal deployment)
 
-### Forbidden
-- **No USDT pairs** — USDT is not MiCA-compliant
-- **No BTC/ETH in personal deployment** — institutional only
-- **No external custody** — local-only execution
-- **No public offering** — individual use only
-
-### Compliance Verification
-Before committing, verify zero USDT references in `src/`:
+### Compliance verification
 ```bash
-grep -rn "USDT" src/ --include="*.py" | grep -v "NO USDT\|USDT ALLOWED\|USDT PAIRS\|compliance.py:3[89]\|gpu_accelerated"
+grep -rn "USDT" src/ --include="*.py" | grep -v "NO USDT\|USDT ALLOWED\|compliance"
 ```
-This check runs in CI and **will fail the build** if violations are found.
 
 ---
 
-## Code Conventions
+## Agent System (9 personalities)
 
-### Python
-- **Async-first**: All I/O operations must use async/await
-- **Type hints**: Full annotation coverage expected
-- **Error handling**: Comprehensive try/except with structured logging (structlog)
-- **Security**: Non-root containers, secrets via env vars, no hardcoded credentials
-- **Performance**: GPU optimization, memory bounds, gradient accumulation
-- **Imports**: isort-compatible ordering (enforced by ruff I rules)
+### 6 Audit Agents
+| Agent | Personality | Focus |
+|-------|------------|-------|
+| SecurityAuditor | Red teamer | OWASP, auth, secrets, injection |
+| PerformanceAnalyst | Latency hunter | Blocking I/O, memory, async |
+| TradingLogicReviewer | Burned quant | Fees, spreads, Kelly, rounding |
+| RiskAuditor | Crash survivor | Limits, drawdown, emergency stop |
+| MiCAComplianceChecker | EU regulator | USDT scan, whitelist consistency |
+| CodeQualityGuardian | Senior architect | Dead code, duplication, types |
 
-### TypeScript/React
-- **Strict mode**: Enabled in tsconfig.json
-- **Styling**: Tailwind CSS utility classes
-- **State management**: React hooks, WebSocket hook for real-time data
-- **Target**: ES5, esnext modules, react-jsx
-
-### Commit Messages
-Use conventional commit prefixes:
-- `feat:` — new feature
-- `fix:` — bug fix
-- `perf:` — performance improvement
-- `docs:` — documentation
-- `test:` — test additions/changes
-- `refactor:` — code restructuring
-
-Small, single-purpose commits preferred.
+### 3 Research Agents
+| Agent | Focus |
+|-------|-------|
+| MarketSentimentAgent | Fear/greed, news sentiment |
+| TechnicalAnalysisAgent | RSI, BB, MACD per pair via ccxt |
+| StrategyPerformanceAgent | Weight rebalancing recommendations |
 
 ---
 
-## Testing
+## Production Safety
 
-### Test Suite Overview
-| File | Coverage |
-|------|----------|
-| `test_compliance_models.py` | MiCA whitelist enforcement |
-| `test_wave2.py` | Wave 2 feature validation |
-| `test_arbitrage_detector.py` | Arbitrage detection engine |
-| `test_risk_management.py` | Risk control validation |
-| `test_telegram_alerts.py` | Alert delivery |
-| `test_websocket_integration.py` | Real-time data (skipped in CI) |
-| `test_ml_models.py` | ML model validation (skipped in CI) |
-| `test_integration.py` | End-to-end integration |
-
-### Test Markers
-- `@pytest.mark.gpu` — requires NVIDIA GPU (skipped in CI)
-- `@pytest.mark.network` — requires network access (skipped in CI)
-- `@pytest.mark.slow` — long-running tests (skipped in CI)
-
-### Current Status
-- **71/73 tests passing** (97.3%)
-- **Coverage**: ~74%
-
----
-
-## Configuration
-
-### Environment Variables
-Copy `.env.example` to `.env` and configure. Key sections:
-- **Database**: PostgreSQL connection, pool settings
-- **Cache**: Redis URL and password
-- **Trading**: Symbol pairs, exchanges, risk limits
-- **Exchange API keys**: Binance, Coinbase, Kraken
-- **Monitoring**: Prometheus, Sentry
-- **Security**: Encryption keys, JWT secrets
-
-### Config Files (`config/`)
-- `trading_config.json` — enabled pairs, position sizes, spreads, dry-run mode
-- `deployment_config.json` — Docker registry, K8s replicas, resource limits
-- `risk_limits.json` — portfolio risk %, position risk %, Kelly fraction
-- `api_keys.json` — exchange API credential template
-
----
-
-## Session Workflow for AI Agents
-
-### Session Start
-1. Read this file (`CLAUDE.md`) for project conventions
-2. Read `WORKING.md` for current priorities and known issues
-3. Read `AGENTS.md` for detailed operating rules and guardrails
-4. Check `git status` for branch state and uncommitted changes
-5. Verify tests pass before making changes
-
-### During Development
-- Run tests before and after changes: `python -m pytest tests/ -v --tb=short`
-- Verify MiCA compliance (no USDT references in `src/`)
-- Update `WORKING.md` after significant changes
-- Keep commits small and focused
-
-### Pre-Commit Checklist
-- [ ] Tests pass
-- [ ] MiCA compliance verified (no USDT)
-- [ ] Type hints included for new code
-- [ ] Error handling is comprehensive
-- [ ] No hardcoded secrets or Windows paths
-- [ ] WORKING.md updated if needed
+- **API auth**: API key on all POST endpoints (set `SOVEREIGNFORGE_API_KEY` env var)
+- **Localhost binding**: Dashboard API on 127.0.0.1:8420 only
+- **Atomic state writes**: paper_trading_state.json uses write-to-temp-then-rename
+- **Log rotation**: 100MB max, 5 backups
+- **Multi-layer safety gate**: Both env var AND config must agree to go live
+- **Model backup**: `backup_models()` before retraining, keeps last 3
+- **Health watchdog**: Polls /api/health, restarts on 3 consecutive failures
+- **WebSocket limit**: Max 10 concurrent connections
+- **Quarter-Kelly**: Conservative position sizing (0.25 fraction)
+- **$50 capital floor**: Halts all trading if breached
 
 ---
 
 ## Architecture Notes
 
-- **Async everywhere**: The entire backend is async — never use blocking I/O
-- **Circuit breakers**: Exchange API calls use exponential backoff with jitter
-- **GPU inference**: 163M-parameter transformer models with mixed precision (FP16/FP32)
-- **Multi-exchange**: Concurrent data from Binance, Coinbase, Kraken via CCXT
-- **WebSocket streaming**: Real-time price feeds with auto-reconnect
-- **Horizontal scaling**: Stateless services behind K8s, ready for replica scaling
-- **Monitoring**: Prometheus metrics on port 9090, Grafana dashboards on port 3000
+- **Async ccxt**: Exchange operations use `ccxt.async_support` with lazy initialization
+- **RegimeDetector**: Classifies market as trending/ranging/volatile, adjusts strategy weights
+- **CointegrationDetector**: ADF test + z-score for pairs arbitrage
+- **DynamicRiskAdjustment**: VaR/ES circuit breakers wired into pipeline
+- **Capital tiers**: micro ($0-500), small ($500-2k), medium ($2k-5k), standard ($5k+)
+- **Training improvements**: Embargo gap, noise injection, SWA, temporal dropout, Huber beta=0.1

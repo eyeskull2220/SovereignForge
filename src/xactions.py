@@ -24,9 +24,6 @@ from decimal import ROUND_DOWN, Decimal
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 logger = logging.getLogger(__name__)
 
 class TransactionStatus(Enum):

@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "ONDO/USDC",
+  "exchange": "bybit",
+  "best_epoch": 3,
+  "best_val_loss": 0.1320010162152276,
+  "total_epochs": 3,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:16:31.673260",
+  "forward_window": 6
+}

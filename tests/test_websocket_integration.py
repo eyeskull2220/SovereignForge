@@ -14,9 +14,6 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-# Add src directory to path for imports
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
 from exchange_connector import (
     WEBSOCKET_AVAILABLE,
     ExchangeConnector,

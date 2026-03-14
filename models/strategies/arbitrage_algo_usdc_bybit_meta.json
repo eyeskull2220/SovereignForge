@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "ALGO/USDC",
+  "exchange": "bybit",
+  "best_epoch": 1,
+  "best_val_loss": 0.0985483882838104,
+  "total_epochs": 1,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:12:38.867502",
+  "forward_window": 6
+}

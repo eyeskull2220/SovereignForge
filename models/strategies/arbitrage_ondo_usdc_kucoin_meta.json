@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "ONDO/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 6,
+  "best_val_loss": 0.1287112049020753,
+  "total_epochs": 6,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:06:19.797941",
+  "forward_window": 6
+}

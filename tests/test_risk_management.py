@@ -10,9 +10,6 @@ import sys
 import numpy as np
 import pytest
 
-# Add src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'src'))
-
 from live_arbitrage_pipeline import ArbitrageOpportunity
 
 

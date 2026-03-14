@@ -521,6 +521,163 @@ class OKXWebSocket(WebSocketConnector):
             logger.error(f"Error parsing OKX ticker message: {e}")
         return None
 
+class BybitWebSocket(WebSocketConnector):
+    """Bybit v5 spot WebSocket connector"""
+
+    BASE_URI = "wss://stream.bybit.com/v5/public/spot"
+
+    def __init__(self):
+        super().__init__("bybit")
+        self.subscribed_pairs = set()
+
+    async def subscribe_ticker(self, pairs: List[str]):
+        """Subscribe to Bybit ticker data. Pairs format: BTCUSDC (no separator)"""
+        # Convert pairs to Bybit format
+        bybit_args = []
+        for pair in pairs:
+            # Bybit uses format like BTCUSDC (no separator)
+            symbol = pair.replace('/', '').replace('-', '').upper()
+            bybit_args.append(f"tickers.{symbol}")
+
+        subscribe_message = {
+            "op": "subscribe",
+            "args": bybit_args
+        }
+
+        if await self.connect(self.BASE_URI):
+            await self.send(json.dumps(subscribe_message))
+            logger.info(f"Subscribed to ticker data for {len(pairs)} pairs on Bybit")
+            self.subscribed_pairs.update(pairs)
+            return True
+        return False
+
+    def parse_ticker_message(self, message: str) -> Optional[MarketData]:
+        """Parse Bybit v5 ticker message"""
+        try:
+            data = json.loads(message)
+
+            # Bybit sends topic-based messages
+            if 'topic' not in data or not data['topic'].startswith('tickers.'):
+                return None
+
+            ticker = data.get('data', {})
+            if not ticker:
+                return None
+
+            symbol = ticker.get('symbol', '')
+            # Convert BTCUSDC back to BTC/USDC
+            pair = self._symbol_to_pair(symbol)
+
+            return MarketData(
+                exchange='bybit',
+                pair=pair,
+                timestamp=time.time(),
+                price=float(ticker.get('lastPrice', 0)),
+                volume=float(ticker.get('volume24h', 0)),
+                bid_price=float(ticker.get('bid1Price', 0)),
+                ask_price=float(ticker.get('ask1Price', 0)),
+                bid_volume=float(ticker.get('bid1Size', 0)),
+                ask_volume=float(ticker.get('ask1Size', 0))
+            )
+        except Exception as e:
+            logger.error(f"Error parsing Bybit ticker message: {e}")
+        return None
+
+    def _symbol_to_pair(self, symbol: str) -> str:
+        """Convert BTCUSDC to BTC/USDC."""
+        if symbol.endswith('USDC'):
+            base = symbol[:-4]
+            return f"{base}/USDC"
+        return symbol
+
+class GateWebSocket(WebSocketConnector):
+    """Gate.io v4 spot WebSocket connector"""
+
+    BASE_URI = "wss://api.gateio.ws/ws/v4/"
+
+    def __init__(self):
+        super().__init__("gate")
+        self.subscribed_pairs = set()
+        self.subscriptions = []
+
+    async def subscribe_ticker(self, pairs: List[str]):
+        """Subscribe to Gate.io tickers. Pairs format: BTC_USDC"""
+        for pair in pairs:
+            # Gate.io uses underscore: BTC_USDC
+            symbol = pair.replace('/', '_').upper()
+            self.subscriptions.append(symbol)
+
+        subscribe_message = json.dumps({
+            "time": int(datetime.now().timestamp()),
+            "channel": "spot.tickers",
+            "event": "subscribe",
+            "payload": self.subscriptions
+        })
+
+        if await self.connect(self.BASE_URI):
+            await self.send(subscribe_message)
+            logger.info(f"Subscribed to ticker data for {len(pairs)} pairs on Gate.io")
+            self.subscribed_pairs.update(pairs)
+            return True
+        return False
+
+    def parse_ticker_message(self, message: str) -> Optional[MarketData]:
+        """Parse Gate.io v4 ticker message"""
+        try:
+            data = json.loads(message)
+
+            if data.get('channel') != 'spot.tickers' or data.get('event') != 'update':
+                return None
+
+            result = data.get('result', {})
+            if not result:
+                return None
+
+            symbol = result.get('currency_pair', '')
+            pair = symbol.replace('_', '/')
+
+            return MarketData(
+                exchange='gate',
+                pair=pair,
+                timestamp=time.time(),
+                price=float(result.get('last', 0)),
+                volume=float(result.get('base_volume', 0)),
+                bid_price=float(result.get('highest_bid', 0)),
+                ask_price=float(result.get('lowest_ask', 0)),
+                bid_volume=0.0,  # Not provided in ticker
+                ask_volume=0.0   # Not provided in ticker
+            )
+        except Exception as e:
+            logger.debug(f"Gate.io parse error: {e}")
+        return None
+
+def normalize_pairs_for_exchange(pairs: List[str], exchange: str) -> List[str]:
+    """Normalize pairs from standard format (BTC/USDC) to exchange-specific format.
+
+    Binance:  btcusdc (lowercase, no separator)
+    Coinbase: BTC-USDC (dash-separated)
+    Kraken:   BTC/USDC (slash — Kraken connector handles XBT conversion internally)
+    KuCoin:   BTC-USDC (dash-separated)
+    OKX:      BTC/USDC (slash — OKX connector handles dash conversion internally)
+    Bybit:    BTCUSDC (uppercase, no separator)
+    Gate.io:  BTC_USDC (underscore-separated, uppercase)
+    """
+    result = []
+    for pair in pairs:
+        if exchange == 'binance':
+            result.append(pair.replace('/', '').lower())
+        elif exchange in ('coinbase', 'kucoin'):
+            result.append(pair.replace('/', '-'))
+        elif exchange == 'bybit':
+            result.append(pair.replace('/', '').upper())
+        elif exchange == 'gate':
+            result.append(pair.replace('/', '_').upper())  # BTC/USDC -> BTC_USDC
+        else:
+            # kraken, okx handle conversion internally
+            result.append(pair)
+    return result
+
+
 class MultiExchangeConnector:
     """Unified connector for multiple exchanges"""
 
@@ -530,7 +687,9 @@ class MultiExchangeConnector:
             'coinbase': CoinbaseWebSocket(),
             'kraken': KrakenWebSocket(),
             'kucoin': KuCoinWebSocket(),
-            'okx': OKXWebSocket()
+            'okx': OKXWebSocket(),
+            'bybit': BybitWebSocket(),
+            'gate': GateWebSocket()
         }
         self.data_callbacks = []
         self.is_running = False
@@ -546,7 +705,8 @@ class MultiExchangeConnector:
         for exchange_name, connector in self.connectors.items():
             try:
                 logger.info(f"Connecting to {exchange_name}...")
-                if await connector.subscribe_ticker(pairs):
+                exchange_pairs = normalize_pairs_for_exchange(pairs, exchange_name)
+                if await connector.subscribe_ticker(exchange_pairs):
                     success_count += 1
                     logger.info(f"Successfully connected to {exchange_name}")
                 else:
@@ -594,6 +754,10 @@ class MultiExchangeConnector:
                         market_data = connector.parse_ticker_message(message)
                     elif exchange_name == 'okx':
                         market_data = connector.parse_ticker_message(message)
+                    elif exchange_name == 'bybit':
+                        market_data = connector.parse_ticker_message(message)
+                    elif exchange_name == 'gate':
+                        market_data = connector.parse_ticker_message(message)
 
                     # Call callbacks with parsed data
                     if market_data:
@@ -603,8 +767,7 @@ class MultiExchangeConnector:
                             except Exception as e:
                                 logger.error(f"Error in data callback: {e}")
 
-                # Small delay to prevent overwhelming the system
-                await asyncio.sleep(0.01)
+                await asyncio.sleep(0)  # yield to event loop without delay
 
             except Exception as e:
                 logger.error(f"Error streaming data from {exchange_name}: {e}")

@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "ETH/USDC",
+  "exchange": "bybit",
+  "best_epoch": 8,
+  "best_val_loss": 0.0460931136466489,
+  "total_epochs": 8,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:49:19.118525",
+  "forward_window": 12
+}

@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "XRP/USDC",
+  "exchange": "bybit",
+  "best_epoch": 7,
+  "best_val_loss": 0.04158488772625085,
+  "total_epochs": 7,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:50:17.401105",
+  "forward_window": 12
+}

@@ -10,15 +10,22 @@ import time
 import json
 import subprocess
 import logging
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Dict, Any, Optional
 
 # Setup logging
+_log_dir = Path(__file__).resolve().parent / "logs"
+_log_dir.mkdir(parents=True, exist_ok=True)
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/auto_recovery.log'),
+        RotatingFileHandler(
+            _log_dir / 'auto_recovery.log',
+            maxBytes=100 * 1024 * 1024, backupCount=5
+        ),
         logging.StreamHandler(sys.stdout)
     ]
 )

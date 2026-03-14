@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "ADA/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 2,
+  "best_val_loss": 0.11786748162738167,
+  "total_epochs": 2,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:04:14.110814",
+  "forward_window": 6
+}

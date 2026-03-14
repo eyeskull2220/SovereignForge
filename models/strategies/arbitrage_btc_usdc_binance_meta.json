@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "BTC/USDC",
+  "exchange": "binance",
+  "best_epoch": 22,
+  "best_val_loss": 0.08375096543511348,
+  "total_epochs": 22,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T20:42:09.430932",
+  "forward_window": 6
+}

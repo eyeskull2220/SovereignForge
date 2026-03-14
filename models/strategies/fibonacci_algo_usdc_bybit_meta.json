@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "ALGO/USDC",
+  "exchange": "bybit",
+  "best_epoch": 1,
+  "best_val_loss": 0.17790947647968142,
+  "total_epochs": 1,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:18:10.838576",
+  "forward_window": 18
+}

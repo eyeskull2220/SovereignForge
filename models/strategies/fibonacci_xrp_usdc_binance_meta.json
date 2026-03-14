@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "XRP/USDC",
+  "exchange": "binance",
+  "best_epoch": 4,
+  "best_val_loss": 0.1458725752447968,
+  "total_epochs": 4,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:20:51.277915",
+  "forward_window": 18
+}

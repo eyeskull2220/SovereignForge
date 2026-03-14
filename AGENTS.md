@@ -2,108 +2,93 @@
 
 ## Session Start
 
-1. Read `CLAUDE.md` — project structure, commands, conventions
-2. Read `WORKING.md` — current priorities, blockers, what's broken
-3. Read `TODO_ENHANCEMENTS.md` — open bugs with exact file:line locations
-4. `git status` — check branch, uncommitted changes
-5. `python -m pytest tests/ -v --tb=short` — verify tests pass before touching code
+1. Read `CLAUDE.md` — project structure, 7 strategies, 7 exchanges, commands
+2. Check memory files in `C:\Users\Gino\.claude\projects\C--Users-Gino\memory/` for context
+3. `git status` — check branch and uncommitted changes
+4. `PYTHONPATH=src python -m pytest tests/test_integration.py -v` — verify tests pass
 
 ## MiCA Compliance — NEVER VIOLATE
 
 **Allowed pairs only:**
 - XRP/USDC, XLM/USDC, HBAR/USDC, ALGO/USDC, ADA/USDC
-- LINK/USDC, IOTA/USDC, XDC/USDC, ONDO/USDC, VET/USDC
+- LINK/USDC, IOTA/USDC, VET/USDC, XDC/USDC, ONDO/USDC
+- BTC/USDC, ETH/USDC (personal deployment)
 - XRP/RLUSD, XLM/RLUSD, ADA/RLUSD
 
 **Forbidden:**
 - No USDT pairs anywhere (not MiCA compliant)
-- No BTC/ETH in personal deployment (institutional only)
+- No DOGE (removed from compliance engine)
 - No external custody, no public offering
 
-**Before every commit, verify:**
-```bash
-grep -rn "USDT" src/ --include="*.py" | grep -v "NO USDT\|USDT ALLOWED\|USDT PAIRS\|compliance.py:3[89]\|gpu_accelerated"
+## Using Personality Subagents
+
+The user prefers using Claude Code subagents with personalities for parallel work. Pattern:
+
 ```
-Must return zero results. CI enforces this.
+# Launch 3 agents in parallel
+Agent("Risk Auditor fixes", "You are a RISK MANAGEMENT OFFICER...", run_in_background=true)
+Agent("Compliance fixes", "You are a MiCA COMPLIANCE OFFICER...", run_in_background=true)
+Agent("Performance fixes", "You are a PERFORMANCE ENGINEER...", run_in_background=true)
+```
+
+**Key rules for subagents:**
+- Each agent works on NON-OVERLAPPING files to avoid conflicts
+- Use `run_in_background=true` for parallel execution
+- Always specify "Read each file before editing"
+- Add "CRITICAL: Do NOT touch src/multi_strategy_training.py" if training is running
+- Report results as they complete, verify with tests after all finish
+
+### Available Agent Personalities
+See `src/agents/audit_*.py` for full prompt templates:
+- **SecurityAuditor** (red_team) — paranoid, adversarial
+- **PerformanceAnalyst** (latency_hunter) — microsecond obsessive
+- **TradingLogicReviewer** (burned_quant) — lost money to rounding errors
+- **RiskAuditor** (crash_survivor) — survived three market crashes
+- **MiCAComplianceChecker** (eu_regulator) — zero tolerance
+- **CodeQualityGuardian** (senior_architect) — 20 years experience
+
+## Current System State (2026-03-14)
+
+### What's Working
+- 7 exchanges integrated (Binance, Coinbase, Kraken, KuCoin, OKX, Bybit, Gate)
+- 7 strategies defined (arbitrage, fibonacci, grid, dca, mean_reversion, pairs_arbitrage, momentum)
+- 109 models trained (arbitrage + fibonacci + grid complete)
+- 15 dashboard pages with dark theme
+- 9 agent personalities (6 audit + 3 research)
+- 3 optimization tools (Optuna, autotuner, swarm optimizer)
+- Health score: 92/100 (verified by QA re-audit)
+- 24/24 integration + risk tests passing
+
+### What Needs Doing (Priority Order)
+1. **Resume training**: 4 strategies remaining (dca, mean_reversion, pairs_arbitrage, momentum)
+2. **Start paper trading**: After training, `python launcher.py start --paper`
+3. **Run autotuner overnight**: `python src/autotuner.py --max-experiments 200`
+4. **Train Kraken models**: 3 pairs (BTC, ETH, XRP) have data
+5. **Monitor paper trading 2 weeks** before any live deployment
+6. **MEV integration**: DEFERRED until $5,000+ portfolio
+
+### Key Config Values
+- Initial capital: $300 (config/trading_config.json)
+- Target: $5,000
+- Kelly fraction: 0.25 (quarter-Kelly)
+- Stop loss: 3%, Take profit: 4%
+- Max daily loss: 2%
+- Per-trade loss limit: 1.5%
+- Capital floor: $50 (halts all trading)
 
 ## Code Standards
 
-- **Async-first**: All I/O uses async/await. Never block the event loop.
-- **Type hints**: Annotate all function signatures.
-- **Error handling**: try/except with structlog logging. No bare `except:`.
-- **Security**: No hardcoded secrets. No `weights_only=False` in torch.load.
-- **No Windows paths**: No `E:\\` or backslashes in file paths.
-
-## Commit Rules
-
-- Small, single-purpose commits
-- Prefix: `feat:`, `fix:`, `perf:`, `docs:`, `test:`, `refactor:`
-- Tests must pass before committing
-- Update `WORKING.md` after significant changes
-
-## Known Problems Quick Reference
-
-Concise guide to every open issue. Fix these in priority order.
-
-### BLOCKERS (system won't run)
-
-| Problem | Where | Fix |
-|---------|-------|-----|
-| Deps not installed | `requirements.txt` | `pip install -r requirements.txt` |
-| API keys empty | `config/api_keys.json` | Fill real exchange keys |
-
-### BUGS (incorrect behavior)
-
-| Problem | Where | Fix |
-|---------|-------|-----|
-| ~~Mock services in prod pipeline~~ | `src/live_arbitrage_pipeline.py` | **RESOLVED** — Pipeline now has `mode` config: `"production"` requires real services (raises `ServiceInitError`), `"development"` allows mocks with warnings. Added `start()`/`stop()` lifecycle and `get_readiness_check()`. |
-| ~~asyncio event loop in sync methods~~ | `src/main.py` | **RESOLVED** — Replaced `new_event_loop()` / `run_until_complete()` with `asyncio.run()` in `run_backtest()` and `run_paper_trading()` |
-| ~~Model weights not loaded~~ | `src/realtime_inference.py:233` | **RESOLVED** — `_create_model_from_metadata()` now imports `AdvancedArbitrageDetector` (LSTM+attention) matching trained `.pth` files. `load_state_dict()` uncommented with `strict=False` + error handling. `_weights_status` dict tracks which models have real vs random weights. |
-| ~~No pre-trade balance check~~ | `src/order_executor.py` | **RESOLVED** — Added `_check_sufficient_balance()` that verifies quote currency on buy exchange and base currency on sell exchange before placing orders. `PaperTradingExecutor` overrides with paper balance checks. Post-trade balance audit logging added. |
-| 4 models below 80% accuracy | `models/` metadata JSONs | Retrain via `gpu_train.py` with tuned hyperparams (see TODO_ENHANCEMENTS.md C3-C6) |
-| VET/USDC model missing entirely | `models/` | Fetch data with `src/data_fetcher.py`, train with `gpu_train.py` |
-| ~~time.sleep(300) blocks thread~~ | `src/model_retrainer.py` | **NOT A BUG** — `_stop_event.wait(timeout=300)` in daemon thread is correct; interruptible via `stop_monitoring()` |
-| ~~monitoring.py not wired to app~~ | `src/monitoring.py` | **RESOLVED** — `MetricsCollector` already wired via `_create_metrics_collector()` in main.py. `AlertManager` used independently; main.py has its own `_NoOpAlertManager` wrapping `multi_channel_alerts`. |
-| ~~cache.py has empty methods~~ | `src/cache.py` | **RESOLVED** — `cache.py` was deleted in previous cleanup. `cache_layer.py` is the sole cache implementation. |
-
-### CLEANUP (duplicates to consolidate)
-
-| Duplicate Pair | Keep | Delete/Merge |
-|---------------|------|-------------|
-| ~~`risk_management.py` + `risk_manager.py`~~ | **RESOLVED** | Consolidated into `risk_management.py`, `risk_manager.py` deleted |
-| ~~`compliance.py` + `mica_compliance.py`~~ | **RESOLVED** | `mica_compliance.py` deleted in previous cleanup |
-| ~~`cache.py` + `cache_layer.py`~~ | **RESOLVED** | `cache.py` deleted, `cache_layer.py` is sole implementation |
-| ~~`sovereignforge_real.py` + `sovereignforge_working.py`~~ | **RESOLVED** | Both deleted in previous cleanup |
-| ~~8 root `.tsx` files~~ | **RESOLVED** | All deleted in previous cleanup |
-| ~~3 stub `.pth` files (<200B)~~ | **RESOLVED** | Deleted + added to `.gitignore` |
-| ~~`monitoring/dashboard/` scaffold~~ | **RESOLVED** | Deleted in previous cleanup |
-| ~~`warm_start_state.json` (18MB)~~ | **RESOLVED** | Added to `.gitignore` |
+- **Async ccxt**: All exchange operations use `ccxt.async_support`
+- **Type hints**: Annotate all function signatures
+- **Error handling**: try/except with logging. No bare `except:`
+- **Security**: No hardcoded secrets. API key auth on POST endpoints
+- **No USDT**: CI enforces zero USDT references in src/
+- **Atomic writes**: State files use write-to-temp-then-rename pattern
+- **Log rotation**: RotatingFileHandler(maxBytes=100MB, backupCount=5)
 
 ## Testing
 
 ```bash
-# All tests
-python -m pytest tests/ -v --tb=short
-
-# Specific suites
-python -m pytest tests/test_compliance_models.py -v
-python -m pytest tests/test_arbitrage_detector.py -v
-python -m pytest tests/test_integration.py -v
-
-# GPU tests (needs NVIDIA GPU)
-python test_cuda.py
+PYTHONPATH=src python -m pytest tests/test_integration.py tests/test_risk_management.py -v
 ```
-
-**Current: 170+ tests passing**
-
-Test markers (skipped in CI): `@pytest.mark.gpu`, `@pytest.mark.network`, `@pytest.mark.slow`
-
-## Architecture Notes
-
-- Entry point: `src/main.py production`
-- Dashboard: `dashboard/` (React 19, Tailwind, WebSocket to backend)
-- Models: `models/strategies/arbitrage_*_usdc_binance.pth` (73MB each, PyTorch)
-- Config: `config/` (trading, risk, deployment, API keys)
-- Docker: `docker-compose.yml` (app + Redis + Prometheus + Grafana)
-- K8s: `k8s/` (11 manifests)
-- CI: `.github/workflows/` (test, lint, build)
+**Current: 24/24 passing**

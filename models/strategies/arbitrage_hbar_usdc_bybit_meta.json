@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "HBAR/USDC",
+  "exchange": "bybit",
+  "best_epoch": 2,
+  "best_val_loss": 0.09850920377170096,
+  "total_epochs": 2,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:11:30.842351",
+  "forward_window": 6
+}

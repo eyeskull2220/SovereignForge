@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "LINK/USDC",
+  "exchange": "bybit",
+  "best_epoch": 10,
+  "best_val_loss": 0.054948987310180566,
+  "total_epochs": 10,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:55:32.282152",
+  "forward_window": 12
+}

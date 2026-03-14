@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "ETH/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 12,
+  "best_val_loss": 0.04569145300803651,
+  "total_epochs": 12,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:40:47.476680",
+  "forward_window": 12
+}

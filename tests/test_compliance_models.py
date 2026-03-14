@@ -23,9 +23,6 @@ import numpy as np
 import pytest
 import torch
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-
 ROOT_DIR = Path(__file__).parent.parent
 ALL_PAIRS = ["BTC", "ETH", "XRP", "XLM", "HBAR", "ALGO", "ADA", "LINK", "IOTA", "VET"]
 ACCURACY_THRESHOLD = 0.80

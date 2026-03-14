@@ -27,9 +27,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
 
-# Add parent directory to path for imports
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 logger = logging.getLogger(__name__)
 
 class ArbitrageDataset(Dataset):

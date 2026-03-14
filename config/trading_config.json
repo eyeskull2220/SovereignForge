@@ -10,9 +10,9 @@
   "risk": {
     "max_portfolio_risk_percent": 5.0,
     "max_single_position_risk_percent": 1.0,
-    "stop_loss_percent": 2.0,
-    "take_profit_percent": 1.0,
-    "kelly_fraction": 0.5
+    "stop_loss_percent": 3.0,
+    "take_profit_percent": 4.0,
+    "kelly_fraction": 0.25
   },
   "alerts": {
     "telegram_enabled": false,
@@ -21,14 +21,26 @@
     "min_alert_spread": 1.0
   },
   "strategies": {
-    "arbitrage": {"enabled": true, "weight": 0.4},
-    "fibonacci": {"enabled": true, "weight": 0.2, "levels": [0.236, 0.382, 0.5, 0.618, 0.786]},
-    "grid": {"enabled": true, "weight": 0.2, "grid_spacing_pct": 2.0, "num_levels": 5},
-    "dca": {"enabled": true, "weight": 0.2, "dip_threshold_pct": 5.0}
+    "arbitrage": {"enabled": true, "weight": 0.20},
+    "fibonacci": {"enabled": true, "weight": 0.10, "levels": [0.236, 0.382, 0.5, 0.618, 0.786]},
+    "grid": {"enabled": true, "weight": 0.18, "grid_spacing_pct": 1.5, "num_levels": 3, "atr_multiplier": 1.5},
+    "dca": {"enabled": true, "weight": 0.10, "dip_threshold_pct": 3.0},
+    "mean_reversion": {"enabled": true, "weight": 0.17, "bb_threshold": 0.8, "rsi_oversold": 25, "rsi_overbought": 75},
+    "pairs_arbitrage": {"enabled": true, "weight": 0.12, "zscore_threshold": 2.0, "spread_window": 40, "exit_zscore": 0.5},
+    "momentum": {"enabled": true, "weight": 0.13, "ema_period": 12, "adx_min": 22}
+  },
+  "capital_allocation": {
+    "initial_capital": 300.0,
+    "target_capital": 5000.0,
+    "min_strategy_allocation_pct": 0.10,
+    "max_strategy_allocation_pct": 0.50,
+    "monthly_drawdown_limit_pct": 0.05,
+    "rebalance_interval_days": 90,
+    "compounding_enabled": true
   },
   "cross_exchange": {
     "enabled": true,
-    "exchanges": ["binance", "coinbase", "kraken", "okx"],
+    "exchanges": ["binance", "coinbase", "kraken", "okx", "kucoin", "bybit", "gate"],
     "min_signal_spread": 0.2,
     "min_confidence": 0.3,
     "min_reward_risk_ratio": 1.0

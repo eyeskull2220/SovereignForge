@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "BTC/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 3,
+  "best_val_loss": 0.1249629448324737,
+  "total_epochs": 3,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:46:47.934752",
+  "forward_window": 18
+}

@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "IOTA/USDC",
+  "exchange": "okx",
+  "best_epoch": 8,
+  "best_val_loss": 0.00839455425869604,
+  "total_epochs": 8,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:45:08.029746",
+  "forward_window": 18
+}

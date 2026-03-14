@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Coin-by-coin training launcher for SovereignForge.
-Trains each coin on all 4 exchanges, all 4 strategies, before moving to next coin.
+Trains each coin on all 4 exchanges, all 7 strategies, before moving to next coin.
 Order: BTC -> XRP -> XLM -> HBAR -> ETH -> ALGO -> ADA -> LINK -> IOTA -> VET -> XDC -> ONDO
 """
 

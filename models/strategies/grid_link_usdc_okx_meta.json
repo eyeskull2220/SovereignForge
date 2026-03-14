@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "LINK/USDC",
+  "exchange": "okx",
+  "best_epoch": 3,
+  "best_val_loss": 0.07902891151329029,
+  "total_epochs": 3,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:37:44.868436",
+  "forward_window": 12
+}

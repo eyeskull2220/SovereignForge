@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "ETH/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 4,
+  "best_val_loss": 0.10045599624846537,
+  "total_epochs": 4,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T20:59:10.963388",
+  "forward_window": 6
+}

@@ -141,7 +141,7 @@ Use `/status` command in Telegram to view real-time statistics.
 ```
 🚀 ARBITRAGE OPPORTUNITY DETECTED
 
-📊 Pair: BTC/USDT
+📊 Pair: BTC/USDC
 ⏰ Time: 14:30:25
 🎯 Probability: 87.3%
 📈 Spread: 0.0024

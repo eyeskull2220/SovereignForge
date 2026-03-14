@@ -27,7 +27,7 @@ MICA_PAIRS = [
     'XDC/USDC', 'ONDO/USDC',
 ]
 
-SUPPORTED_EXCHANGES = ['binance', 'coinbase', 'kraken', 'okx']
+SUPPORTED_EXCHANGES = ['binance', 'coinbase', 'kraken', 'okx', 'kucoin', 'bybit', 'gate']
 
 
 def fetch_ohlcv(exchange: ccxt.Exchange, pair: str, days: int = 60, timeframe: str = '5m') -> pd.DataFrame:

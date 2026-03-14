@@ -27,8 +27,6 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 import torch
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 logger = logging.getLogger(__name__)
 
 # All 12 MiCA-compliant pairs

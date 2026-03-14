@@ -17,7 +17,7 @@ data:
 
   # Trading Pairs
   trading-pairs: |
-    BTC/USDT,ETH/USDT,XRP/USDT,XLM/USDT,HBAR/USDT,ALGO/USDT,ADA/USDT
+    BTC/USDC,ETH/USDC,XRP/USDC,XLM/USDC,HBAR/USDC,ALGO/USDC,ADA/USDC
 
   # System Configuration
   log-level: "INFO"

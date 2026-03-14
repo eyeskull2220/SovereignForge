@@ -2,19 +2,19 @@
 """
 SovereignForge - Hybrid Data Integration Service
 Multi-exchange market data aggregation with MiCA compliance
+
+Delegates WebSocket connections to MultiExchangeConnector (websocket_connector.py)
+which has complete parsers for all 7 exchanges (Binance, Coinbase, Kraken, KuCoin, OKX, Bybit, Gate).
 """
 
 import asyncio
-import json
 import logging
 import time
 from dataclasses import dataclass
-from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
-import websockets
-
 logger = logging.getLogger(__name__)
+
 
 @dataclass
 class MarketData:
@@ -29,6 +29,7 @@ class MarketData:
     bid_volume: float
     ask_volume: float
 
+
 @dataclass
 class ConnectionStatus:
     """WebSocket connection status"""
@@ -38,34 +39,27 @@ class ConnectionStatus:
     reconnect_attempts: int
     error_count: int
 
+
 class HybridDataIntegrationService:
     """
-    Hybrid data integration service for multi-exchange market data with WebSocket resilience
+    Hybrid data integration service for multi-exchange market data with WebSocket resilience.
+
+    Wraps MultiExchangeConnector from websocket_connector.py and adds:
+    - MiCA compliance filtering
+    - Async callback dispatch
+    - Connection health monitoring
     """
 
     def __init__(self):
-        self.data_sources = ['binance', 'coinbase', 'kraken', 'kucoin', 'okx']
+        self.data_sources = ['binance', 'coinbase', 'kraken', 'kucoin', 'okx', 'bybit', 'gate']
         self.data_sources_count = len(self.data_sources)
         self.is_running = False
         self.data_callbacks: List[Callable] = []
+        self._connector = None
+        self._stream_task: Optional[asyncio.Task] = None
 
-        # WebSocket resilience
+        # Connection tracking
         self.connections: Dict[str, ConnectionStatus] = {}
-        self.websocket_tasks: Dict[str, asyncio.Task] = {}
-        self.reconnect_delays = [1, 2, 5, 10, 30, 60]  # Progressive backoff in seconds
-        self.max_reconnect_attempts = 10
-        self.connection_timeout = 30  # seconds
-        self.heartbeat_interval = 60  # seconds
-
-        # Import compliance engine (will be available when compliance.py is created)
-        try:
-            from compliance import get_compliance_engine
-            self.compliance_engine = get_compliance_engine()
-        except ImportError:
-            logger.warning("Compliance engine not available, using mock")
-            self.compliance_engine = MockComplianceEngine()
-
-        # Initialize connection status
         for exchange in self.data_sources:
             self.connections[exchange] = ConnectionStatus(
                 exchange=exchange,
@@ -75,19 +69,72 @@ class HybridDataIntegrationService:
                 error_count=0
             )
 
+        # Import compliance engine
+        try:
+            from compliance import get_compliance_engine
+            self.compliance_engine = get_compliance_engine()
+        except ImportError:
+            logger.warning("Compliance engine not available, using mock")
+            self.compliance_engine = MockComplianceEngine()
+
+    def _get_connector(self):
+        """Lazily initialize MultiExchangeConnector."""
+        if self._connector is None:
+            from websocket_connector import MultiExchangeConnector
+            self._connector = MultiExchangeConnector()
+            # Register our bridge callback
+            self._connector.add_data_callback(self._on_market_data_sync)
+        return self._connector
+
     async def initialize(self):
         """Initialize the data integration service"""
         logger.info("Initializing HybridDataIntegrationService")
-        # Note: initialize() prepares the service but does not start it
-        # is_running remains False until start() is called
+        self._get_connector()
         logger.info(f"Data integration service initialized with {self.data_sources_count} exchanges")
 
     def add_data_callback(self, callback: Callable):
         """Add callback for market data updates"""
         self.data_callbacks.append(callback)
 
+    def _on_market_data_sync(self, data):
+        """Bridge: sync callback from MultiExchangeConnector → async dispatch.
+
+        MultiExchangeConnector invokes callbacks synchronously from its streaming loop.
+        We convert the connector's MarketData to our MarketData and schedule async dispatch.
+        """
+        try:
+            # Convert websocket_connector.MarketData to our MarketData
+            market_data = MarketData(
+                exchange=data.exchange,
+                pair=data.pair,
+                timestamp=data.timestamp,
+                price=data.price,
+                volume=data.volume,
+                bid_price=data.bid_price,
+                ask_price=data.ask_price,
+                bid_volume=data.bid_volume,
+                ask_volume=data.ask_volume,
+            )
+
+            # Update connection status
+            if data.exchange in self.connections:
+                self.connections[data.exchange].connected = True
+                self.connections[data.exchange].last_message = time.time()
+
+            # Schedule async handling
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                asyncio.ensure_future(self._handle_market_data(market_data))
+            else:
+                loop.run_until_complete(self._handle_market_data(market_data))
+
+        except Exception as e:
+            logger.error(f"Error in sync→async bridge: {e}")
+            if data.exchange in self.connections:
+                self.connections[data.exchange].error_count += 1
+
     async def _handle_market_data(self, data: MarketData):
-        """Handle incoming market data"""
+        """Handle incoming market data with compliance filtering"""
         # Apply compliance filtering
         if hasattr(self.compliance_engine, 'is_pair_compliant'):
             if not self.compliance_engine.is_pair_compliant(data.pair):
@@ -95,181 +142,70 @@ class HybridDataIntegrationService:
                 return
 
         # Notify callbacks in parallel
-        async def _invoke(cb, data):
+        async def _invoke(cb, market_data):
             try:
                 if asyncio.iscoroutinefunction(cb):
-                    await cb(data)
+                    await cb(market_data)
                 else:
-                    cb(data)
+                    cb(market_data)
             except Exception as e:
                 logger.error(f"Error in data callback: {e}")
 
         await asyncio.gather(*[_invoke(cb, data) for cb in self.data_callbacks])
 
     async def start_websocket_connections(self):
-        """Start WebSocket connections for all exchanges"""
-        for exchange in self.data_sources:
-            if exchange not in self.websocket_tasks:
-                task = asyncio.create_task(self._manage_websocket_connection(exchange))
-                self.websocket_tasks[exchange] = task
-                logger.info(f"Started WebSocket connection manager for {exchange}")
+        """Start WebSocket connections for all exchanges via MultiExchangeConnector."""
+        connector = self._get_connector()
 
-    async def stop_websocket_connections(self):
-        """Stop all WebSocket connections"""
-        for exchange, task in self.websocket_tasks.items():
-            task.cancel()
-            logger.info(f"Stopped WebSocket connection for {exchange}")
+        # MiCA compliant pairs to subscribe to
+        compliant_pairs = [
+            'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
+            'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
+            'XDC/USDC', 'ONDO/USDC',
+        ]
 
-        self.websocket_tasks.clear()
+        logger.info(f"Connecting to {len(self.data_sources)} exchanges for {len(compliant_pairs)} pairs...")
+        success = await connector.connect_all_exchanges(compliant_pairs)
 
-        # Wait for tasks to complete
-        await asyncio.gather(*[task for task in self.websocket_tasks.values()], return_exceptions=True)
+        if success:
+            self.is_running = True
+            # Start streaming in background task
+            self._stream_task = asyncio.create_task(self._run_data_stream())
+            logger.info("WebSocket connections established, data streaming started")
+        else:
+            logger.error("Failed to connect to any exchange")
 
-    async def _manage_websocket_connection(self, exchange: str):
-        """Manage WebSocket connection with automatic reconnection"""
+    async def _run_data_stream(self):
+        """Run the data stream with automatic reconnection."""
+        connector = self._get_connector()
         while self.is_running:
             try:
-                await self._connect_websocket(exchange)
+                await connector.start_data_stream()
             except Exception as e:
-                logger.error(f"WebSocket connection failed for {exchange}: {e}")
-                await self._handle_connection_failure(exchange)
+                logger.error(f"Data stream error, restarting in 5s: {e}")
+                if self.is_running:
+                    await asyncio.sleep(5)
 
-    async def _connect_websocket(self, exchange: str):
-        """Establish WebSocket connection for an exchange"""
-        ws_url = self._get_websocket_url(exchange)
+    async def stop(self):
+        """Stop all WebSocket connections"""
+        self.is_running = False
 
-        try:
-            async with websockets.connect(ws_url, timeout=self.connection_timeout) as websocket:
-                logger.info(f"Connected to {exchange} WebSocket")
-                self.connections[exchange].connected = True
-                self.connections[exchange].reconnect_attempts = 0
-
-                # Subscribe to trading pairs
-                await self._subscribe_to_pairs(websocket, exchange)
-
-                # Start heartbeat
-                heartbeat_task = asyncio.create_task(self._send_heartbeats(websocket, exchange))
-
-                try:
-                    async for message in websocket:
-                        await self._process_websocket_message(exchange, message)
-                        self.connections[exchange].last_message = time.time()
-                finally:
-                    heartbeat_task.cancel()
-                    self.connections[exchange].connected = False
-
-        except Exception as e:
-            self.connections[exchange].connected = False
-            raise e
-
-    async def _subscribe_to_pairs(self, websocket, exchange: str):
-        """Subscribe to trading pairs for an exchange"""
-        # This would be implemented with exchange-specific subscription messages
-        # For now, subscribe to MiCA compliant pairs
-        compliant_pairs = ['XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC', 'BTC/USDC', 'ETH/USDC']
-
-        subscription_message = self._create_subscription_message(exchange, compliant_pairs)
-        if subscription_message:
-            await websocket.send(json.dumps(subscription_message))
-            logger.info(f"Subscribed to {len(compliant_pairs)} pairs on {exchange}")
-
-    def _create_subscription_message(self, exchange: str, pairs: List[str]) -> Optional[Dict[str, Any]]:
-        """Create exchange-specific subscription message"""
-        # Simplified - would need exchange-specific implementations
-        if exchange == 'binance':
-            return {
-                "method": "SUBSCRIBE",
-                "params": [f"{pair.lower()}@ticker" for pair in pairs],
-                "id": 1
-            }
-        return None
-
-    async def _process_websocket_message(self, exchange: str, message: str):
-        """Process incoming WebSocket message"""
-        try:
-            data = json.loads(message)
-
-            # Convert to standardized MarketData format
-            market_data = self._parse_market_data(exchange, data)
-            if market_data:
-                await self._handle_market_data(market_data)
-
-        except json.JSONDecodeError:
-            logger.warning(f"Invalid JSON message from {exchange}")
-        except Exception as e:
-            logger.error(f"Error processing message from {exchange}: {e}")
-            self.connections[exchange].error_count += 1
-
-    def _parse_market_data(self, exchange: str, data: Dict[str, Any]) -> Optional[MarketData]:
-        """Parse exchange-specific data into standardized format"""
-        try:
-            # Simplified parsing - would need exchange-specific implementations
-            if exchange == 'binance' and 'stream' in data:
-                ticker_data = data.get('data', {})
-                pair = ticker_data.get('s', '').replace('USDC', '/USDC')
-
-                return MarketData(
-                    exchange=exchange,
-                    pair=pair,
-                    timestamp=time.time(),
-                    price=float(ticker_data.get('c', 0)),
-                    volume=float(ticker_data.get('v', 0)),
-                    bid_price=float(ticker_data.get('b', 0)),
-                    ask_price=float(ticker_data.get('a', 0)),
-                    bid_volume=float(ticker_data.get('B', 0)),
-                    ask_volume=float(ticker_data.get('A', 0))
-                )
-
-            return None
-
-        except Exception as e:
-            logger.error(f"Error parsing market data from {exchange}: {e}")
-            return None
-
-    async def _send_heartbeats(self, websocket, exchange: str):
-        """Send periodic heartbeats to maintain connection"""
-        while True:
+        if self._stream_task:
+            self._stream_task.cancel()
             try:
-                await asyncio.sleep(self.heartbeat_interval)
-                # Send heartbeat (exchange-specific)
-                heartbeat = self._create_heartbeat_message(exchange)
-                if heartbeat:
-                    await websocket.send(json.dumps(heartbeat))
-            except Exception as e:
-                logger.error(f"Heartbeat failed for {exchange}: {e}")
-                break
+                await self._stream_task
+            except asyncio.CancelledError:
+                pass
+            self._stream_task = None
 
-    def _create_heartbeat_message(self, exchange: str) -> Optional[Dict[str, Any]]:
-        """Create exchange-specific heartbeat message"""
-        if exchange == 'binance':
-            return {"method": "ping", "id": 1}
-        return None
+        if self._connector:
+            await self._connector.stop()
 
-    async def _handle_connection_failure(self, exchange: str):
-        """Handle WebSocket connection failure with exponential backoff"""
-        status = self.connections[exchange]
-        status.reconnect_attempts += 1
+        # Mark all connections as disconnected
+        for status in self.connections.values():
+            status.connected = False
 
-        if status.reconnect_attempts >= self.max_reconnect_attempts:
-            logger.error(f"Max reconnection attempts reached for {exchange}")
-            return
-
-        delay_index = min(status.reconnect_attempts - 1, len(self.reconnect_delays) - 1)
-        delay = self.reconnect_delays[delay_index]
-
-        logger.info(f"Reconnecting to {exchange} in {delay} seconds (attempt {status.reconnect_attempts})")
-        await asyncio.sleep(delay)
-
-    def _get_websocket_url(self, exchange: str) -> str:
-        """Get WebSocket URL for exchange"""
-        urls = {
-            'binance': 'wss://stream.binance.com:9443/ws',
-            'coinbase': 'wss://ws-feed.pro.coinbase.com',
-            'kraken': 'wss://ws.kraken.com',
-            'kucoin': 'wss://ws-api.kucoin.com',
-            'okx': 'wss://ws.okx.com:8443/ws/v5/public'
-        }
-        return urls.get(exchange, '')
+        logger.info("Data integration service stopped")
 
     def get_connection_health(self) -> Dict[str, Any]:
         """Get WebSocket connection health status"""
@@ -279,7 +215,7 @@ class HybridDataIntegrationService:
         for exchange, status in self.connections.items():
             health[exchange] = {
                 'connected': status.connected,
-                'last_message_seconds_ago': current_time - status.last_message,
+                'last_message_seconds_ago': current_time - status.last_message if status.last_message > 0 else None,
                 'reconnect_attempts': status.reconnect_attempts,
                 'error_count': status.error_count,
                 'healthy': status.connected and (current_time - status.last_message) < 300  # 5 minutes
@@ -299,38 +235,28 @@ class HybridDataIntegrationService:
     async def is_healthy(self) -> bool:
         """Check if the data service is healthy"""
         try:
-            # Check if service is running
             if not self.is_running:
                 return False
-
-            # Check if we have active callbacks
             if len(self.data_callbacks) == 0:
                 return False
-
-            # Check connection health
             health = self.get_connection_health()
             healthy_connections = sum(1 for conn in health.values() if conn.get('healthy', False))
-
-            # Consider healthy if at least 1 connection is working
             return healthy_connections > 0
-
         except Exception as e:
             logger.error(f"Health check error: {e}")
             return False
+
 
 class MockComplianceEngine:
     """Mock compliance engine for when compliance.py is not available"""
 
     def is_asset_compliant(self, asset: str) -> bool:
-        """Mock asset compliance check"""
-        compliant_assets = ['BTC', 'ETH', 'XRP', 'ADA', 'XLM', 'HBAR', 'ALGO', 'DOGE']
+        compliant_assets = ['BTC', 'ETH', 'XRP', 'ADA', 'XLM', 'HBAR', 'ALGO', 'LINK', 'IOTA', 'VET', 'XDC', 'ONDO']
         return asset in compliant_assets
 
     def is_pair_compliant(self, pair: str) -> bool:
-        """Mock pair compliance check"""
         base = pair.split('/')[0] if '/' in pair else pair
         return self.is_asset_compliant(base)
 
     def filter_compliant_pairs(self, pairs: List[str]) -> List[str]:
-        """Mock pair filtering"""
         return [pair for pair in pairs if self.is_pair_compliant(pair)]

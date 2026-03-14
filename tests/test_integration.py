@@ -11,9 +11,6 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-# Add src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
 from compliance import ComplianceViolationError, get_compliance_engine
 from data_integration_service import HybridDataIntegrationService, MarketData
 from live_arbitrage_pipeline import LiveArbitragePipeline
@@ -27,7 +24,7 @@ async def test_data_integration_service_initialization():
     await data_service.initialize()
 
     assert not data_service.is_running  # Not started yet
-    assert len(data_service.data_sources) == 5  # binance, coinbase, kraken, kucoin, okx
+    assert len(data_service.data_sources) == 7  # binance, coinbase, kraken, kucoin, okx, bybit, gate
     assert 'binance' in data_service.data_sources
 
 
@@ -84,7 +81,7 @@ def test_data_integration_service_status():
     assert 'is_running' in status
     assert 'data_sources' in status
     assert 'active_callbacks' in status
-    assert status['data_sources'] == 5
+    assert status['data_sources'] == 7
 
 
 def test_realtime_inference_service_initialization():
@@ -244,7 +241,7 @@ def test_compliance_filtering():
     assert 'ETH/USDC' in filtered
     assert 'XRP/USDC' in filtered
     assert 'ADA/USDC' in filtered
-    assert 'DOGE/USDC' in filtered  # DOGE is compliant
+    assert 'DOGE/USDC' not in filtered  # DOGE is NOT MiCA compliant
 
     # Test that USDT pairs are filtered out (CRITICAL: MiCA compliance violation fixed)
     usdt_pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT']

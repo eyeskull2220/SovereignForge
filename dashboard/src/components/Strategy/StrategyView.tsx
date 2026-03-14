@@ -104,13 +104,36 @@ const Sparkline: React.FC<{ data: number[]; color: string; width?: number; heigh
 // Component
 // ---------------------------------------------------------------------------
 const StrategyView: React.FC = () => {
-  const [strategies] = useState(demoStrategies);
+  const [strategies, setStrategies] = useState<StrategyStats[]>(demoStrategies);
   const [weights, setWeights] = useState(demoWeights);
-  const [equity] = useState(demoEquityCurve);
-  const [bestPairs] = useState(demoBestPairs);
-  const [corr] = useState(demoCorrelation);
+  const [equity, setEquity] = useState(demoEquityCurve);
+  const [bestPairs, setBestPairs] = useState(demoBestPairs);
+  const [corr, setCorr] = useState(demoCorrelation);
 
   useEffect(() => {
+    // Fetch strategy performance from API
+    fetch('http://localhost:8420/api/strategy/performance')
+      .then(r => r.json())
+      .then(d => {
+        if (d.strategies && Array.isArray(d.strategies)) {
+          setStrategies(d.strategies.map((s: any) => ({
+            name: s.name,
+            winRate: s.win_rate ?? s.winRate ?? 0,
+            avgPnl: s.avg_pnl ?? s.avgPnl ?? 0,
+            totalTrades: s.total_trades ?? s.totalTrades ?? 0,
+            bestPair: s.best_pair ?? s.bestPair ?? '--',
+            valLossRange: s.val_loss_range ?? s.valLossRange ?? '--',
+            color: COLORS[s.name] || '#8b949e',
+            sparkline: s.sparkline ?? Array.from({ length: 20 }, () => 0),
+          })));
+        }
+        if (d.equity_curve) setEquity(d.equity_curve);
+        if (d.best_pairs) setBestPairs(d.best_pairs);
+        if (d.correlation) setCorr(d.correlation);
+      })
+      .catch(() => {}); // keep demo data on failure
+
+    // Fetch weights from config
     fetch('http://localhost:8420/api/config')
       .then(r => r.json())
       .then(cfg => {

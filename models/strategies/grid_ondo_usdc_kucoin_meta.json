@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "ONDO/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 13,
+  "best_val_loss": 0.06992397691575017,
+  "total_epochs": 13,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:47:12.635614",
+  "forward_window": 12
+}

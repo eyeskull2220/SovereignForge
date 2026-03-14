@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "ALGO/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 2,
+  "best_val_loss": 0.0826458142387985,
+  "total_epochs": 2,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:03:15.352514",
+  "forward_window": 6
+}

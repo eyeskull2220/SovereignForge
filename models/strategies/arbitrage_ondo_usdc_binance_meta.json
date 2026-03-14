@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "ONDO/USDC",
+  "exchange": "binance",
+  "best_epoch": 6,
+  "best_val_loss": 0.13625498255019758,
+  "total_epochs": 6,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T20:51:51.732790",
+  "forward_window": 6
+}

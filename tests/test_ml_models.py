@@ -12,9 +12,6 @@ import numpy as np
 import torch
 import torch.nn as nn
 
-# Add src to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
-
 from multi_strategy_training import (
     TradingLSTM,
     create_attention_model,

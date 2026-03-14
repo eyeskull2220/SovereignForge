@@ -8,7 +8,7 @@ class SovereignForgeConfig(BaseSettings):
     """SovereignForge v1.0.4 core config. Enforces all project rules: local-only, MiCA whitelist, Docker isolation."""
 
     ROOT_PATH: Path = Path(r"E:\Users\Gino\Downloads\SovereignForge")
-    VERSION: str = "v1.0.46"
+    VERSION: str = "v1.0.47"
     WHITELIST_COINS: FrozenSet[str] = frozenset([
         "BTC", "ETH", "XRP", "XLM", "HBAR", "ALGO", "ADA", "LINK",
         "IOTA", "XDC", "ONDO", "VET", "USDC", "RLUSD"

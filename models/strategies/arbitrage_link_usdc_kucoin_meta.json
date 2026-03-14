@@ -1,0 +1,12 @@
+{
+  "strategy": "arbitrage",
+  "pair": "LINK/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 2,
+  "best_val_loss": 0.11775293592179176,
+  "total_epochs": 2,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:05:13.314427",
+  "forward_window": 6
+}

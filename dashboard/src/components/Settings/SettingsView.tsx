@@ -93,6 +93,10 @@ const SettingsView: React.FC = () => {
   const [ptRunning, setPtRunning] = useState(false);
   const [ptLoading, setPtLoading] = useState(false);
   const [ptError, setPtError] = useState<string | null>(null);
+  const [pipelineRunning, setPipelineRunning] = useState(false);
+  const [pipelineLoading, setPipelineLoading] = useState(false);
+  const [pipelineError, setPipelineError] = useState<string | null>(null);
+  const [pipelineInfo, setPipelineInfo] = useState<{ uptime?: number; pid?: number } | null>(null);
   const [modelCount, setModelCount] = useState(0);
   const [enabledPairs, setEnabledPairs] = useState<Set<string>>(new Set(ALL_PAIRS));
   const [enabledStrategies, setEnabledStrategies] = useState<Record<string, boolean>>({});
@@ -165,14 +169,41 @@ const SettingsView: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const check = () => fetch(`${API}/api/paper-trading/status`)
-      .then(r => r.json())
-      .then(d => setPtRunning(!!d.running))
-      .catch(() => {});
+    const check = () => {
+      fetch(`${API}/api/paper-trading/status`)
+        .then(r => r.json())
+        .then(d => setPtRunning(!!d.running))
+        .catch(() => {});
+      fetch(`${API}/api/pipeline/status`)
+        .then(r => r.json())
+        .then(d => {
+          setPipelineRunning(!!d.running);
+          setPipelineInfo({ uptime: d.uptime, pid: d.pid });
+        })
+        .catch(() => {});
+    };
     check();
     const id = setInterval(check, 5000);
     return () => clearInterval(id);
   }, []);
+
+  const togglePipeline = async () => {
+    setPipelineLoading(true);
+    setPipelineError(null);
+    try {
+      const endpoint = pipelineRunning ? '/api/pipeline/stop' : '/api/pipeline/start';
+      const res = await fetch(`${API}${endpoint}`, { method: 'POST' });
+      const d = await res.json();
+      if (d.status === 'error') {
+        setPipelineError(d.detail || 'Failed to toggle pipeline');
+      } else {
+        setPipelineRunning(d.status === 'started' || d.status === 'already_running');
+      }
+    } catch (e: any) {
+      setPipelineError(e.message || 'Connection failed');
+    }
+    setPipelineLoading(false);
+  };
 
   const togglePaperTrading = async () => {
     setPtLoading(true);
@@ -334,33 +365,109 @@ const SettingsView: React.FC = () => {
           <KV label="Backend" value="FastAPI @ :8420" />
           <KV label="MiCA Compliance" value={<span style={{ color: '#3fb950' }}>USDC Only - Compliant</span>} />
 
-          <div style={{ marginTop: 16 }}>
-            <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, color: '#e2e8f0' }}>Paper Trading Controls</h4>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <button
-                style={ptLoading ? btnDisabled : ptRunning ? btnDanger : btnActive}
-                disabled={ptLoading}
-                onClick={togglePaperTrading}
-              >
-                {ptLoading ? 'Working...' : ptRunning ? 'Stop Paper Trading' : 'Start Paper Trading'}
-              </button>
-              <span style={{
-                display: 'inline-flex', alignItems: 'center', gap: 6,
-                fontSize: 12, color: ptRunning ? '#3fb950' : '#8b949e',
-              }}>
+        </div>
+
+        {/* Trading Controls */}
+        <div style={{ ...card, gridColumn: '1 / -1' }}>
+          <h3 style={sectionTitle}>Trading Controls</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            {/* Pipeline */}
+            <div>
+              <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, marginTop: 0, color: '#e2e8f0' }}>Live Pipeline</h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                <button
+                  style={pipelineLoading ? btnDisabled : pipelineRunning ? btnDanger : btnActive}
+                  disabled={pipelineLoading}
+                  onClick={togglePipeline}
+                >
+                  {pipelineLoading ? 'Working...' : pipelineRunning ? 'Stop Pipeline' : 'Start Pipeline'}
+                </button>
                 <span style={{
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: ptRunning ? '#3fb950' : '#484f58',
-                  display: 'inline-block',
-                }} />
-                {ptRunning ? 'Running' : 'Stopped'}
-              </span>
-            </div>
-            {ptError && (
-              <div style={{ marginTop: 8, fontSize: 12, color: '#f85149', background: '#f8514922', padding: '6px 10px', borderRadius: 4 }}>
-                {ptError}
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  fontSize: 12, color: pipelineRunning ? '#3fb950' : '#8b949e',
+                }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: pipelineRunning ? '#3fb950' : '#484f58',
+                    display: 'inline-block',
+                  }} />
+                  {pipelineRunning ? 'Running' : 'Stopped'}
+                </span>
               </div>
-            )}
+              {pipelineInfo?.uptime != null && pipelineRunning && (
+                <div style={{ fontSize: 11, color: '#8b949e' }}>
+                  Uptime: {Math.floor(pipelineInfo.uptime / 60)}m {Math.round(pipelineInfo.uptime % 60)}s
+                  {pipelineInfo.pid && ` (PID ${pipelineInfo.pid})`}
+                </div>
+              )}
+              {pipelineError && (
+                <div style={{ marginTop: 8, fontSize: 12, color: '#f85149', background: '#f8514922', padding: '6px 10px', borderRadius: 4 }}>
+                  {pipelineError}
+                </div>
+              )}
+            </div>
+
+            {/* Paper Trading */}
+            <div>
+              <h4 style={{ fontSize: 13, fontWeight: 600, marginBottom: 8, marginTop: 0, color: '#e2e8f0' }}>Paper Trading</h4>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                <button
+                  style={ptLoading ? btnDisabled : ptRunning ? btnDanger : btnActive}
+                  disabled={ptLoading}
+                  onClick={togglePaperTrading}
+                >
+                  {ptLoading ? 'Working...' : ptRunning ? 'Stop Paper Trading' : 'Start Paper Trading'}
+                </button>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 6,
+                  fontSize: 12, color: ptRunning ? '#3fb950' : '#8b949e',
+                }}>
+                  <span style={{
+                    width: 8, height: 8, borderRadius: '50%',
+                    background: ptRunning ? '#3fb950' : '#484f58',
+                    display: 'inline-block',
+                  }} />
+                  {ptRunning ? 'Running' : 'Stopped'}
+                </span>
+              </div>
+              {ptError && (
+                <div style={{ marginTop: 8, fontSize: 12, color: '#f85149', background: '#f8514922', padding: '6px 10px', borderRadius: 4 }}>
+                  {ptError}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Mode toggles */}
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #21262d' }}>
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 13, color: '#8b949e' }}>Trading Enabled</span>
+                <button style={toggleTrack(!!trading.trading_enabled)} onClick={() => {
+                  fetch(`${API}/api/config/update`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: 'trading.trading_enabled', value: !trading.trading_enabled }),
+                  }).then(() => setConfig(c => c ? { ...c, trading: { ...c.trading, trading_enabled: !trading.trading_enabled } } : c)).catch(() => {});
+                }}>
+                  <span style={toggleThumb(!!trading.trading_enabled)} />
+                </button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 13, color: '#8b949e' }}>Dry Run Mode</span>
+                <button style={toggleTrack(trading.dry_run_mode !== false)} onClick={() => {
+                  const newVal = trading.dry_run_mode === false;
+                  fetch(`${API}/api/config/update`, {
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ path: 'trading.dry_run_mode', value: newVal }),
+                  }).then(() => setConfig(c => c ? { ...c, trading: { ...c.trading, dry_run_mode: newVal } } : c)).catch(() => {});
+                }}>
+                  <span style={toggleThumb(trading.dry_run_mode !== false)} />
+                </button>
+                <span style={badge(trading.dry_run_mode !== false ? '#3fb950' : '#f85149')}>
+                  {trading.dry_run_mode !== false ? 'SAFE' : 'LIVE'}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
       </div>

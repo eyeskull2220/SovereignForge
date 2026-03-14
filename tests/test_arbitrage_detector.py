@@ -8,9 +8,6 @@ import sys
 import time
 import unittest
 
-# Add src directory to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
-
 from live_arbitrage_pipeline import (
     ArbitrageOpportunity,
     FilteredOpportunity,

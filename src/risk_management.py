@@ -5,7 +5,6 @@ Position sizing, stop-loss, and portfolio risk controls for MiCA compliance
 """
 
 import logging
-import math
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
@@ -28,7 +27,7 @@ def _fire_alert(title: str, message: str, level: str = "warning") -> None:
         if loop.is_running():
             loop.create_task(send_system_alert(title, message, level))
         else:
-            # No running loop — use multi_channel_alerts synchronous path or just log
+            # No running loop -- use multi_channel_alerts synchronous path or just log
             try:
                 from multi_channel_alerts import Alert, AlertPriority, get_alert_router
                 pmap = {"error": AlertPriority.HIGH, "warning": AlertPriority.MEDIUM,
@@ -60,16 +59,72 @@ class RiskLimits:
     max_position_size_pct: float = 0.02  # 2% of portfolio per position
     max_portfolio_risk_pct: float = 0.05  # 5% max portfolio risk
     max_single_pair_exposure_pct: float = 0.10  # 10% max per pair
-    max_daily_loss_pct: float = 0.03  # 3% max daily loss
+    max_daily_loss_pct: float = 0.02  # 2% max daily loss
     max_open_positions: int = 5
     min_liquidity_ratio: float = 2.0  # Minimum bid/ask liquidity ratio
+    max_loss_per_trade_pct: float = 0.015  # 1.5% of portfolio per trade
+
 
 class RiskManager:
     """
-    Comprehensive risk management for arbitrage trading
+    Comprehensive risk management for arbitrage trading.
+
+    Serves as the single source of truth for risk logic (Kelly Criterion,
+    position sizing, stop-loss / take-profit, drawdown tracking, portfolio
+    controls, emergency stop).
+
+    Parameters
+    ----------
+    initial_capital : float
+        Starting portfolio value.
+    risk_limits : RiskLimits, optional
+        Structured risk-limit object used by the live pipeline.
+    config : dict, optional
+        Flat config dict (used by backtester / CLI).  When supplied the
+        constructor maps relevant keys into *risk_limits* so both init
+        paths converge on the same internal state.
     """
 
-    def __init__(self, initial_capital: float = 10000.0, risk_limits: Optional[RiskLimits] = None):
+    # ----- Per-asset volatility / min-order-size configs -------------------
+
+    _ASSET_CONFIGS = {
+        'BTC/USDC':  {'volatility': 0.03, 'min_order_size': 0.0001, 'volatility_multiplier': 1.0},
+        'ETH/USDC':  {'volatility': 0.04, 'min_order_size': 0.001,  'volatility_multiplier': 1.0},
+        'XRP/USDC':  {'volatility': 0.08, 'min_order_size': 1,      'volatility_multiplier': 1.5},
+        'XLM/USDC':  {'volatility': 0.07, 'min_order_size': 1,      'volatility_multiplier': 1.4},
+        'HBAR/USDC': {'volatility': 0.09, 'min_order_size': 10,     'volatility_multiplier': 1.6},
+        'ALGO/USDC': {'volatility': 0.10, 'min_order_size': 1,      'volatility_multiplier': 1.7},
+        'ADA/USDC':  {'volatility': 0.06, 'min_order_size': 1,      'volatility_multiplier': 1.2},
+        'LINK/USDC': {'volatility': 0.08, 'min_order_size': 0.1,    'volatility_multiplier': 1.5},
+        'IOTA/USDC': {'volatility': 0.09, 'min_order_size': 1,      'volatility_multiplier': 1.6},
+        'VET/USDC':  {'volatility': 0.10, 'min_order_size': 10,     'volatility_multiplier': 1.7},
+        'XDC/USDC':  {'volatility': 0.10, 'min_order_size': 10,     'volatility_multiplier': 1.7},
+        'ONDO/USDC': {'volatility': 0.08, 'min_order_size': 1,      'volatility_multiplier': 1.5},
+    }
+
+    def _get_asset_config(self, symbol: str) -> Dict:
+        """Return per-asset risk parameters, falling back to conservative defaults."""
+        return self._ASSET_CONFIGS.get(symbol, {
+            'volatility': 0.05, 'min_order_size': 0.001, 'volatility_multiplier': 1.0,
+        })
+
+    # ----- Construction ----------------------------------------------------
+
+    def __init__(self, initial_capital: float = 10000.0,
+                 risk_limits: Optional[RiskLimits] = None,
+                 config: Optional[Dict] = None):
+        # When a flat config dict is provided, derive initial_capital and
+        # risk_limits from it so callers coming from the backtester path
+        # end up with the same internal state as live-pipeline callers.
+        if config:
+            initial_capital = config.get('initial_capital', initial_capital)
+            if not risk_limits:
+                risk_limits = RiskLimits(
+                    max_position_size_pct=config.get('max_single_trade', 0.02),
+                    max_daily_loss_pct=config.get('max_daily_loss', 0.03),
+                    max_open_positions=config.get('max_open_positions', 5),
+                )
+
         self.initial_capital = initial_capital
         self.current_capital = initial_capital
         self.risk_limits = risk_limits or RiskLimits()
@@ -83,12 +138,15 @@ class RiskManager:
         self.portfolio_value = initial_capital
         self.total_exposure = 0.0
         self.max_drawdown = 0.0
+        self._peak_value = initial_capital
         self.sharpe_ratio = 0.0
 
         # Trading history
         self.trade_history: List[Dict[str, Any]] = []
 
         logger.info(f"RiskManager initialized with ${initial_capital} capital")
+
+    # ----- Opportunity validation ------------------------------------------
 
     def validate_opportunity(self, opportunity) -> bool:
         """
@@ -143,6 +201,8 @@ class RiskManager:
             logger.error(f"Error validating opportunity: {e}")
             return False
 
+    # ----- Position sizing (live pipeline interface) -----------------------
+
     def calculate_position_size(self, opportunity: Dict[str, Any], use_kelly: bool = True) -> float:
         """
         Calculate optimal position size based on risk limits and Kelly Criterion
@@ -180,6 +240,13 @@ class RiskManager:
                 risk_adjustment = 1.0 - (risk_score * 0.5)  # Reduce size by up to 50% for high risk
                 position_value = max_position_value * risk_adjustment
 
+            # Per-trade loss limit: cap position so max estimated loss stays within bounds
+            max_loss = self.portfolio_value * self.risk_limits.max_loss_per_trade_pct
+            # rough estimate: max loss = position_value * stop_loss_pct (assume 2%)
+            estimated_max_loss = position_value * 0.02
+            if estimated_max_loss > max_loss:
+                position_value = max_loss / 0.02
+
             # Calculate position size in base currency
             position_size = position_value / avg_price
 
@@ -198,6 +265,8 @@ class RiskManager:
         except Exception as e:
             logger.error(f"Error calculating position size: {e}")
             return 0.0
+
+    # ----- Kelly Criterion (single source of truth) ------------------------
 
     def _calculate_kelly_position_size(self,
                                      spread: float,
@@ -314,6 +383,8 @@ class RiskManager:
             logger.error(f"Error calculating Kelly metrics: {e}")
             return {}
 
+    # ----- Position lifecycle (live pipeline, Position-dataclass-based) -----
+
     def open_position(self, opportunity: Dict[str, Any]) -> Optional[Position]:
         """
         Open a new arbitrage position
@@ -389,6 +460,13 @@ class RiskManager:
             self.daily_pnl += pnl
             self.total_exposure -= position.size * position.entry_price
 
+            # Track drawdown
+            self.portfolio_value = self.current_capital + sum(p.unrealized_pnl for p in self.positions.values())
+            if self.portfolio_value > self._peak_value:
+                self._peak_value = self.portfolio_value
+            if self._peak_value > 0:
+                self.max_drawdown = max(self.max_drawdown, (self._peak_value - self.portfolio_value) / self._peak_value)
+
             # Record trade
             trade_record = {
                 'pair': pair,
@@ -456,6 +534,8 @@ class RiskManager:
             logger.error(f"Error checking stop losses: {e}")
             return []
 
+    # ----- Portfolio status ------------------------------------------------
+
     def get_portfolio_status(self) -> Dict[str, Any]:
         """
         Get current portfolio status and risk metrics
@@ -483,7 +563,7 @@ class RiskManager:
                     "error"
                 )
 
-            if abs(daily_pnl_pct) > self.risk_limits.max_daily_loss_pct:
+            if daily_pnl_pct < -self.risk_limits.max_daily_loss_pct:
                 violation_msg = f"Daily P&L ({daily_pnl_pct:.1%}) exceeds limit ({self.risk_limits.max_daily_loss_pct:.1%})"
                 risk_violations.append(violation_msg)
 
@@ -511,6 +591,8 @@ class RiskManager:
         except Exception as e:
             logger.error(f"Error getting portfolio status: {e}")
             return {}
+
+    # ----- Internal helpers ------------------------------------------------
 
     def _check_liquidity_requirements(self, prices: Dict[str, float]) -> bool:
         """
@@ -580,10 +662,24 @@ class RiskManager:
 _risk_manager: Optional[RiskManager] = None
 
 
-def get_risk_manager(initial_capital: float = 10000.0) -> RiskManager:
-    """Return the module-level RiskManager singleton, creating it on first call."""
+def get_risk_manager(initial_capital: float = None) -> RiskManager:
+    """Return the module-level RiskManager singleton, creating it on first call.
+
+    If initial_capital is None, attempts to read from config/trading_config.json.
+    Falls back to $10,000 if config is unavailable.
+    """
     global _risk_manager
     if _risk_manager is None:
+        if initial_capital is None:
+            try:
+                import json
+                from pathlib import Path
+                cfg_path = Path(__file__).parent.parent / "config" / "trading_config.json"
+                with open(cfg_path) as f:
+                    cfg = json.load(f)
+                initial_capital = cfg.get('capital_allocation', {}).get('initial_capital', 10000.0)
+            except Exception:
+                initial_capital = 10000.0
         _risk_manager = RiskManager(initial_capital=initial_capital)
     return _risk_manager
 
@@ -594,36 +690,61 @@ get_risk_management_engine = get_risk_manager
 
 
 # ---------------------------------------------------------------------------
-# TradingRiskManager — config-dict-based risk manager used by main.py
-# and backtester.py for position sizing, daily stats, and drawdown tracking.
-# (Formerly in risk_manager.py)
+# TradingRiskManager -- thin subclass of RiskManager for backtesting / CLI.
+#
+# Inherits all core risk logic (Kelly, drawdown, asset configs) from
+# RiskManager.  Adds:
+#   - dict-based position tracking  (open_positions / position_history)
+#   - daily stats bookkeeping
+#   - config-dict constructor with backtester-specific defaults
+#
+# The dict-based open_position / close_position / check_stop_loss_take_profit
+# are kept as overrides because the backtester depends on them.
 # ---------------------------------------------------------------------------
 
-class TradingRiskManager:
-    """Config-dict-based risk manager for backtesting and CLI trading."""
+class TradingRiskManager(RiskManager):
+    """Config-dict-based risk manager for backtesting and CLI trading.
+
+    Wraps RiskManager with dict-based position tracking and daily-stats
+    bookkeeping.  All Kelly / drawdown / asset-config logic is inherited.
+    """
 
     def __init__(self, config: Dict = None):
-        self.config = config or self._default_config()
+        config = config or self._default_config()
 
-        # Risk metrics
-        self.portfolio_value = self.config['initial_capital']
+        # Initialise base class with the config dict path
+        super().__init__(
+            initial_capital=config.get('initial_capital', 10000.0),
+            config=config,
+        )
+
+        self.config = config
+
+        # Backtester-specific state: peak tracking with separate name so
+        # tests that check self.peak_portfolio_value keep working.
         self.peak_portfolio_value = self.portfolio_value
         self.current_drawdown = 0.0
 
-        # Position tracking
+        # Dict-based position tracking (parallel to base class Position-based)
         self.open_positions: Dict[str, Dict] = {}
         self.position_history: List[Dict] = []
         self.daily_stats = self._init_daily_stats()
 
-        # Trading state
+        # Trading state surfaced as direct attributes for test/caller compat
         self.daily_pnl = 0.0
         self.daily_trades = 0
-        self.max_daily_loss = self.config['max_daily_loss']
-        self.max_single_trade = self.config['max_single_trade']
-        self.max_open_positions = self.config['max_open_positions']
-        self.max_drawdown = self.config['max_drawdown']
+        defaults = self._default_config()
+        self.max_daily_loss = self.config.get('max_daily_loss', defaults['max_daily_loss'])
+        self.max_single_trade = self.config.get('max_single_trade', defaults['max_single_trade'])
+        self.max_open_positions = self.config.get('max_open_positions', defaults['max_open_positions'])
+        # Note: base class also has self.max_drawdown (float, peak-tracking).
+        # We reassign it from config here as the backtester treats it as a
+        # drawdown *limit* rather than a tracked high-water-mark delta.
+        self.max_drawdown = self.config.get('max_drawdown', defaults['max_drawdown'])
 
         logger.info(f"TradingRiskManager initialized with ${self.portfolio_value} capital")
+
+    # ----- Default config --------------------------------------------------
 
     @staticmethod
     def _default_config() -> Dict:
@@ -657,27 +778,13 @@ class TradingRiskManager:
             'win_rate': 0.0,
         }
 
-    # ----- Asset config -----
+    # ----- Position sizing (dict-returning, backtester interface) ----------
 
-    _ASSET_CONFIGS = {
-        'BTC/USDC':  {'volatility': 0.03, 'min_order_size': 0.0001, 'volatility_multiplier': 1.0},
-        'ETH/USDC':  {'volatility': 0.04, 'min_order_size': 0.001,  'volatility_multiplier': 1.0},
-        'XRP/USDC':  {'volatility': 0.08, 'min_order_size': 1,      'volatility_multiplier': 1.5},
-        'XLM/USDC':  {'volatility': 0.07, 'min_order_size': 1,      'volatility_multiplier': 1.4},
-        'HBAR/USDC': {'volatility': 0.09, 'min_order_size': 10,     'volatility_multiplier': 1.6},
-        'ALGO/USDC': {'volatility': 0.10, 'min_order_size': 1,      'volatility_multiplier': 1.7},
-        'ADA/USDC':  {'volatility': 0.06, 'min_order_size': 1,      'volatility_multiplier': 1.2},
-    }
+    def calculate_position_size(self, arbitrage_opportunity: Dict, asset_config: Dict = None) -> Dict:  # type: ignore[override]
+        """Calculate position size using Kelly criterion and risk limits.
 
-    def _get_asset_config(self, symbol: str) -> Dict:
-        return self._ASSET_CONFIGS.get(symbol, {
-            'volatility': 0.05, 'min_order_size': 0.001, 'volatility_multiplier': 1.0,
-        })
-
-    # ----- Position sizing -----
-
-    def calculate_position_size(self, arbitrage_opportunity: Dict, asset_config: Dict = None) -> Dict:
-        """Calculate position size using Kelly criterion and risk limits."""
+        Returns a dict with an ``approved`` key (backtester interface).
+        """
         if not self._can_open_position():
             return {'approved': False, 'reason': 'Risk limits exceeded'}
 
@@ -695,7 +802,7 @@ class TradingRiskManager:
         if spread_pct < self.config['min_arbitrage_spread']:
             return {'approved': False, 'reason': f'Spread {spread_pct:.4f} below minimum'}
 
-        kelly_size = self._kelly_criterion(spread_pct, confidence, volatility)
+        kelly_size = self._kelly_criterion(confidence, spread_pct, volatility)
         max_position_value = self.portfolio_value * self.config['max_single_trade']
         kelly_position_value = self.portfolio_value * kelly_size
         position_value = min(kelly_position_value, max_position_value)
@@ -728,13 +835,22 @@ class TradingRiskManager:
             'take_profit_price': self._calculate_take_profit(arbitrage_opportunity),
         }
 
+    # ----- Kelly (delegates to base-class core formula) --------------------
+
     def _kelly_criterion(self, win_probability: float, win_amount: float, loss_amount: float = 1.0) -> float:
+        """Simplified Kelly for backtester.  Uses the same (bp - q)/b formula
+        as the base class ``_calculate_kelly_position_size``, but parameterised
+        for the backtester's spread_pct / volatility inputs and bounded by the
+        config's ``kelly_fraction``.
+        """
         if win_probability <= 0 or win_probability >= 1:
             return 0.0
         b = win_amount / loss_amount
         kelly = (win_probability * b - (1 - win_probability)) / b
         kelly *= self.config['kelly_fraction']
         return max(0.0, min(kelly, 0.1))
+
+    # ----- Guards ----------------------------------------------------------
 
     def _can_open_position(self) -> bool:
         if self.daily_pnl < -self.portfolio_value * self.config['max_daily_loss']:
@@ -753,9 +869,9 @@ class TradingRiskManager:
         entry_price = opportunity.get('entry_price', 0)
         return entry_price * (1 + self.config['take_profit_pct'])
 
-    # ----- Position lifecycle -----
+    # ----- Position lifecycle (dict-based, backtester interface) -----------
 
-    def open_position(self, position_details: Dict) -> Dict:
+    def open_position(self, position_details: Dict) -> Dict:  # type: ignore[override]
         position_id = f"pos_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self.open_positions)}"
         position = {
             'id': position_id,
@@ -774,7 +890,7 @@ class TradingRiskManager:
         logger.info(f"Opened position {position_id}: {position['symbol']} {position['side']} @ ${position['entry_price']:.4f}")
         return position
 
-    def close_position(self, position_id: str, exit_price: float, reason: str = 'manual') -> Optional[Dict]:
+    def close_position(self, position_id: str, exit_price: float, reason: str = 'manual') -> Optional[Dict]:  # type: ignore[override]
         if position_id not in self.open_positions:
             logger.error(f"Position {position_id} not found")
             return None
@@ -826,7 +942,7 @@ class TradingRiskManager:
                 triggered.append(closed)
         return triggered
 
-    # ----- Stats -----
+    # ----- Stats -----------------------------------------------------------
 
     def _update_daily_stats(self, closed_position: Dict):
         pnl = closed_position['pnl']
@@ -874,8 +990,8 @@ class TradingRiskManager:
         self.daily_stats = self._init_daily_stats()
         logger.info("Daily statistics reset")
 
-    def emergency_stop(self) -> List[Dict]:
-        logger.warning("EMERGENCY STOP — Closing all positions")
+    def emergency_stop(self) -> List[Dict]:  # type: ignore[override]
+        logger.warning("EMERGENCY STOP -- Closing all positions")
         closed = []
         for position_id in list(self.open_positions.keys()):
             position = self.open_positions[position_id]
@@ -948,9 +1064,9 @@ class ArbitrageRiskAssessor:
     @staticmethod
     def _recommendations(factors: Dict) -> List[str]:
         msgs = {
-            'spread_stability': "Reduce position size — spread may not persist",
+            'spread_stability': "Reduce position size -- spread may not persist",
             'volatility': "Consider wider stop loss due to high volatility",
-            'liquidity': "Monitor order book depth — low liquidity detected",
+            'liquidity': "Monitor order book depth -- low liquidity detected",
             'execution': "Wait for higher confidence signal",
             'market_impact': "Reduce position size to minimize market impact",
         }

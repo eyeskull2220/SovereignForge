@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "BTC/USDC",
+  "exchange": "binance",
+  "best_epoch": 1,
+  "best_val_loss": 0.1324857561779556,
+  "total_epochs": 1,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:17:36.258008",
+  "forward_window": 18
+}

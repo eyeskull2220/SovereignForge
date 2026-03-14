@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 // ---------------------------------------------------------------------------
@@ -21,6 +21,11 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Strategy',   path: '/strategy',  icon: '\u2694' },   // crossed swords
   { label: 'Sentiment',  path: '/sentiment', icon: '\u2665' },   // heart
   { label: 'Settings',   path: '/settings',  icon: '\u2630' },   // hamburger
+  { label: 'Audit',      path: '/audit',     icon: '\u2611' },   // ballot box with check
+  { label: 'Exchanges',  path: '/exchanges', icon: '\u2194' },   // left right arrow
+  { label: 'Capital',    path: '/capital',   icon: '\u2B06' },   // upwards arrow
+  { label: 'Research',   path: '/research',  icon: '\u2318' },   // place of interest
+  { label: 'Pairs',      path: '/cointegration', icon: '\u2248' },  // approximately equal
 ];
 
 // ---------------------------------------------------------------------------
@@ -89,23 +94,77 @@ const toggleBtn: React.CSSProperties = {
 };
 
 // ---------------------------------------------------------------------------
+// Mobile detection hook
+// ---------------------------------------------------------------------------
+function useIsMobile(breakpoint = 768) {
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== 'undefined' ? window.innerWidth < breakpoint : false
+  );
+
+  useEffect(() => {
+    const mq = window.matchMedia(`(max-width: ${breakpoint - 1}px)`);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', handler);
+    setIsMobile(mq.matches);
+    return () => mq.removeEventListener('change', handler);
+  }, [breakpoint]);
+
+  return isMobile;
+}
+
+// ---------------------------------------------------------------------------
+// Overlay
+// ---------------------------------------------------------------------------
+const overlayStyle: React.CSSProperties = {
+  position: 'fixed',
+  inset: 0,
+  background: 'rgba(0,0,0,0.5)',
+  zIndex: 99,
+};
+
+// ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  mobileOpen?: boolean;
+  onMobileClose?: () => void;
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ mobileOpen = false, onMobileClose }) => {
   const [collapsed, setCollapsed] = useState(false);
+  const isMobile = useIsMobile();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const width = collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_WIDTH;
+  // Close mobile drawer on navigation
+  const handleNav = useCallback((path: string) => {
+    navigate(path);
+    if (isMobile && onMobileClose) onMobileClose();
+  }, [navigate, isMobile, onMobileClose]);
+
+  // On mobile: full width drawer, visibility controlled by mobileOpen prop
+  // On desktop: normal collapsible sidebar
+  const showSidebar = isMobile ? mobileOpen : true;
+  const width = isMobile ? SIDEBAR_WIDTH : (collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_WIDTH);
 
   return (
     <>
+      {/* Overlay for mobile */}
+      {isMobile && mobileOpen && (
+        <div style={overlayStyle} onClick={onMobileClose} />
+      )}
+
       {/* Sidebar */}
-      <nav style={{ ...sidebarBase, width }}>
+      <nav style={{
+        ...sidebarBase,
+        width,
+        transform: isMobile && !showSidebar ? `translateX(-${width}px)` : 'translateX(0)',
+        transition: 'width 0.2s ease, transform 0.25s ease',
+      }}>
         {/* Logo */}
         <div style={logoArea}>
           <span style={{ fontSize: 20, color: '#58a6ff', flexShrink: 0 }}>{'\u2726'}</span>
-          {!collapsed && (
+          {(!collapsed || isMobile) && (
             <span style={{ fontSize: 15, fontWeight: 700, color: '#e2e8f0', letterSpacing: 0.5 }}>
               SovereignForge
             </span>
@@ -119,34 +178,38 @@ const Sidebar: React.FC = () => {
             return (
               <button
                 key={item.path}
-                onClick={() => navigate(item.path)}
+                onClick={() => handleNav(item.path)}
                 style={{
                   ...navItemBase,
                   ...(isActive ? activeStyle : {}),
                 }}
-                title={collapsed ? item.label : undefined}
+                title={collapsed && !isMobile ? item.label : undefined}
               >
                 <span style={{ fontSize: 16, flexShrink: 0, width: 20, textAlign: 'center' }}>
                   {item.icon}
                 </span>
-                {!collapsed && <span>{item.label}</span>}
+                {(!collapsed || isMobile) && <span>{item.label}</span>}
               </button>
             );
           })}
         </div>
 
-        {/* Collapse toggle */}
-        <button
-          style={toggleBtn}
-          onClick={() => setCollapsed(c => !c)}
-          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-        >
-          {collapsed ? '\u00BB' : '\u00AB'}
-        </button>
+        {/* Collapse toggle (desktop only) */}
+        {!isMobile && (
+          <button
+            style={toggleBtn}
+            onClick={() => setCollapsed(c => !c)}
+            title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {collapsed ? '\u00BB' : '\u00AB'}
+          </button>
+        )}
       </nav>
 
-      {/* Spacer so content is not hidden behind the fixed sidebar */}
-      <div style={{ minWidth: width, width, transition: 'width 0.2s ease', flexShrink: 0 }} />
+      {/* Spacer so content is not hidden behind the fixed sidebar (desktop only) */}
+      {!isMobile && (
+        <div style={{ minWidth: width, width, transition: 'width 0.2s ease', flexShrink: 0 }} />
+      )}
     </>
   );
 };

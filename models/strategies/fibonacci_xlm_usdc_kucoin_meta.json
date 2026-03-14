@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "XLM/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 1,
+  "best_val_loss": 0.16646672637745885,
+  "total_epochs": 1,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T21:53:19.901453",
+  "forward_window": 18
+}

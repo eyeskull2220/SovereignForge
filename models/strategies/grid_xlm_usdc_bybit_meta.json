@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "XLM/USDC",
+  "exchange": "bybit",
+  "best_epoch": 5,
+  "best_val_loss": 0.04971974981155726,
+  "total_epochs": 5,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:51:10.666680",
+  "forward_window": 12
+}

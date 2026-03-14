@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "VET/USDC",
+  "exchange": "binance",
+  "best_epoch": 17,
+  "best_val_loss": 0.049825849734357934,
+  "total_epochs": 17,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:32:46.653066",
+  "forward_window": 12
+}

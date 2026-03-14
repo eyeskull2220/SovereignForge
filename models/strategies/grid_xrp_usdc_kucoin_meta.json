@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "XRP/USDC",
+  "exchange": "kucoin",
+  "best_epoch": 10,
+  "best_val_loss": 0.04213002816506541,
+  "total_epochs": 10,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-14T22:41:47.767291",
+  "forward_window": 12
+}

@@ -289,7 +289,7 @@ GPU Training Configuration:
                     monitor_training=self.args.gpu_monitor
                 )
             elif strategy == 'all':
-                # Train all 4 strategies (collective brain) across all exchanges
+                # Train all 7 strategies (collective brain) across all exchanges
                 logger.info(f"Training ALL strategies (collective brain) on {exchanges}")
                 training_results = train_all_strategies(
                     pairs=self.args.pairs,
@@ -679,7 +679,7 @@ Examples:
                        help='Exchanges to train on (default: binance coinbase kraken okx)')
 
     # Strategy selection
-    parser.add_argument('--strategy', choices=['arbitrage', 'fibonacci', 'grid', 'dca', 'all'],
+    parser.add_argument('--strategy', choices=['arbitrage', 'fibonacci', 'grid', 'dca', 'mean_reversion', 'pairs_arbitrage', 'momentum', 'all'],
                        default='arbitrage',
                        help='Strategy to train (default: arbitrage, use "all" for collective brain)')
 

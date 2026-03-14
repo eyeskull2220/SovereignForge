@@ -106,8 +106,8 @@ TRANSFER_FEES = {
 
 MAX_POSITION_PCT = 0.05             # 5% of portfolio per trade
 MAX_POSITIONS_PER_PAIR = 3
-SIGNAL_THRESHOLD = 0.3
-CONFIDENCE_THRESHOLD = 0.5
+SIGNAL_THRESHOLD = 0.015              # Calibrated to actual model output range
+CONFIDENCE_THRESHOLD = 0.52            # Just above random (sigmoid(0) = 0.5)
 STOP_LOSS_PCT = 0.02                # 2% stop loss
 TAKE_PROFIT_PCT = 0.03              # 3% take profit
 MAX_DAILY_LOSS_PCT = 0.05           # 5% daily loss circuit breaker
@@ -363,6 +363,8 @@ class PaperTradingEngine:
 
         # Loaded models: (strategy, pair, exchange) -> model
         self._models: Dict[Tuple[str, str, str], torch.nn.Module] = {}
+        # Track input_dim per model for feature slicing
+        self._model_input_dims: Dict[Tuple[str, str, str], int] = {}
         self._device = "cuda" if torch.cuda.is_available() else "cpu"
 
         # OHLCV buffers: (pair, exchange) -> list of [ts, o, h, l, c, v]
@@ -447,22 +449,33 @@ class PaperTradingEngine:
 
                     try:
                         factory = STRATEGY_MODELS[strategy]
-                        model = factory(INPUT_DIM, OUTPUT_SIZE)
                         checkpoint = torch.load(
                             str(model_path),
                             map_location=self._device,
                             weights_only=True,
                         )
-                        if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint:
-                            model.load_state_dict(checkpoint["model_state_dict"])
-                        else:
-                            model.load_state_dict(checkpoint)
+                        state = checkpoint["model_state_dict"] if isinstance(checkpoint, dict) and "model_state_dict" in checkpoint else checkpoint
+
+                        # Detect input_dim from checkpoint to handle models
+                        # trained with different feature sets (e.g. 10 vs 17)
+                        detected_dim = INPUT_DIM
+                        for k, v in state.items():
+                            if "weight_ih_l0" in k:        # LSTM/GRU
+                                detected_dim = v.shape[1]
+                                break
+                            if k.endswith(".weight") and v.shape[1] in (10, 17):
+                                detected_dim = v.shape[1]
+                                break
+
+                        model = factory(detected_dim, OUTPUT_SIZE)
+                        model.load_state_dict(state)
 
                         model.to(self._device)
                         model.eval()
                         self._models[(strategy, pair, exchange)] = model
+                        self._model_input_dims[(strategy, pair, exchange)] = detected_dim
                         results[key] = True
-                        logger.debug(f"Loaded model: {key}")
+                        logger.debug(f"Loaded model: {key} (input_dim={detected_dim})")
 
                     except Exception as exc:
                         logger.warning(f"Failed to load {key}: {exc}")
@@ -691,7 +704,14 @@ class PaperTradingEngine:
             return None
 
         # Take the last sequence (most recent window)
-        seq = sequences[-1:]  # [1, SEQ_LEN, 17]
+        seq = sequences[-1:]  # [1, SEQ_LEN, n_feat]
+
+        # Slice features to match the model's expected input_dim
+        # (older models were trained with 10 features, newer with 17)
+        expected_dim = self._model_input_dims.get((strategy, pair, exchange), INPUT_DIM)
+        if seq.shape[2] > expected_dim:
+            seq = seq[:, :, :expected_dim]
+
         tensor = torch.from_numpy(seq).float().to(self._device)
 
         try:
@@ -706,10 +726,15 @@ class PaperTradingEngine:
 
             raw = raw.cpu().numpy().flatten()
 
-            # Interpret outputs: signal (tanh), confidence (sigmoid), magnitude (sigmoid)
-            signal_val = float(np.tanh(raw[0]))       # [-1, 1]
-            confidence = float(1 / (1 + np.exp(-raw[1])))  # [0, 1]
-            magnitude = float(1 / (1 + np.exp(-raw[2])))   # [0, 1]
+            # Scale raw outputs — models output in a small range (~0.01-0.05)
+            # so we amplify before applying activations to use the full range
+            SIGNAL_SCALE = 10.0
+            CONF_SCALE = 4.0
+            MAG_SCALE = 4.0
+
+            signal_val = float(np.tanh(raw[0] * SIGNAL_SCALE))            # [-1, 1]
+            confidence = float(1 / (1 + np.exp(-raw[1] * CONF_SCALE)))    # [0, 1]
+            magnitude = float(1 / (1 + np.exp(-raw[2] * MAG_SCALE)))      # [0, 1]
 
             return SignalResult(
                 pair=pair,

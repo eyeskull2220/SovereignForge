@@ -254,6 +254,12 @@ class OrderExecutor:
                                    quantity: float, price: float) -> Dict:
         """Execute single order on exchange"""
 
+        # Paper trading safety - prevent accidental live trades
+        paper_mode = os.getenv('PAPER_TRADING_MODE', 'true').lower()
+        if paper_mode != 'false':
+            logger.warning("BLOCKED: Real trade attempt while PAPER_TRADING_MODE is active. Set PAPER_TRADING_MODE=false to enable live trading.")
+            raise RuntimeError("Paper trading mode is active - real orders are blocked. Set PAPER_TRADING_MODE=false to enable live trading.")
+
         order_result = {
             'success': False,
             'order_id': None,

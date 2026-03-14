@@ -40,15 +40,26 @@ class ArbitrageDataset(Dataset):
         self.data = self._load_data(data_path)
 
     def _load_data(self, data_path: str) -> List[Dict[str, Any]]:
-        """Load training data"""
-        # Placeholder - would load real market data
-        return []
+        """Load training data from CSV files"""
+        try:
+            from multi_strategy_training import _load_pair_data, engineer_features
+        except ImportError:
+            from src.multi_strategy_training import _load_pair_data, engineer_features
+
+        ohlcv = _load_pair_data("BTC/USDC", data_path)
+        if ohlcv is None:
+            return []
+
+        features, _ = engineer_features(ohlcv, self.seq_len)
+        return [{"features": f} for f in features]
 
     def __len__(self):
         return len(self.data)
 
     def __getitem__(self, idx):
-        # Placeholder - would return real training samples
+        if self.data:
+            features = torch.FloatTensor(self.data[idx]["features"])
+            return features, torch.tensor([0.0, 0.5, 0.02])
         return torch.randn(self.seq_len, 10), torch.tensor([0.0, 0.5, 0.02])
 
 class GPUTrainingCLI:

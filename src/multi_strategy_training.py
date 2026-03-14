@@ -8,6 +8,7 @@ Provides factory functions and a unified training interface.
 import json
 import logging
 import os
+import sys
 import time
 from datetime import datetime
 from enum import Enum
@@ -19,6 +20,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, Dataset
+
+try:
+    import mlflow
+    MLFLOW_AVAILABLE = True
+except ImportError:
+    mlflow = None
+    MLFLOW_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -365,6 +373,8 @@ def generate_labels(
     ohlcv: np.ndarray,
     strategy: StrategyType,
     seq_len: int = 128,
+    pair: str = "unknown",
+    exchange: str = "unknown",
 ) -> np.ndarray:
     """Generate strategy-specific training labels.
 
@@ -389,31 +399,69 @@ def generate_labels(
     elif strategy == StrategyType.DCA:
         labels = _generate_dca_labels(close, seq_len)
 
+    _log_label_diagnostics(labels, strategy.value, pair, exchange)
+
     return labels
 
 
 def _generate_arbitrage_labels(close: np.ndarray, seq_len: int) -> np.ndarray:
-    """Arbitrage: forward return > threshold → buy signal."""
+    """Arbitrage: forward-looking spread exploitation over next 6 candles (30m at 5m).
+
+    Predicts whether current price dislocation creates exploitable opportunity
+    over the next 30 minutes. Uses only forward data for targets.
+    """
     n = len(close) - seq_len
     labels = np.zeros((n, 3))
+    forward_window = 6  # 30 minutes at 5m candles
+
     for i in range(n):
         idx = seq_len + i
-        if idx + 1 < len(close):
-            fwd_return = (close[idx + 1] - close[idx]) / (close[idx] + 1e-10)
-            labels[i, 0] = np.clip(fwd_return * 100, -1, 1)  # signal
-            labels[i, 1] = min(abs(fwd_return) * 200, 1.0)   # confidence
-            labels[i, 2] = min(abs(fwd_return) * 100, 1.0)   # magnitude
+        if idx + forward_window >= len(close):
+            continue  # Not enough forward data
+
+        current_price = close[idx]
+
+        # Forward-looking: best achievable return over next 30 min
+        future_prices = close[idx + 1:idx + forward_window + 1]
+        future_max = np.max(future_prices)
+        future_min = np.min(future_prices)
+
+        # Signal: directional opportunity — did price move enough to exploit?
+        best_long = (future_max - current_price) / (current_price + 1e-10)
+        best_short = (current_price - future_min) / (current_price + 1e-10)
+
+        if best_long > best_short:
+            labels[i, 0] = np.clip(best_long * 50, 0, 1)   # buy signal
+        else:
+            labels[i, 0] = np.clip(-best_short * 50, -1, 0)  # sell signal
+
+        # Confidence: forward volatility — higher spread = higher confidence
+        fwd_range = (future_max - future_min) / (current_price + 1e-10)
+        labels[i, 1] = min(fwd_range * 30, 1.0)
+
+        # Magnitude: absolute end-of-window return
+        fwd_return = (close[idx + forward_window] - current_price) / (current_price + 1e-10)
+        labels[i, 2] = min(abs(fwd_return) * 50, 1.0)
+
     return labels
 
 
 def _generate_fibonacci_labels(close: np.ndarray, seq_len: int) -> np.ndarray:
-    """Fibonacci: signal based on proximity to fib retracement levels."""
+    """Fibonacci: forward-looking profitability at fib retracement levels over next 18 candles (90m at 5m).
+
+    Uses backward window for fib level identification (strategy logic) but
+    targets are forward-looking: does trading at this fib level produce profit?
+    """
     fib_levels = [0.236, 0.382, 0.5, 0.618, 0.786]
     n = len(close) - seq_len
     labels = np.zeros((n, 3))
+    forward_window = 18  # 90 minutes at 5m candles
 
     for i in range(n):
         idx = seq_len + i
+        if idx + forward_window >= len(close):
+            continue  # Not enough forward data
+
         window = close[max(0, idx - 50):idx]
         if len(window) < 10:
             continue
@@ -430,62 +478,136 @@ def _generate_fibonacci_labels(close: np.ndarray, seq_len: int) -> np.ndarray:
         min_dist = min(distances)
         nearest_level = fib_levels[distances.index(min_dist)]
 
-        # Signal: buy near 0.618/0.786 (deep retracement), sell near 0.236/0.382
-        if min_dist < 0.05:  # Near a fib level
-            if nearest_level >= 0.5:
-                labels[i, 0] = 1.0 - min_dist * 10  # Buy signal
-            else:
-                labels[i, 0] = -(1.0 - min_dist * 10)  # Sell signal
-            labels[i, 1] = 1.0 - min_dist * 10  # Confidence
-            labels[i, 2] = rng / close[idx]  # Magnitude
+        # Forward-looking: what happens over the next 90 minutes?
+        current_price = close[idx]
+        future_prices = close[idx + 1:idx + forward_window + 1]
+        fwd_return = (close[idx + forward_window] - current_price) / (current_price + 1e-10)
+
+        # Signal: forward return amplified by fib proximity
+        # Near a fib level → stronger signal; far from any level → muted
+        # Deep retracement (0.618/0.786): positive return = bounce = buy
+        # Shallow retracement (0.236/0.382): negative return = continuation = sell
+        proximity = max(0, 1.0 - min_dist * 10)  # 0-1, how close to a fib level
+        labels[i, 0] = np.clip(fwd_return * 30 * (1 + proximity), -1, 1)
+
+        # Confidence: combination of fib proximity and forward volatility
+        fwd_volatility = np.std(future_prices) / (current_price + 1e-10)
+        labels[i, 1] = min(proximity * 0.5 + fwd_volatility * 100, 1.0)
+
+        # Magnitude: absolute forward return scaled by range context
+        labels[i, 2] = min(abs(fwd_return) * 30, 1.0)
 
     return labels
 
 
 def _generate_grid_labels(close: np.ndarray, seq_len: int) -> np.ndarray:
-    """Grid: optimal grid spacing based on volatility regime."""
+    """Grid: forward-looking mean-reversion targets over next 12 candles (1h at 5m).
+
+    Predicts whether price reverts toward the 20-candle mean over the NEXT 12 candles.
+    Uses only forward data for targets to prevent data leakage.
+    """
     n = len(close) - seq_len
     labels = np.zeros((n, 3))
+    forward_window = 12  # 1 hour at 5m candles
 
     for i in range(n):
         idx = seq_len + i
-        window = close[max(0, idx - 20):idx]
-        if len(window) < 5:
+
+        # Need backward window for mean calculation and forward window for targets
+        backward_window = close[max(0, idx - 20):idx]
+        if len(backward_window) < 5:
             continue
+        if idx + forward_window >= len(close):
+            continue  # Not enough forward data
 
-        volatility = np.std(np.diff(window) / (window[:-1] + 1e-10))
-        mean_price = np.mean(window)
+        mean_price = np.mean(backward_window)
+        current_deviation = (close[idx] - mean_price) / (mean_price + 1e-10)
 
-        # Grid signal: mean reversion strength
-        deviation = (close[idx] - mean_price) / (mean_price + 1e-10)
-        labels[i, 0] = np.clip(-deviation * 10, -1, 1)  # Buy below mean, sell above
-        labels[i, 1] = min(volatility * 50, 1.0)  # Higher vol → more confidence in grid
-        labels[i, 2] = min(volatility * 20, 1.0)  # Grid spacing magnitude
+        # Forward-looking: deviation at end of forward window
+        future_mean = np.mean(close[idx:idx + forward_window])
+        future_price = close[idx + forward_window]
+        future_deviation = (future_price - future_mean) / (future_mean + 1e-10)
+
+        # Signal: did price revert toward the mean? positive = buy was correct
+        labels[i, 0] = np.clip((current_deviation - future_deviation) * 20, -1, 1)
+
+        # Confidence: volatility regime indicator
+        volatility = np.std(np.diff(backward_window) / (backward_window[:-1] + 1e-10))
+        labels[i, 1] = min(volatility * 50, 1.0)
+
+        # Magnitude: absolute forward return
+        fwd_return = (close[idx + forward_window] - close[idx]) / (close[idx] + 1e-10)
+        labels[i, 2] = min(abs(fwd_return) * 50, 1.0)
 
     return labels
 
 
 def _generate_dca_labels(close: np.ndarray, seq_len: int) -> np.ndarray:
-    """DCA: buy-the-dip score based on drawdown from recent high."""
+    """DCA: forward-looking buy-now vs DCA-average over next 24 candles (2h at 5m).
+
+    Predicts whether buying NOW beats dollar-cost-averaging over the next 24 candles.
+    Uses only forward data for targets to prevent data leakage.
+    """
     n = len(close) - seq_len
     labels = np.zeros((n, 3))
+    forward_window = 24  # 2 hours at 5m candles
 
     for i in range(n):
         idx = seq_len + i
-        window = close[max(0, idx - 30):idx]
-        if len(window) < 5:
-            continue
 
-        recent_high = np.max(window)
-        drawdown = (recent_high - close[idx]) / (recent_high + 1e-10)
+        if idx + forward_window >= len(close):
+            continue  # Not enough forward data
 
-        # DCA: buy more when price is further from recent high
-        if drawdown > 0.02:  # 2%+ drawdown triggers DCA
-            labels[i, 0] = min(drawdown * 5, 1.0)  # Stronger buy on deeper dip
-            labels[i, 1] = min(drawdown * 3, 1.0)  # Confidence scales with drawdown
-            labels[i, 2] = drawdown  # Magnitude = drawdown itself
+        buy_now_price = close[idx]
+        future_prices = close[idx + 1:idx + forward_window + 1]
+
+        # DCA average price: average of buying at each of the next 24 candles
+        dca_avg_price = np.mean(future_prices)
+
+        # Signal: positive = buy now is better than DCA (price goes up)
+        labels[i, 0] = np.clip(
+            (dca_avg_price - buy_now_price) / (buy_now_price + 1e-10) * 30,
+            -1, 1
+        )
+
+        # Confidence: future price range as volatility indicator
+        future_range = (np.max(future_prices) - np.min(future_prices)) / (buy_now_price + 1e-10)
+        labels[i, 1] = min(future_range * 10, 1.0)
+
+        # Magnitude: absolute end-of-window return
+        fwd_return = (close[idx + forward_window] - buy_now_price) / (buy_now_price + 1e-10)
+        labels[i, 2] = min(abs(fwd_return) * 20, 1.0)
 
     return labels
+
+
+def _log_label_diagnostics(
+    labels: np.ndarray, strategy: str, pair: str, exchange: str
+) -> None:
+    """Log summary statistics for generated labels and warn on degenerate distributions."""
+    col_names = ["signal", "confidence", "magnitude"]
+    for col_idx, name in enumerate(col_names):
+        col = labels[:, col_idx]
+        mean_val = np.mean(col)
+        std_val = np.std(col)
+        min_val = np.min(col)
+        max_val = np.max(col)
+        zero_pct = 100.0 * np.mean(np.abs(col) < 1e-8)
+        logger.info(
+            f"  Label[{name}] {strategy}/{pair}@{exchange}: "
+            f"mean={mean_val:.4f} std={std_val:.4f} "
+            f"min={min_val:.4f} max={max_val:.4f} zero%={zero_pct:.1f}%"
+        )
+        if zero_pct > 80:
+            logger.warning(
+                f"  WARNING: {name} for {strategy}/{pair}@{exchange} has {zero_pct:.1f}% zeros — "
+                f"labels may be degenerate"
+            )
+        if std_val < 0.01:
+            logger.warning(
+                f"  WARNING: {name} for {strategy}/{pair}@{exchange} has std={std_val:.6f} — "
+                f"near-constant labels, model may not learn meaningful patterns"
+            )
 
 
 # ── Training Function ─────────────────────────────────────────────────────
@@ -549,6 +671,16 @@ def train_strategy_model(
     except ImportError:
         kg = None
 
+    # MLflow experiment setup
+    _mlflow_ok = False
+    if MLFLOW_AVAILABLE:
+        try:
+            mlflow.set_experiment(f"sovereignforge-{strategy.value}")
+            _mlflow_ok = True
+            logger.info(f"MLflow experiment set: sovereignforge-{strategy.value}")
+        except Exception as e:
+            logger.warning(f"MLflow experiment setup failed: {e}")
+
     for exchange, ex_data_dir in exchange_dirs:
         logger.info(f"\n--- Training {strategy.value} on {exchange.upper()} ---")
 
@@ -581,7 +713,7 @@ def train_strategy_model(
 
                 # Engineer features and generate labels
                 features, n_features = engineer_features(ohlcv, seq_len)
-                labels = generate_labels(ohlcv, strategy, seq_len)
+                labels = generate_labels(ohlcv, strategy, seq_len, pair=pair, exchange=exchange)
 
                 # Compute session-based sample weights for loss weighting
                 try:
@@ -601,6 +733,22 @@ def train_strategy_model(
                 labels = labels[:min_len]
                 sample_weights = sample_weights[:min_len]
 
+                # Trim trailing samples that lack sufficient forward data for labels
+                # All strategies now use forward-looking targets
+                forward_windows = {
+                    StrategyType.ARBITRAGE: 6,
+                    StrategyType.FIBONACCI: 18,
+                    StrategyType.GRID: 12,
+                    StrategyType.DCA: 24,
+                }
+                forward_window = forward_windows[strategy]
+                effective_len = len(labels) - forward_window
+                if effective_len > 0:
+                    labels = labels[:effective_len]
+                    features = features[:effective_len]
+                    sample_weights = sample_weights[:effective_len]
+                    min_len = effective_len
+
                 if min_len < 10:
                     logger.warning(f"Too few samples for {pair} on {exchange} after processing")
                     results[result_key] = {"status": "skipped", "reason": "too few samples", "exchange": exchange}
@@ -617,13 +765,16 @@ def train_strategy_model(
                 train_dataset = StrategyDataset(train_features, train_labels, train_weights)
                 val_dataset = StrategyDataset(val_features, val_labels)
                 use_cuda = device.type == 'cuda'
+                # num_workers=0 on Windows to avoid multiprocessing spawn crashes
+                _workers = 0 if sys.platform == 'win32' else (4 if use_cuda else 0)
+                _val_workers = 0 if sys.platform == 'win32' else (2 if use_cuda else 0)
                 train_loader = DataLoader(
                     train_dataset, batch_size=batch_size, shuffle=True,
-                    pin_memory=use_cuda, num_workers=4 if use_cuda else 0,
+                    pin_memory=use_cuda, num_workers=_workers,
                 )
                 val_loader = DataLoader(
                     val_dataset, batch_size=batch_size,
-                    pin_memory=use_cuda, num_workers=2 if use_cuda else 0,
+                    pin_memory=use_cuda, num_workers=_val_workers,
                 )
 
                 # Create model
@@ -644,7 +795,10 @@ def train_strategy_model(
                 scheduler = optim.lr_scheduler.ReduceLROnPlateau(
                     optimizer, mode='min', factor=0.5, patience=10, min_lr=1e-6
                 )
-                val_criterion = nn.MSELoss()  # Unweighted for validation
+                # SmoothL1Loss (Huber) for all strategies — all use forward-looking
+                # targets which are inherently noisy; Huber is more robust than MSE
+                base_criterion = nn.SmoothL1Loss()
+                val_criterion = nn.SmoothL1Loss()
 
                 # Trading cost constants for loss penalty
                 TRADE_FEE = 0.0005     # 0.05%
@@ -659,6 +813,31 @@ def train_strategy_model(
                 epoch_results = []
                 use_amp = use_cuda
                 scaler = torch.amp.GradScaler('cuda', enabled=use_amp) if use_amp else None
+
+                # MLflow: start run for this pair/exchange
+                _mlflow_run = None
+                if _mlflow_ok:
+                    try:
+                        _mlflow_run = mlflow.start_run(
+                            run_name=f"{strategy.value}_{pair.replace('/', '_')}_{exchange}",
+                            tags={
+                                "strategy": strategy.value,
+                                "pair": pair,
+                                "exchange": exchange,
+                                "version": "wave7",
+                            },
+                        )
+                        mlflow.log_params({
+                            "epochs": epochs,
+                            "batch_size": batch_size,
+                            "learning_rate": effective_lr,
+                            "seq_len": seq_len,
+                            "n_features": n_features,
+                            "forward_window": forward_window,
+                        })
+                    except Exception as e:
+                        logger.warning(f"MLflow run start failed: {e}")
+                        _mlflow_run = None
 
                 model.train()
                 for epoch in range(epochs):
@@ -678,10 +857,13 @@ def train_strategy_model(
                         with torch.amp.autocast('cuda', enabled=use_amp):
                             output = model(batch_x)
                             if batch_w is not None:
-                                # Weighted MSE loss (session regime + ADX weighting)
-                                mse = (batch_w.view(-1, 1) * (output - batch_y) ** 2).mean()
+                                # Weighted SmoothL1 loss (session regime + ADX weighting)
+                                per_elem = torch.nn.functional.smooth_l1_loss(
+                                    output, batch_y, reduction='none'
+                                )
+                                mse = (batch_w.view(-1, 1) * per_elem).mean()
                             else:
-                                mse = val_criterion(output, batch_y)
+                                mse = base_criterion(output, batch_y)
                             # Fee+slippage cost penalty on signal strength
                             cost_penalty = ROUND_TRIP_COST * torch.abs(output[:, 0]).mean()
                             loss = mse + cost_penalty
@@ -717,6 +899,19 @@ def train_strategy_model(
                         "train_loss": train_loss,
                         "val_loss": val_loss,
                     })
+
+                    # MLflow: log epoch metrics
+                    if _mlflow_run:
+                        try:
+                            current_lr = optimizer.param_groups[0]['lr']
+                            mlflow.log_metrics({
+                                "train_loss": train_loss,
+                                "val_loss": val_loss,
+                                "risk_score": _compute_training_risk_score(epoch_results),
+                                "learning_rate": current_lr,
+                            }, step=epoch + 1)
+                        except Exception:
+                            pass  # Non-blocking
 
                     # Risk scoring: pause if training becomes unstable
                     risk_score = _compute_training_risk_score(epoch_results)
@@ -761,6 +956,28 @@ def train_strategy_model(
                             f"risk={risk_score:.3f}"
                         )
 
+                # MLflow: log final metrics and model artifact, then end run
+                if _mlflow_run:
+                    try:
+                        early_stop_epoch = len(epoch_results)
+                        mlflow.log_metrics({
+                            "best_val_loss": best_val_loss,
+                            "total_epochs": early_stop_epoch,
+                            "early_stop_epoch": early_stop_epoch,
+                        })
+                        # Log saved model artifact
+                        pair_slug_mlf = pair.replace('/', '_').lower()
+                        model_path_mlf = Path(save_dir) / f"{strategy.value}_{pair_slug_mlf}_{exchange}.pth"
+                        if model_path_mlf.exists():
+                            mlflow.log_artifact(str(model_path_mlf))
+                    except Exception as e:
+                        logger.warning(f"MLflow final logging failed: {e}")
+                    try:
+                        mlflow.end_run()
+                    except Exception:
+                        pass
+                    _mlflow_run = None
+
                 results[result_key] = {
                     "status": "trained",
                     "strategy": strategy.value,
@@ -789,6 +1006,12 @@ def train_strategy_model(
             except Exception as e:
                 logger.error(f"Training failed for {pair} on {exchange}: {e}")
                 results[result_key] = {"status": "failed", "error": str(e), "exchange": exchange}
+                # End MLflow run on failure
+                if _mlflow_ok:
+                    try:
+                        mlflow.end_run(status="FAILED")
+                    except Exception:
+                        pass
 
     return results
 
@@ -844,7 +1067,7 @@ def _load_best_donor_model(
         model_path = Path(save_dir) / f"{strategy.value}_{pair_slug}_{ex_name}.pth"
         if model_path.exists():
             try:
-                checkpoint = torch.load(model_path, map_location=device, weights_only=False)
+                checkpoint = torch.load(model_path, map_location=device, weights_only=True)
                 vl = checkpoint.get("val_loss", float("inf"))
                 if vl < best_val_loss:
                     best_val_loss = vl

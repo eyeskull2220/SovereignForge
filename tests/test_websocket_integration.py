@@ -107,17 +107,17 @@ class TestWebSocketIntegration:
                     mock_trades.return_value = True
 
                     # Test subscriptions
-                    result = await connector.subscribe_to_ticker('BTC/USDT')
+                    result = await connector.subscribe_to_ticker('BTC/USDC')
                     assert result
-                    mock_ticker.assert_called_once_with('BTC/USDT')
+                    mock_ticker.assert_called_once_with('BTC/USDC')
 
-                    result = await connector.subscribe_to_orderbook('BTC/USDT', 10)
+                    result = await connector.subscribe_to_orderbook('BTC/USDC', 10)
                     assert result
-                    mock_orderbook.assert_called_once_with('BTC/USDT', 10)
+                    mock_orderbook.assert_called_once_with('BTC/USDC', 10)
 
-                    result = await connector.subscribe_to_trades('BTC/USDT')
+                    result = await connector.subscribe_to_trades('BTC/USDC')
                     assert result
-                    mock_trades.assert_called_once_with('BTC/USDT')
+                    mock_trades.assert_called_once_with('BTC/USDC')
 
     def test_message_handlers(self):
         """Test message handler registration and callbacks"""
@@ -272,7 +272,7 @@ class TestWebSocketLoadTesting:
             patch.object(connector, 'subscribe_to_orderbook', AsyncMock(return_value=True))
 
         # Perform multiple subscriptions concurrently
-        symbols = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'ADA/USDT']
+        symbols = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'ADA/USDC']
 
         start_time = time.time()
 

@@ -1,140 +1,505 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+
+import Sidebar from './components/Layout/Sidebar';
 import Header from './components/Header';
-import AlertsPanel, { AlertItem } from './components/AlertsPanel';
-import PnlChart, { PnlDataPoint } from './components/PnlChart';
-import PositionsTable, { Position } from './components/PositionsTable';
+import AlertsPanel from './components/AlertsPanel';
+import PnlChart from './components/PnlChart';
+import PositionsTable from './components/PositionsTable';
 import RiskGauges from './components/RiskGauges';
 import RiskMetrics from './components/RiskMetrics';
+import TrainingCards from './components/TrainingCards';
+import TradesView from './components/Trades/TradesView';
+import RiskView from './components/Risk/RiskView';
+import StrategyView from './components/Strategy/StrategyView';
+import SentimentView from './components/Sentiment/SentimentView';
+import SettingsView from './components/Settings/SettingsView';
+import SignalsView from './components/Signals/SignalsView';
+
+import {
+  useHealth,
+  usePortfolio,
+  useSignals,
+  useModels,
+  useTrainingStatus,
+  useTrainingHistory,
+  useTrades,
+  useMetrics,
+  useConfig,
+} from './hooks/useApi';
+
+import type { Portfolio, Signal, Trade, Metrics } from './types';
 
 // ---------------------------------------------------------------------------
-// Demo data helpers (replace with WebSocket feed in production)
+// Query client
 // ---------------------------------------------------------------------------
-const PAIRS = ['XRP/USDC', 'ADA/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC'];
-const EXCHANGES = ['binance', 'coinbase', 'kraken'];
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+      staleTime: 3_000,
+    },
+  },
+});
 
-function makeAlert(i: number): AlertItem {
-  const types: AlertItem['type'][] = ['critical', 'high', 'medium', 'low'];
-  return {
-    id: `${Date.now()}-${i}`,
-    type: types[i % types.length],
-    title: `Arbitrage Opportunity: ${PAIRS[i % PAIRS.length]}`,
-    message: `Spread +${(0.2 + Math.random() * 0.5).toFixed(3)}% on ${EXCHANGES[i % EXCHANGES.length]}`,
-    timestamp: new Date().toLocaleTimeString(),
-  };
+// ---------------------------------------------------------------------------
+// Helper: map API portfolio positions to the shape PositionsTable expects
+// ---------------------------------------------------------------------------
+function mapPositions(portfolio?: Portfolio) {
+  if (!portfolio?.positions) return [];
+  const pos = Array.isArray(portfolio.positions)
+    ? portfolio.positions
+    : typeof portfolio.positions === 'object'
+      ? Object.values(portfolio.positions)
+      : [];
+  return (pos as any[]).map(p => ({
+    pair: p.pair,
+    exchange: p.exchange,
+    side: p.side,
+    entryPrice: p.entry_price,
+    currentPrice: p.current_price,
+    quantity: p.quantity,
+    pnl: p.pnl,
+    pnlPct: p.pnl_pct,
+    status: p.status,
+  }));
 }
 
-function makePosition(i: number): Position {
-  const entry = 0.3 + Math.random() * 49.7;
-  const current = entry * (1 + (Math.random() - 0.48) * 0.02);
-  const qty = +(10 + Math.random() * 90).toFixed(2);
-  const pnl = (current - entry) * qty;
-  return {
-    pair: PAIRS[i % PAIRS.length],
-    exchange: EXCHANGES[i % EXCHANGES.length],
-    side: Math.random() > 0.5 ? 'buy' : 'sell',
-    entryPrice: +entry.toFixed(4),
-    currentPrice: +current.toFixed(4),
-    quantity: qty,
-    pnl: +pnl.toFixed(2),
-    pnlPct: +((pnl / (entry * qty)) * 100).toFixed(2),
-    status: 'open',
-  };
+// ---------------------------------------------------------------------------
+// Helper: map signals to alert items for the AlertsPanel
+// ---------------------------------------------------------------------------
+function signalsToAlerts(signals?: Signal[]) {
+  if (!signals) return [];
+  return signals.map((s, i) => ({
+    id: s.id ?? `sig-${i}`,
+    type: (s.strength > 0.8 ? 'critical'
+      : s.strength > 0.6 ? 'high'
+      : s.strength > 0.3 ? 'medium'
+      : 'low') as 'critical' | 'high' | 'medium' | 'low',
+    title: `${s.direction.toUpperCase()} ${s.pair}`,
+    message: `${s.strategy} on ${s.exchange} (strength ${(s.strength * 100).toFixed(0)}%)`,
+    timestamp: s.timestamp ? new Date(s.timestamp).toLocaleTimeString() : '--',
+  }));
 }
 
 // ---------------------------------------------------------------------------
-// App
+// Page: Dashboard (main overview)
 // ---------------------------------------------------------------------------
-const App: React.FC = () => {
-  const [alerts, setAlerts] = useState<AlertItem[]>(() => [0, 1, 2].map(makeAlert));
-  const [positions, setPositions] = useState<Position[]>(() => [0, 1, 2].map(makePosition));
-  const [pnlHistory, setPnlHistory] = useState<PnlDataPoint[]>([]);
-  const [totalPnl, setTotalPnl] = useState(0);
-  const [isConnected, setIsConnected] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState('--');
+const DashboardPage: React.FC = () => {
+  const { data: portfolio } = usePortfolio();
+  const { data: signals } = useSignals();
+  const { data: metrics } = useMetrics();
 
-  // Simulate live data feed
-  useEffect(() => {
-    setIsConnected(true);
-
-    // Seed P&L history
-    let cumulative = 0;
-    const history: PnlDataPoint[] = Array.from({ length: 30 }, (_, i) => {
-      const pnl = (Math.random() - 0.45) * 8;
-      cumulative += pnl;
-      return {
-        timestamp: new Date(Date.now() - (29 - i) * 3600_000).toLocaleTimeString(),
-        pnl: +pnl.toFixed(2),
-        cumulative: +cumulative.toFixed(2),
-      };
-    });
-    setPnlHistory(history);
-    setTotalPnl(cumulative);
-
-    const tick = setInterval(() => {
-      setLastUpdate(new Date().toLocaleTimeString());
-      setPositions([0, 1, 2].map(makePosition));
-
-      const newPnl = (Math.random() - 0.45) * 6;
-      setTotalPnl(prev => {
-        const next = +(prev + newPnl).toFixed(2);
-        setPnlHistory(h => {
-          const point: PnlDataPoint = {
-            timestamp: new Date().toLocaleTimeString(),
-            pnl: +newPnl.toFixed(2),
-            cumulative: next,
-          };
-          return [...h.slice(-59), point];
-        });
-        return next;
-      });
-
-      // Occasionally add alert
-      if (Math.random() > 0.7) {
-        setAlerts(prev => [makeAlert(Date.now()), ...prev].slice(0, 20));
-      }
-    }, 3000);
-
-    return () => { clearInterval(tick); setIsConnected(false); };
-  }, []);
-
+  const positions = mapPositions(portfolio);
   const openPositions = positions.filter(p => p.status === 'open');
-  const totalPnlPct = totalPnl / 10000 * 100;
+  const alerts = signalsToAlerts(signals);
+
+  const totalPnl = portfolio?.daily_pnl ?? metrics?.daily_pnl ?? 0;
+  const portfolioValue = portfolio?.total_value ?? metrics?.portfolio_value ?? 10000;
+  const totalPnlPct = portfolioValue > 0 ? (totalPnl / portfolioValue) * 100 : 0;
+
+  // Build a simple cumulative PnL point from the current snapshot
+  const pnlData = totalPnl !== 0
+    ? [{ timestamp: new Date().toLocaleTimeString(), pnl: totalPnl, cumulative: totalPnl }]
+    : [];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#0d1117', color: '#e2e8f0', fontFamily: 'Inter, system-ui, sans-serif' }}>
-      <Header isConnected={isConnected} lastUpdate={lastUpdate} />
-      <div style={{ maxWidth: 1400, margin: '0 auto', padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Metric cards */}
+      <RiskMetrics
+        portfolioValue={portfolioValue}
+        dailyPnl={totalPnl}
+        sharpeRatio={portfolio?.sharpe_ratio ?? metrics?.sharpe_ratio ?? 0}
+        winRate={portfolio?.win_rate ?? metrics?.win_rate ?? 0}
+        totalTrades={portfolio?.total_trades ?? metrics?.total_trades ?? 0}
+        maxDrawdown={portfolio?.max_drawdown ?? metrics?.max_drawdown ?? 0}
+      />
 
-        {/* Top row */}
-        <RiskMetrics
-          portfolioValue={10000 + totalPnl}
-          dailyPnl={totalPnl}
-          sharpeRatio={1.42 + Math.random() * 0.2}
-          winRate={0.63}
-          totalTrades={positions.length * 4}
-          maxDrawdown={3.2}
+      {/* Charts row */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <PnlChart data={pnlData} totalPnl={totalPnl} totalPnlPct={+totalPnlPct.toFixed(2)} />
+        <RiskGauges
+          portfolioExposure={portfolio?.exposure_pct ?? metrics?.exposure_pct ?? 0}
+          dailyLoss={totalPnl < 0 ? Math.abs(totalPnlPct) : 0}
+          drawdown={portfolio?.max_drawdown ?? metrics?.drawdown_pct ?? 0}
+          openPositions={openPositions.length}
+          maxPositions={metrics?.max_positions ?? 5}
         />
+      </div>
 
-        {/* Middle row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-          <PnlChart data={pnlHistory} totalPnl={totalPnl} totalPnlPct={+totalPnlPct.toFixed(2)} />
-          <RiskGauges
-            portfolioExposure={openPositions.length * 8}
-            dailyLoss={totalPnl < 0 ? Math.abs(totalPnlPct) : 0}
-            drawdown={3.2}
-            openPositions={openPositions.length}
-            maxPositions={5}
-          />
-        </div>
+      {/* Training cards */}
+      <TrainingCards />
 
-        {/* Bottom row */}
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
-          <PositionsTable positions={openPositions} />
-          <AlertsPanel alerts={alerts} />
-        </div>
+      {/* Positions + Alerts */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
+        <PositionsTable positions={openPositions} />
+        <AlertsPanel alerts={alerts} />
       </div>
     </div>
   );
 };
+
+// ---------------------------------------------------------------------------
+// Page: Models
+// ---------------------------------------------------------------------------
+const ModelsPage: React.FC = () => {
+  const { data: models, isLoading } = useModels();
+
+  if (isLoading) return <PageLoading label="models" />;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <SectionTitle>Trained Models</SectionTitle>
+      <div style={cardStyle}>
+        {!models || models.length === 0 ? (
+          <p style={{ color: '#718096', fontSize: 13 }}>No models loaded.</p>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #2d3748' }}>
+                {['Strategy', 'Pair', 'Exchange', 'Val Loss', 'Sharpe', 'Win Rate', 'P&L', 'Status'].map(h => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {models.map((m, i) => (
+                <tr key={m.id ?? i} style={{ borderBottom: '1px solid #2d3748' }}>
+                  <td style={{ ...tdStyle, color: '#58a6ff', fontWeight: 600 }}>{m.strategy}</td>
+                  <td style={{ ...tdStyle, fontWeight: 600 }}>{m.pair}</td>
+                  <td style={tdStyle}>{m.exchange}</td>
+                  <td style={tdStyle}>{m.val_loss?.toFixed(6) ?? '--'}</td>
+                  <td style={{ ...tdStyle, color: (m.sharpe ?? 0) > 0 ? '#68d391' : '#fc8181' }}>
+                    {m.sharpe?.toFixed(3) ?? '--'}
+                  </td>
+                  <td style={tdStyle}>{m.win_rate != null ? `${(m.win_rate * 100).toFixed(1)}%` : '--'}</td>
+                  <td style={{ ...tdStyle, color: (m.net_pnl ?? 0) >= 0 ? '#68d391' : '#fc8181' }}>
+                    {m.net_pnl != null ? `$${m.net_pnl.toFixed(2)}` : '--'}
+                  </td>
+                  <td style={tdStyle}>{m.status ?? '--'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Page: Training
+// ---------------------------------------------------------------------------
+const TrainingPage: React.FC = () => {
+  const { data: status, isLoading: loadingStatus } = useTrainingStatus();
+  const { data: history, isLoading: loadingHistory } = useTrainingHistory();
+
+  if (loadingStatus && loadingHistory) return <PageLoading label="training data" />;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <SectionTitle>Training Status</SectionTitle>
+
+      {/* Active runs */}
+      <div style={cardStyle}>
+        <h4 style={{ margin: '0 0 12px', fontSize: 13, color: '#58a6ff' }}>Active Runs</h4>
+        {!status || status.length === 0 ? (
+          <p style={{ color: '#718096', fontSize: 13 }}>No active training runs.</p>
+        ) : (
+          status.map((run, i) => (
+            <div key={run.id ?? i} style={{
+              background: '#0d1117',
+              borderRadius: 6,
+              padding: '10px 12px',
+              border: '1px solid #21262d',
+              marginBottom: 8,
+            }}>
+              <div style={{ fontSize: 13, fontWeight: 600, color: '#e2e8f0' }}>
+                {run.strategy} -- {run.pair} @ {run.exchange}
+              </div>
+              <div style={{ fontSize: 12, color: '#8b949e', marginTop: 4 }}>
+                Epoch {run.epoch ?? '?'}/{run.total_epochs ?? '?'}
+                {run.val_loss != null && ` | Val Loss: ${run.val_loss.toFixed(6)}`}
+                {run.gpu && ` | GPU: ${run.gpu}`}
+              </div>
+              {run.epoch != null && run.total_epochs != null && (
+                <div style={{ background: '#21262d', borderRadius: 4, height: 4, marginTop: 6, overflow: 'hidden' }}>
+                  <div style={{
+                    width: `${(run.epoch / run.total_epochs) * 100}%`,
+                    height: '100%',
+                    background: '#58a6ff',
+                    borderRadius: 4,
+                  }} />
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* History */}
+      <div style={cardStyle}>
+        <h4 style={{ margin: '0 0 12px', fontSize: 13, color: '#58a6ff' }}>Training History</h4>
+        {!history || history.length === 0 ? (
+          <p style={{ color: '#718096', fontSize: 13 }}>No training history.</p>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #2d3748' }}>
+                {['Strategy', 'Pair', 'Exchange', 'Status', 'Epochs', 'Val Loss', 'Sharpe'].map(h => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {history.map((run, i) => (
+                <tr key={run.id ?? i} style={{ borderBottom: '1px solid #2d3748' }}>
+                  <td style={{ ...tdStyle, color: '#58a6ff' }}>{run.strategy}</td>
+                  <td style={{ ...tdStyle, fontWeight: 600 }}>{run.pair}</td>
+                  <td style={tdStyle}>{run.exchange}</td>
+                  <td style={{
+                    ...tdStyle,
+                    color: run.status === 'completed' ? '#68d391' : run.status === 'failed' ? '#fc8181' : '#f6ad55',
+                  }}>{run.status}</td>
+                  <td style={tdStyle}>{run.epochs_completed ?? run.epoch ?? '--'}</td>
+                  <td style={tdStyle}>{run.val_loss?.toFixed(6) ?? '--'}</td>
+                  <td style={{ ...tdStyle, color: (run.sharpe ?? 0) > 0 ? '#68d391' : '#fc8181' }}>
+                    {run.sharpe?.toFixed(3) ?? '--'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      {/* Existing training cards component */}
+      <TrainingCards />
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Page: Charts (placeholder -- PnL chart view)
+// ---------------------------------------------------------------------------
+const ChartsPage: React.FC = () => {
+  const { data: portfolio } = usePortfolio();
+  const { data: metrics } = useMetrics();
+
+  const totalPnl = portfolio?.daily_pnl ?? metrics?.daily_pnl ?? 0;
+  const portfolioValue = portfolio?.total_value ?? metrics?.portfolio_value ?? 10000;
+  const totalPnlPct = portfolioValue > 0 ? (totalPnl / portfolioValue) * 100 : 0;
+
+  const pnlData = totalPnl !== 0
+    ? [{ timestamp: new Date().toLocaleTimeString(), pnl: totalPnl, cumulative: totalPnl }]
+    : [];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <SectionTitle>Charts</SectionTitle>
+      <PnlChart data={pnlData} totalPnl={totalPnl} totalPnlPct={+totalPnlPct.toFixed(2)} />
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Page: Risk
+// ---------------------------------------------------------------------------
+const RiskPage: React.FC = () => {
+  const { data: portfolio } = usePortfolio();
+  const { data: metrics } = useMetrics();
+
+  const positions = mapPositions(portfolio);
+  const openPositions = positions.filter(p => p.status === 'open');
+  const totalPnl = portfolio?.daily_pnl ?? metrics?.daily_pnl ?? 0;
+  const portfolioValue = portfolio?.total_value ?? metrics?.portfolio_value ?? 10000;
+  const totalPnlPct = portfolioValue > 0 ? (totalPnl / portfolioValue) * 100 : 0;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <SectionTitle>Risk Management</SectionTitle>
+      <RiskMetrics
+        portfolioValue={portfolioValue}
+        dailyPnl={totalPnl}
+        sharpeRatio={portfolio?.sharpe_ratio ?? metrics?.sharpe_ratio ?? 0}
+        winRate={portfolio?.win_rate ?? metrics?.win_rate ?? 0}
+        totalTrades={portfolio?.total_trades ?? metrics?.total_trades ?? 0}
+        maxDrawdown={portfolio?.max_drawdown ?? metrics?.max_drawdown ?? 0}
+      />
+      <RiskGauges
+        portfolioExposure={portfolio?.exposure_pct ?? metrics?.exposure_pct ?? 0}
+        dailyLoss={totalPnl < 0 ? Math.abs(totalPnlPct) : 0}
+        drawdown={portfolio?.max_drawdown ?? metrics?.drawdown_pct ?? 0}
+        openPositions={openPositions.length}
+        maxPositions={metrics?.max_positions ?? 5}
+      />
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Page: Trades
+// ---------------------------------------------------------------------------
+const TradesPage: React.FC = () => {
+  const { data: trades, isLoading } = useTrades();
+  const { data: portfolio } = usePortfolio();
+
+  if (isLoading) return <PageLoading label="trades" />;
+
+  // Also show open positions from portfolio
+  const positions = mapPositions(portfolio);
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <SectionTitle>Trades</SectionTitle>
+
+      <PositionsTable positions={positions} />
+
+      <div style={cardStyle}>
+        <h4 style={{ margin: '0 0 12px', fontSize: 13, color: '#58a6ff' }}>Trade History</h4>
+        {!trades || trades.length === 0 ? (
+          <p style={{ color: '#718096', fontSize: 13 }}>No trade history.</p>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #2d3748' }}>
+                {['Pair', 'Exchange', 'Side', 'Price', 'Qty', 'P&L', 'Strategy', 'Time'].map(h => (
+                  <th key={h} style={thStyle}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {trades.map((t, i) => (
+                <tr key={t.id ?? i} style={{ borderBottom: '1px solid #2d3748' }}>
+                  <td style={{ ...tdStyle, fontWeight: 600 }}>{t.pair}</td>
+                  <td style={tdStyle}>{t.exchange}</td>
+                  <td style={{
+                    ...tdStyle,
+                    color: t.side === 'buy' ? '#68d391' : '#fc8181',
+                    textTransform: 'uppercase',
+                    fontSize: 11,
+                    fontWeight: 600,
+                  }}>{t.side}</td>
+                  <td style={tdStyle}>{t.price.toFixed(4)}</td>
+                  <td style={tdStyle}>{t.quantity.toFixed(4)}</td>
+                  <td style={{ ...tdStyle, color: (t.pnl ?? 0) >= 0 ? '#68d391' : '#fc8181' }}>
+                    {t.pnl != null ? `$${t.pnl.toFixed(2)}` : '--'}
+                  </td>
+                  <td style={tdStyle}>{t.strategy ?? '--'}</td>
+                  <td style={{ ...tdStyle, color: '#718096' }}>
+                    {t.timestamp ? new Date(t.timestamp).toLocaleTimeString() : '--'}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Page: Settings
+// ---------------------------------------------------------------------------
+const SettingsPage: React.FC = () => {
+  const { data: config, isLoading } = useConfig();
+
+  if (isLoading) return <PageLoading label="configuration" />;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <SectionTitle>Settings</SectionTitle>
+      <div style={cardStyle}>
+        {config ? (
+          <pre style={{ color: '#e2e8f0', fontSize: 13, margin: 0, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {JSON.stringify(config, null, 2)}
+          </pre>
+        ) : (
+          <p style={{ color: '#718096', fontSize: 13 }}>No configuration data available.</p>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Shared small components
+// ---------------------------------------------------------------------------
+const cardStyle: React.CSSProperties = {
+  background: '#161b22',
+  border: '1px solid #30363d',
+  borderRadius: 8,
+  padding: 16,
+};
+
+const thStyle: React.CSSProperties = {
+  color: '#718096',
+  padding: '4px 8px',
+  textAlign: 'right',
+  fontWeight: 500,
+  whiteSpace: 'nowrap',
+};
+
+const tdStyle: React.CSSProperties = {
+  color: '#e2e8f0',
+  padding: '6px 8px',
+  textAlign: 'right',
+};
+
+const SectionTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <h2 style={{ color: '#e2e8f0', margin: 0, fontSize: 18, fontWeight: 700 }}>{String(children)}</h2>
+);
+
+const PageLoading: React.FC<{ label: string }> = ({ label }) => (
+  <div style={{ color: '#718096', fontSize: 14, padding: '40px 0', textAlign: 'center' }}>
+    Loading {label}...
+  </div>
+);
+
+// ---------------------------------------------------------------------------
+// App shell: Header content area showing connection status from health hook
+// ---------------------------------------------------------------------------
+const AppContent: React.FC = () => {
+  const { data: health, dataUpdatedAt } = useHealth();
+  const isConnected = health?.status === 'ok' || health?.status === 'healthy';
+  const lastUpdate = dataUpdatedAt ? new Date(dataUpdatedAt).toLocaleTimeString() : '--';
+
+  return (
+    <div style={{ display: 'flex', minHeight: '100vh', background: '#0d1117', color: '#e2e8f0', fontFamily: 'Inter, system-ui, sans-serif' }}>
+      <Sidebar />
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+        <Header isConnected={isConnected} lastUpdate={lastUpdate} />
+        <main style={{ maxWidth: 1400, width: '100%', margin: '0 auto', padding: 20 }}>
+          <Routes>
+            <Route path="/" element={<DashboardPage />} />
+            <Route path="/signals" element={<SignalsView />} />
+            <Route path="/models" element={<ModelsPage />} />
+            <Route path="/training" element={<TrainingPage />} />
+            <Route path="/charts" element={<ChartsPage />} />
+            <Route path="/risk" element={<RiskView />} />
+            <Route path="/trades" element={<TradesView />} />
+            <Route path="/strategy" element={<StrategyView />} />
+            <Route path="/sentiment" element={<SentimentView />} />
+            <Route path="/settings" element={<SettingsView />} />
+          </Routes>
+        </main>
+      </div>
+    </div>
+  );
+};
+
+// ---------------------------------------------------------------------------
+// Root App with providers
+// ---------------------------------------------------------------------------
+const App: React.FC = () => (
+  <QueryClientProvider client={queryClient}>
+    <BrowserRouter>
+      <AppContent />
+    </BrowserRouter>
+  </QueryClientProvider>
+);
 
 export default App;

@@ -30,7 +30,10 @@ class DatabaseManager:
     def __init__(self):
         self.pool = None
         self.engine = None
-        self.database_url = os.getenv('DATABASE_URL', 'postgresql://sovereignforge:sovereignforge_pass@postgres:5432/sovereignforge')
+        self.database_url = os.getenv('DATABASE_URL')
+        if not self.database_url:
+            # Fall back to SQLite for local development
+            self.database_url = 'sqlite:///data/trading.db'
 
         # Connection pool settings
         self.pool_config = {
@@ -199,8 +202,8 @@ class DatabaseManager:
                         SUM(pnl) as total_pnl,
                         STDDEV(pnl) as pnl_stddev
                     FROM trading.trade_executions
-                    WHERE timestamp >= NOW() - INTERVAL '%s days'
-                """ % days)
+                    WHERE timestamp >= NOW() - MAKE_INTERVAL(days => $1)
+                """, days)
 
                 # Get opportunity statistics
                 opp_stats = await conn.fetchrow("""
@@ -210,8 +213,8 @@ class DatabaseManager:
                         AVG(arbitrage_signal) as avg_signal,
                         AVG(confidence) as avg_confidence
                     FROM trading.arbitrage_opportunities
-                    WHERE timestamp >= NOW() - INTERVAL '%s days'
-                """ % days)
+                    WHERE timestamp >= NOW() - MAKE_INTERVAL(days => $1)
+                """, days)
 
                 return {
                     'trade_stats': dict(trade_stats) if trade_stats else {},

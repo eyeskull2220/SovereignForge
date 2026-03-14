@@ -24,8 +24,9 @@ logger = logging.getLogger(__name__)
 MICA_COMPLIANT_PAIRS = [
     'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
     'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
+    'XDC/USDC', 'ONDO/USDC',
     'XRP/RLUSD', 'XLM/RLUSD', 'HBAR/RLUSD', 'ALGO/RLUSD', 'ADA/RLUSD',
-    'LINK/RLUSD', 'IOTA/RLUSD', 'VET/RLUSD',
+    'LINK/RLUSD', 'IOTA/RLUSD', 'VET/RLUSD', 'XDC/RLUSD', 'ONDO/RLUSD',
 ]
 
 
@@ -175,6 +176,7 @@ class LiveArbitragePipeline:
                            "Data will be synthetic — do NOT trade real funds.")
 
         # ── Core services (data + inference + ensemble) ───────────────
+        self.cross_exchange_scorer = None  # Set by _init_ensemble if configured
         self.data_service = self._init_data_service()
         self.inference_service = self._init_inference_service()
         self.ensemble = self._init_ensemble()
@@ -242,13 +244,34 @@ class LiveArbitragePipeline:
             return MockInferenceService()
 
     def _init_ensemble(self):
-        """Initialize the multi-strategy ensemble (collective brain)."""
+        """Initialize the multi-strategy ensemble (collective brain) and cross-exchange scorer."""
         try:
-            from strategy_ensemble import StrategyEnsemble
+            from strategy_ensemble import StrategyEnsemble, CrossExchangeScorer
             ensemble = StrategyEnsemble(config=self.config)
             logger.info("StrategyEnsemble loaded — collective brain enabled")
+
+            # Initialize CrossExchangeScorer if configured
+            cx_config = self.config.get('cross_exchange', {})
+            if cx_config.get('enabled', False):
+                risk_mgr = None
+                try:
+                    from risk_management import get_risk_manager
+                    risk_mgr = get_risk_manager()
+                except ImportError:
+                    pass
+                self.cross_exchange_scorer = CrossExchangeScorer(
+                    ensemble=ensemble,
+                    risk_manager=risk_mgr,
+                    min_signal_spread=cx_config.get('min_signal_spread', 0.2),
+                    min_confidence=cx_config.get('min_confidence', 0.3),
+                )
+                logger.info("CrossExchangeScorer loaded — cross-exchange arbitrage detection enabled")
+            else:
+                self.cross_exchange_scorer = None
+
             return ensemble
         except ImportError:
+            self.cross_exchange_scorer = None
             if self.mode == 'production':
                 logger.warning(
                     "StrategyEnsemble not available in production — "
@@ -632,7 +655,7 @@ class MockInferenceService:
     """Mock inference service — used only in development mode."""
 
     def __init__(self):
-        self.pairs = MICA_COMPLIANT_PAIRS[:10]
+        self.pairs = [p for p in MICA_COMPLIANT_PAIRS if p.endswith('/USDC')]
         self.models = {}
         self._callbacks = []
 

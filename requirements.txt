@@ -16,6 +16,9 @@ ccxt>=4.3.0
 numpy>=1.26.0
 pandas>=2.2.0
 scikit-learn>=1.4.0
+ta>=0.10.0                 # technical indicators (RSI, MACD, BB, etc.)
+vaderSentiment>=3.3.2      # sentiment analysis for crypto news
+mlflow>=2.5.0              # experiment tracking
 
 # ── PyTorch (CPU build — swap for CUDA variant if GPU available) ──────────────
 torch>=2.2.0

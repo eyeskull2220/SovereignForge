@@ -112,7 +112,7 @@ class PostTrainingBacktester:
         )
 
         # Load model checkpoint
-        checkpoint = torch.load(model_path, map_location="cpu", weights_only=False)
+        checkpoint = torch.load(model_path, map_location="cpu", weights_only=True)
         config = checkpoint["config"]
         strategy_type = StrategyType(strategy)
 

@@ -201,7 +201,7 @@ class MarketKnowledgeGraph:
 
         # Coin-exchange relationships
         coins = ['XRP', 'XLM', 'HBAR', 'ALGO', 'ADA', 'LINK', 'IOTA', 'XDC', 'ONDO', 'VET', 'USDC', 'RLUSD']
-        exchanges = ['binance', 'kraken', 'coinbase', 'bitfinex', 'gemini']
+        exchanges = ['binance', 'kraken', 'coinbase', 'okx']
 
         for coin in coins:
             coin_node = await self.add_coin_node(coin)

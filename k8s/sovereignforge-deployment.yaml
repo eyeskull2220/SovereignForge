@@ -30,7 +30,7 @@ spec:
         fsGroup: 2000
       containers:
       - name: sovereignforge
-        image: sovereignforge:v1.0.0
+        image: sovereignforge:latest  # Override with commit SHA in CI/CD
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080

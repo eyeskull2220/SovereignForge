@@ -33,7 +33,7 @@ class TradingConfig:
                 "enabled_coins": ["XRP", "XLM", "HBAR", "ALGO", "ADA", "LINK", "IOTA", "XDC", "ONDO", "VET"],
                 "stable_coins": ["USDC", "RLUSD"],
                 "forbidden_coins": ["BTC", "ETH", "USDT", "BNB", "SOL", "DOT", "AVAX", "MATIC"],
-                "supported_exchanges": ["binance", "kraken", "coinbase", "kucoin", "gateio"],
+                "supported_exchanges": ["binance", "kraken", "coinbase", "okx"],
                 "min_spread_threshold": 0.5,  # Minimum 0.5% spread to consider
                 "max_spread_threshold": 5.0,  # Maximum 5% spread to avoid outliers
                 "min_volume_threshold": 1000,  # Minimum volume for consideration

@@ -119,7 +119,7 @@ class MarketOverviewWidget(QWidget):
 
     def _setup_coin_display(self):
         """Setup coin price display grid"""
-        exchanges = ["binance", "kraken", "coinbase", "kucoin", "gateio"]
+        exchanges = ["binance", "kraken", "coinbase", "okx"]
 
         # Header row
         self.coin_grid.addWidget(QLabel("Coin"), 0, 0)

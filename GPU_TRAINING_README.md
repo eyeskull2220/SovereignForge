@@ -2,12 +2,12 @@
 
 ## 🚀 GPU-Accelerated Multi-Pair Arbitrage Training
 
-**Wave 7** introduces comprehensive GPU acceleration for training advanced arbitrage detection models across all 7 supported trading pairs. This system provides **100x faster training** with enterprise-grade safety and monitoring.
+**Wave 7** introduces comprehensive GPU acceleration for training advanced arbitrage detection models across all 10 MiCA-compliant USDC trading pairs. This system provides **100x faster training** with enterprise-grade safety and monitoring.
 
 ## 📋 What's New in Wave 7
 
 ### 🔥 GPU Acceleration Features
-- **Multi-Pair Concurrent Training** - Train all 7 pairs simultaneously
+- **Multi-Pair Concurrent Training** - Train all 10 MiCA-compliant pairs simultaneously
 - **Advanced ML Architectures** - Transformer + GNN models for arbitrage detection
 - **GPU Safety Framework** - Memory monitoring, thermal protection, automatic cleanup
 - **Real-Time Monitoring** - TensorBoard, Weights & Biases, and custom dashboards
@@ -28,14 +28,14 @@ pip install -r requirements-gpu.txt
 
 ### 2. Start GPU Training
 ```bash
-# Train all 7 pairs with full monitoring
+# Train all 10 pairs with full monitoring
 python gpu_train.py --all-pairs --gpu-monitor --tensorboard --wandb
 
 # Train specific pairs
-python gpu_train.py --pairs BTC/USDT ETH/USDT --epochs 100 --batch-size 64
+python gpu_train.py --pairs BTC/USDC ETH/USDC --epochs 100 --batch-size 64
 
 # Quick test training
-python gpu_train.py --pairs BTC/USDT --epochs 5 --batch-size 16
+python gpu_train.py --pairs BTC/USDC --epochs 5 --batch-size 16
 ```
 
 ### 3. Monitor Training
@@ -72,13 +72,13 @@ docker run --gpus all -it sovereignforge-gpu python gpu_train.py --all-pairs
 ### Supported Trading Pairs
 | Pair | Volatility | Min Order Size | Risk Multiplier |
 |------|------------|----------------|-----------------|
-| BTC/USDT | 3% | 0.0001 | 1.0x |
-| ETH/USDT | 4% | 0.001 | 1.0x |
-| ADA/USDT | 6% | 1 | 1.2x |
-| XLM/USDT | 7% | 1 | 1.4x |
-| XRP/USDT | 8% | 1 | 1.5x |
-| HBAR/USDT | 9% | 10 | 1.6x |
-| ALGO/USDT | 10% | 1 | 1.7x |
+| BTC/USDC | 3% | 0.0001 | 1.0x |
+| ETH/USDC | 4% | 0.001 | 1.0x |
+| ADA/USDC | 6% | 1 | 1.2x |
+| XLM/USDC | 7% | 1 | 1.4x |
+| XRP/USDC | 8% | 1 | 1.5x |
+| HBAR/USDC | 9% | 10 | 1.6x |
+| ALGO/USDC | 10% | 1 | 1.7x |
 
 ### Advanced Training Options
 ```bash
@@ -95,7 +95,7 @@ python gpu_train.py \
 
 # Memory-constrained training
 python gpu_train.py \
-  --pairs BTC/USDT ETH/USDT \
+  --pairs BTC/USDC ETH/USDC \
   --batch-size 16 \
   --memory-fraction 0.5 \
   --gradient-clip 0.5
@@ -171,7 +171,7 @@ Output: [arbitrage_prob, confidence, spread_pred]
 
 ### Multi-Pair Scaling
 - **1 Pair**: 25 seconds per epoch
-- **7 Pairs**: 35 seconds per epoch (1.4x overhead)
+- **10 Pairs**: 35 seconds per epoch (1.4x overhead)
 - **Concurrent Training**: All pairs train simultaneously
 
 ## 🔧 Advanced Configuration

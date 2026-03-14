@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 logger = logging.getLogger(__name__)
-PROJECT_ROOT = r"E:\SovereignForge"
+PROJECT_ROOT = os.environ.get("SOVEREIGNFORGE_ROOT", str(Path(__file__).resolve().parent.parent))
 
 @dataclass
 class Task:
@@ -188,8 +188,8 @@ class ResearchAgent(BaseAgent):
         """Route market data requests"""
         # Placeholder for market_data_router integration
         return {
-            "exchanges": ["binance", "kraken", "coinbase"],
-            "coins": ["XRP", "ADA", "XLM"],
+            "exchanges": ["binance", "kraken", "coinbase", "okx"],
+            "coins": ["BTC", "ETH", "XRP", "ADA", "XLM", "HBAR", "ALGO", "LINK", "IOTA", "VET", "XDC", "ONDO"],
             "data_points": 1000
         }
 
@@ -317,10 +317,20 @@ trading_engine:
     - binance
     - kraken
     - coinbase
+    - okx
   coins:
+    - BTC
+    - ETH
     - XRP
     - ADA
     - XLM
+    - HBAR
+    - ALGO
+    - LINK
+    - IOTA
+    - VET
+    - XDC
+    - ONDO
 """
 
     def _design_rag_infrastructure(self, requirements: str) -> Dict[str, Any]:
@@ -759,7 +769,7 @@ class RiskPortfolioManagerAgent(BaseAgent):
 
     def _calculate_correlation_matrix(self, portfolio: str) -> Dict[str, Dict[str, float]]:
         """Calculate comprehensive correlation matrix"""
-        coins = ["XRP", "ADA", "XLM", "HBAR", "ALGO", "LINK", "IOTA", "XDC", "ONDO", "VET"]
+        coins = ["BTC", "ETH", "XRP", "ADA", "XLM", "HBAR", "ALGO", "LINK", "IOTA", "VET", "XDC", "ONDO"]
         matrix = {}
         for coin1 in coins:
             matrix[coin1] = {}
@@ -919,7 +929,7 @@ class NovaSchedulerComplianceAgent(BaseAgent):
         checks = [
             "MiCA regulatory compliance verified",
             "Coin whitelist enforcement active",
-            "No BTC/ETH/USDT pairs detected",
+            "No USDT pairs detected - USDC only",
             "Local-first architecture confirmed",
             "Docker isolation maintained",
             "Privacy cleaning protocols active"

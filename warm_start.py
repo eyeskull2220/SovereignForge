@@ -152,6 +152,12 @@ class WarmStart:
         """Extract key development commands from project files"""
         commands = {
             "test": "python -m pytest tests/ -v",
+            "train": "python gpu_train.py --strategy all --all-pairs --exchanges binance coinbase kraken okx --epochs 200 --batch-size 128 --gpu-monitor",
+            "train_sequential": "python train_coin_by_coin.py",
+            "paper_trade": "python src/paper_trading.py --start",
+            "dashboard_api": "python src/dashboard_api.py",
+            "dashboard_ui": "cd dashboard && npm start",
+            "fetch_data": "python fetch_exchange_data.py",
             "build": "docker build -t sovereignforge .",
             "dev": "docker-compose up -d",
             "lint": "python -m pylint src/",
@@ -196,10 +202,13 @@ class WarmStart:
 
         # Load-bearing config files
         config_files = [
-            "core/config.py", "config.py", "personal_config.json",
-            "pyrightconfig.json", ".vscode/settings.json",
+            "core/config.py", "config/trading_config.json",
+            ".mcp.json", ".env.example",
             "docker-compose.yml", "Dockerfile", "requirements.txt",
-            "production_docker_compose.yml", "live_testing_validator.py"
+            "requirements-gpu.txt", "gpu_train.py",
+            "src/multi_strategy_training.py", "src/dashboard_api.py",
+            "src/paper_trading.py", "src/live_arbitrage_pipeline.py",
+            "src/risk_management.py", "src/order_executor.py",
         ]
 
         for config in config_files:
@@ -207,7 +216,7 @@ class WarmStart:
                 structure["load_bearing_configs"].append(config)
 
         # Model directories
-        model_dirs = ["models/", "src/models/", "model_checkpoints/", "training_logs/"]
+        model_dirs = ["models/", "models/strategies/", "src/models/", "model_checkpoints/", "training_logs/"]
         for model_dir in model_dirs:
             if (self.project_root / model_dir).exists():
                 structure["model_dirs"].append(model_dir)
@@ -226,21 +235,25 @@ class WarmStart:
 
         # Documentation
         docs = ["WORKING.md", "AGENTS.md", "README.md", "PRODUCTION_README.md",
-                "user_manual.md", "troubleshooting_guide.md", "compliance_documentation.md"]
+                "user_manual.md", "troubleshooting_guide.md", "compliance_documentation.md",
+                "learnings/LEARNINGS.md"]
         for doc in docs:
             if (self.project_root / doc).exists():
                 structure["documentation"].append(doc)
 
         # Monitoring components
         monitoring_files = ["monitoring/dashboard/", "monitoring/backend/",
-                           "PnlChart.tsx", "RiskGauges.tsx", "PositionsTable.tsx"]
+                           "dashboard/src/App.tsx", "dashboard/src/components/",
+                           "src/technical_indicators.py", "src/sentiment_analyzer.py",
+                           "src/training_report_generator.py"]
         for monitor_file in monitoring_files:
             if (self.project_root / monitor_file).exists():
                 structure["monitoring_components"].append(monitor_file)
 
         # Production readiness check
-        required_files = ["production_docker_compose.yml", "integration_test_suite.py",
-                         "user_manual.md", "system_readiness_report.json"]
+        required_files = ["gpu_train.py", "src/multi_strategy_training.py",
+                         "src/paper_trading.py", "src/dashboard_api.py",
+                         "config/trading_config.json", "requirements.txt"]
         structure["production_ready"] = all((self.project_root / f).exists() for f in required_files)
 
         return structure
@@ -306,10 +319,12 @@ class WarmStart:
             f"- CPU: {self.state['stack_info']['cpu_count']} cores, {self.state['stack_info']['memory_gb']}GB RAM",
             "",
             "### Key Commands",
+            f"- Train: {self.state['key_commands'].get('train', 'N/A')}",
+            f"- Paper Trade: {self.state['key_commands'].get('paper_trade', 'N/A')}",
+            f"- Dashboard API: {self.state['key_commands'].get('dashboard_api', 'N/A')}",
+            f"- Dashboard UI: {self.state['key_commands'].get('dashboard_ui', 'N/A')}",
             f"- Test: {self.state['key_commands']['test']}",
             f"- Build: {self.state['key_commands']['build']}",
-            f"- Dev: {self.state['key_commands']['dev']}",
-            f"- Deploy: {self.state['key_commands']['deploy']}",
             "",
             "### Load-Bearing Files",
             f"- Configs: {', '.join(self.state['project_structure']['load_bearing_configs'])}",

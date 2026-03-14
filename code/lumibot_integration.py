@@ -76,7 +76,7 @@ class ArbitrageExecutionEngine:
         brokers = {}
 
         # Note: In real implementation, these would use actual API keys and configurations
-        exchanges = ["binance", "kraken", "coinbase", "kucoin", "gateio"]
+        exchanges = ["binance", "kraken", "coinbase", "okx"]
 
         for exchange in exchanges:
             try:

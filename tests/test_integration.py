@@ -91,9 +91,9 @@ def test_realtime_inference_service_initialization():
     """Test real-time inference service initialization"""
     inference_service = RealTimeInferenceService()
 
-    assert len(inference_service.pairs) == 7  # 7 trading pairs
+    assert len(inference_service.pairs) == 12  # 12 MiCA-compliant USDC pairs
     assert len(inference_service.models) >= 0  # May have loaded models or fallbacks
-    assert len(inference_service.buffers) == 7
+    assert len(inference_service.buffers) == 12
 
 
 @pytest.mark.asyncio
@@ -111,7 +111,7 @@ async def test_realtime_inference_service_market_data_processing():
     # Send test market data
     test_data = {
         'exchange': 'binance',
-        'pair': 'BTC/USDT',
+        'pair': 'BTC/USDC',
         'timestamp': time.time(),
         'price': 45000.0,
         'bid_price': 44990.0,
@@ -144,7 +144,7 @@ def test_live_arbitrage_pipeline_initialization():
         'max_risk_score': 0.5,
         'enable_grok_reasoning': False,  # Disable for testing
         'alert_on_opportunities': False,  # Disable alerts for testing
-        'pairs': ['BTC/USDT', 'ETH/USDT']
+        'pairs': ['BTC/USDC', 'ETH/USDC']
     }
     pipeline = LiveArbitragePipeline(pipeline_config)
 
@@ -163,13 +163,13 @@ async def test_live_arbitrage_pipeline_opportunity_processing():
         'max_risk_score': 0.5,
         'enable_grok_reasoning': False,
         'alert_on_opportunities': False,
-        'pairs': ['BTC/USDT', 'ETH/USDT']
+        'pairs': ['BTC/USDC', 'ETH/USDC']
     }
     pipeline = LiveArbitragePipeline(pipeline_config)
 
     # Create test opportunity
     opportunity = ArbitrageOpportunity(
-        pair="BTC/USDT",
+        pair="BTC/USDC",
         timestamp=time.time(),
         probability=0.8,
         confidence=0.9,
@@ -203,7 +203,7 @@ def test_live_arbitrage_pipeline_status():
         'max_risk_score': 0.5,
         'enable_grok_reasoning': False,
         'alert_on_opportunities': False,
-        'pairs': ['BTC/USDT', 'ETH/USDT']
+        'pairs': ['BTC/USDC', 'ETH/USDC']
     }
     pipeline = LiveArbitragePipeline(pipeline_config)
 
@@ -291,7 +291,7 @@ async def test_end_to_end_data_flow():
     # Send test market data
     test_data = {
         'exchange': 'binance',
-        'pair': 'BTC/USDT',
+        'pair': 'BTC/USDC',
         'timestamp': time.time(),
         'price': 45000.0,
         'bid_price': 44990.0,
@@ -316,7 +316,7 @@ async def test_pipeline_integration():
         'max_risk_score': 0.8,
         'enable_grok_reasoning': False,
         'alert_on_opportunities': False,
-        'pairs': ['BTC/USDT']
+        'pairs': ['BTC/USDC']
     }
 
     pipeline = LiveArbitragePipeline(config)

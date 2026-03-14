@@ -25,8 +25,12 @@ import numpy as np
 import torch
 
 # Import existing components
-from gpu_arbitrage_model import GPUArbitrageModel, run_gpu_arbitrage_training
-from gpu_manager import get_gpu_manager
+try:
+    from gpu_arbitrage_model import GPUArbitrageModel, run_gpu_arbitrage_training
+    from gpu_manager import get_gpu_manager
+except ImportError:
+    from src.gpu_arbitrage_model import GPUArbitrageModel, run_gpu_arbitrage_training
+    from src.gpu_manager import get_gpu_manager
 
 logger = logging.getLogger(__name__)
 

@@ -55,6 +55,7 @@ services:
     container_name: sovereignforge-redis
     ports:
       - "6379:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD:-changeme}
     volumes:
       - redis_data:/data
     restart: unless-stopped
@@ -62,11 +63,12 @@ services:
       - sovereignforge-network
 
   # Monitoring stack (optional)
+  # WARNING: Prometheus should be behind a reverse proxy with auth in production
   prometheus:
     image: prom/prometheus:latest
     container_name: sovereignforge-prometheus
     ports:
-      - "9090:9090"
+      - "9090:9090"  # Put behind auth proxy in production
     volumes:
       - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -87,7 +89,7 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - GF_SECURITY_ADMIN_PASSWORD=sovereignforge
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-changeme}
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana

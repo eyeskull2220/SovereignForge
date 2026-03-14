@@ -16,7 +16,7 @@ class PersonalConfig:
 
     # Trading Configuration
     trading_pairs: list = None
-    base_currency: str = "USDT"
+    base_currency: str = "USDC"
     quote_currencies: list = None
 
     # Exchange Configuration
@@ -77,12 +77,12 @@ class PersonalConfig:
         # Set defaults if None
         if self.trading_pairs is None:
             self.trading_pairs = [
-                'BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'ADA/USDT',
-                'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT'
+                'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'ADA/USDC',
+                'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC'
             ]
 
         if self.quote_currencies is None:
-            self.quote_currencies = ['USDT', 'BTC', 'ETH']
+            self.quote_currencies = ['USDC', 'BTC', 'ETH']
 
         if self.exchanges is None:
             self.exchanges = ['binance', 'coinbase', 'kraken']

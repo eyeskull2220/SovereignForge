@@ -1,15 +1,16 @@
 # SovereignForge .gitignore
 # Exclude sensitive data, logs, and large model files
 
-# Database files (keep sample data for demo)
-# *.db
-# *.sqlite
-# *.sqlite3
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+data/trading.db
 
-# Log files (keep training logs for demo)
-# *.log
-# logs/
-# tensorboard/
+# Log files
+*.log
+logs/
+tensorboard/
 
 # Model checkpoints (large files - exclude from repo)
 models/*.pth
@@ -71,6 +72,18 @@ docs/_build/
 
 # Node modules (if any frontend components)
 node_modules/
+
+# Paper trading state
+reports/paper_trading_state.json
+
+# Runtime files
+.paper_trading.pid
+.launcher_pids.json
+mlruns/
+
+# MCP config (local)
+.mcp.json
+.mcp-servers/
 
 # Docker volumes
 volumes/

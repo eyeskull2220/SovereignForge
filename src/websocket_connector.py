@@ -123,9 +123,9 @@ class WebSocketConnector:
                         'ping_timeout': 10,
                         'close_timeout': 5
                     },
-                    # Strategy 3: No SSL verification (for testing)
+                    # Strategy 3: Retry with default SSL (always use SSL for security)
                     {
-                        'ssl': False,
+                        'ssl': True,  # Always use SSL for security
                         'ping_interval': 20,
                         'ping_timeout': 10,
                         'close_timeout': 5

@@ -48,6 +48,13 @@ try:
 except ImportError:
     WANDB_AVAILABLE = False
 
+try:
+    import mlflow as _mlflow
+    MLFLOW_AVAILABLE = True
+except ImportError:
+    _mlflow = None
+    MLFLOW_AVAILABLE = False
+
 # Core imports
 from gpu_manager import get_gpu_manager, shutdown_gpu_manager
 from gpu_arbitrage_model import run_gpu_arbitrage_training, setup_gpu_training
@@ -663,6 +670,8 @@ Examples:
                        help='Enable TensorBoard logging')
     parser.add_argument('--wandb', action='store_true',
                        help='Enable Weights & Biases logging')
+    parser.add_argument('--mlflow', action='store_true',
+                       help='Launch MLflow UI at http://localhost:5000 before training')
 
     # Exchange selection
     parser.add_argument('--exchanges', nargs='+',
@@ -707,6 +716,19 @@ Examples:
     if args.scan:
         run_cross_exchange_scan(args)
         sys.exit(0)
+
+    # Launch MLflow UI in background if requested
+    if args.mlflow:
+        if MLFLOW_AVAILABLE:
+            import subprocess
+            print("MLflow UI at http://localhost:5000")
+            subprocess.Popen(
+                [sys.executable, "-m", "mlflow", "ui", "--port", "5000"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+            )
+        else:
+            print("WARNING: MLflow not installed, skipping UI launch")
 
     # Create orchestrator and run training
     orchestrator = GPUTrainingOrchestrator(args)

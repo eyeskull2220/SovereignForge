@@ -176,11 +176,11 @@ def main():
         else:
             status = "FAIL"
 
-        print(".3f")
-        print(".3f")
-        print(".3f")
-        print(".3f")
-        print(".3f")
+        print(f"  [{status}] {pair}/USDC")
+        print(f"    Accuracy:  {perf['accuracy']:.3f}")
+        print(f"    Precision: {perf['precision']:.3f}")
+        print(f"    Recall:    {perf['recall']:.3f}")
+        print(f"    F1:        {perf['f1']:.3f}")
         print()
 
         total_accuracy += perf["accuracy"]
@@ -194,8 +194,8 @@ def main():
 
     print(f"Models Tested: {len(results)}")
     print(f"Models Passing (>=80%): {passed_models}")
-    print(".1f")
-    print(".3f")
+    print(f"Pass Rate: {passed_models/len(results)*100:.1f}%" if results else "No results")
+    print(f"Average Accuracy: {avg_accuracy:.3f}")
 
     if passed_models == len(mica_pairs):
         print("ALL MODELS ACHIEVE TARGET PERFORMANCE!")

@@ -215,7 +215,7 @@ class AutoRecovery:
         try:
             subprocess.run(["docker", "info"], capture_output=True, timeout=5)
             results["docker"] = True
-        except:
+        except Exception:
             results["docker"] = False
 
         # Check services

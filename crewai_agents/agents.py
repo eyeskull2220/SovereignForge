@@ -149,9 +149,10 @@ class ComplianceOfficerAgent(Agent):
 
         # MiCA compliant pairs whitelist
         mica_whitelist = [
-            'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT',
-            'LINK/USDT', 'IOTA/USDT', 'XDC/USDT', 'ONDO/USDT', 'VET/USDT',
-            'USDC/USDT', 'RLUSD/USDT'
+            'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
+            'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
+            'XDC/USDC', 'ONDO/USDC',
+            'XRP/RLUSD', 'XLM/RLUSD', 'ADA/RLUSD',
         ]
 
         compliant = pair in mica_whitelist
@@ -289,17 +290,17 @@ def get_arbitrage_crew() -> ArbitrageCrew:
 if __name__ == "__main__":
     # Sample market data
     sample_market_data = {
-        "pairs": ["BTC/USDT", "ETH/USDT", "XRP/USDT"],
+        "pairs": ["BTC/USDC", "ETH/USDC", "XRP/USDC"],
         "exchanges": ["binance", "coinbase", "kraken"],
         "prices": {
-            "BTC/USDT": {"binance": 45000, "coinbase": 44900, "kraken": 45050},
-            "ETH/USDT": {"binance": 2800, "coinbase": 2790, "kraken": 2810},
-            "XRP/USDT": {"binance": 0.50, "coinbase": 0.49, "kraken": 0.51}
+            "BTC/USDC": {"binance": 45000, "coinbase": 44900, "kraken": 45050},
+            "ETH/USDC": {"binance": 2800, "coinbase": 2790, "kraken": 2810},
+            "XRP/USDC": {"binance": 0.50, "coinbase": 0.49, "kraken": 0.51}
         },
         "volumes": {
-            "BTC/USDT": {"binance": 100, "coinbase": 80, "kraken": 120},
-            "ETH/USDT": {"binance": 500, "coinbase": 400, "kraken": 600},
-            "XRP/USDT": {"binance": 10000, "coinbase": 8000, "kraken": 12000}
+            "BTC/USDC": {"binance": 100, "coinbase": 80, "kraken": 120},
+            "ETH/USDC": {"binance": 500, "coinbase": 400, "kraken": 600},
+            "XRP/USDC": {"binance": 10000, "coinbase": 8000, "kraken": 12000}
         }
     }
 

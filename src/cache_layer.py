@@ -239,7 +239,7 @@ class CacheManager:
     ):
         host = redis_host or os.getenv("REDIS_HOST", "localhost")
         port = int(os.getenv("REDIS_PORT", str(redis_port)))
-        password = redis_password or os.getenv("REDIS_PASSWORD")
+        password = redis_password or os.getenv("REDIS_PASSWORD")  # No default - must be set explicitly
 
         self._redis = RedisCache(
             host=host, port=port, password=password, key_prefix=key_prefix

@@ -169,7 +169,7 @@ async def call_tool(name: str, arguments: Dict[str, Any]) -> List[TextContent]:
 async def detect_arbitrage_opportunities(arguments: Dict[str, Any]) -> List[TextContent]:
     """Detect arbitrage opportunities"""
     market_data = arguments.get("market_data", {})
-    pairs = arguments.get("pairs", ["BTC/USDT", "ETH/USDT"])
+    pairs = arguments.get("pairs", ["BTC/USDC", "ETH/USDC"])
 
     try:
         # Process market data through inference service

@@ -126,7 +126,7 @@ class ArbitrageAPI(LitAPI):
     def _detect_opportunities(self, request: Dict[str, Any]) -> Dict[str, Any]:
         """Detect arbitrage opportunities"""
         market_data = request.get("market_data", {})
-        pairs = request.get("pairs", ["BTC/USDT", "ETH/USDT"])
+        pairs = request.get("pairs", ["BTC/USDC", "ETH/USDC"])
 
         try:
             # Process market data through inference service
@@ -202,9 +202,9 @@ class ArbitrageAPI(LitAPI):
 
         # MiCA compliant pairs whitelist
         mica_whitelist = [
-            'XRP/USDT', 'XLM/USDT', 'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT',
-            'LINK/USDT', 'IOTA/USDT', 'XDC/USDT', 'ONDO/USDT', 'VET/USDT',
-            'USDC/USDT', 'RLUSD/USDT'
+            'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
+            'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
+            'XRP/RLUSD', 'XLM/RLUSD', 'ADA/RLUSD'
         ]
 
         compliant = pair in mica_whitelist

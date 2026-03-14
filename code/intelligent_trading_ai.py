@@ -101,7 +101,7 @@ class TradingEnvironment(gym.Env):
 
         # Coin and exchange mapping
         coins = ['XRP', 'XLM', 'HBAR', 'ALGO', 'ADA', 'LINK', 'IOTA', 'XDC', 'ONDO', 'VET', 'USDC', 'RLUSD']
-        exchanges = ['binance', 'kraken', 'coinbase', 'bitfinex', 'gemini']
+        exchanges = ['binance', 'kraken', 'coinbase', 'okx']
 
         coin = coins[coin_idx]
         buy_exchange = exchanges[buy_ex_idx]
@@ -434,7 +434,7 @@ class IntelligentTradingOrchestrator:
         action_type, coin_idx, buy_ex_idx, sell_ex_idx, size_idx = action
 
         coins = ['XRP', 'XLM', 'HBAR', 'ALGO', 'ADA', 'LINK', 'IOTA', 'XDC', 'ONDO', 'VET', 'USDC', 'RLUSD']
-        exchanges = ['binance', 'kraken', 'coinbase', 'bitfinex', 'gemini']
+        exchanges = ['binance', 'kraken', 'coinbase', 'okx']
 
         signal = {
             'action': 'HOLD' if action_type == 0 else 'TRADE',

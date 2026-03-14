@@ -797,17 +797,17 @@ class TestWebSocketValidator:
 
     def test_validate_binance_message_valid(self):
         v = WebSocketValidator()
-        data = {"s": "BTCUSDT", "c": 50000.0, "v": 1000.0, "P": "1.5", "E": 123456}
+        data = {"s": "BTCUSDC", "c": 50000.0, "v": 1000.0, "P": "1.5", "E": 123456}
         assert v._validate_binance_message(data) is True
 
     def test_validate_binance_message_missing_field(self):
         v = WebSocketValidator()
-        data = {"s": "BTCUSDT", "c": 50000.0}
+        data = {"s": "BTCUSDC", "c": 50000.0}
         assert v._validate_binance_message(data) is False
 
     def test_validate_binance_message_negative_price(self):
         v = WebSocketValidator()
-        data = {"s": "BTCUSDT", "c": -1.0, "v": 1000.0, "P": "1.5", "E": 123}
+        data = {"s": "BTCUSDC", "c": -1.0, "v": 1000.0, "P": "1.5", "E": 123}
         assert v._validate_binance_message(data) is False
 
     def test_validate_coinbase_ticker(self):

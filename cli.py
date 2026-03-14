@@ -178,7 +178,7 @@ def run_test(detector, database, connector, risk_manager, order_executor, create
     # Test order executor
     print("Testing order executor...")
     balance = order_executor.get_paper_balance('binance')
-    print(f"[OK] Order executor working: ${balance.get('USDT', 0):.2f} balance")
+    print(f"[OK] Order executor working: ${balance.get('USDC', 0):.2f} balance")
 
     print("System tests completed!")
 

@@ -13,7 +13,7 @@
 - **163M Parameter Models**: 4x larger than baseline configurations
 - **RTX 4060 Ti Optimized**: 10-12GB VRAM utilization during training
 - **Mixed Precision Training**: 2x faster convergence with FP16/FP32
-- **Concurrent Multi-Pair Training**: All 7 trading pairs processed simultaneously
+- **Concurrent Multi-Pair Training**: All 10 MiCA-compliant trading pairs processed simultaneously
 
 ### 🧠 **Advanced ML Architecture**
 - **Transformer-Based Models**: Multi-head attention for cross-exchange relationships
@@ -22,7 +22,7 @@
 - **Production Training**: 50 epochs, 25k samples per pair
 
 ### 📊 **Real-Time Detection**
-- **7 Trading Pairs**: BTC/USDT, ETH/USDT, XRP/USDT, XLM/USDT, HBAR/USDT, ALGO/USDT, ADA/USDT
+- **10 Trading Pairs**: BTC/USDC, ETH/USDC, XRP/USDC, XLM/USDC, HBAR/USDC, ALGO/USDC, ADA/USDC, LINK/USDC, IOTA/USDC, VET/USDC
 - **3 Major Exchanges**: Binance, Coinbase, Kraken
 - **Sub-Millisecond Inference**: Optimized for live trading
 - **Confidence Scoring**: Risk-adjusted opportunity detection
@@ -56,7 +56,7 @@ SovereignForge/
 │   ├── risk_manager.py          # Position sizing & risk control
 │   └── monitoring.py            # Performance tracking
 ├── models/
-│   ├── final_*.pth              # Production models (30MB each)
+│   ├── strategies/*.pth          # Production models (~75MB each)
 │   ├── strategies/              # Trading strategy models
 │   └── registry/                # Model metadata
 ├── training_results/            # Training logs & metrics
@@ -127,8 +127,9 @@ model = ArbitrageTransformer(config)
 ### Multi-Pair Training
 ```python
 # Concurrent training across all pairs
-pairs = ['BTC/USDT', 'ETH/USDT', 'XRP/USDT', 'XLM/USDT',
-         'HBAR/USDT', 'ALGO/USDT', 'ADA/USDT']
+pairs = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC',
+         'HBAR/USDC', 'ALGO/USDC', 'ADA/USDC', 'LINK/USDC',
+         'IOTA/USDC', 'VET/USDC']
 
 trainer = MultiPairArbitrageTrainer(config, pairs, exchanges)
 training_history = trainer.train_all_pairs(train_loaders, val_loaders, epochs=50)
@@ -137,7 +138,7 @@ training_history = trainer.train_all_pairs(train_loaders, val_loaders, epochs=50
 ### Real-Time Detection
 ```python
 # Live arbitrage detection
-detector = ArbitrageDetector(model_path='models/final_BTC_USDT.pth')
+detector = ArbitrageDetector(model_path='models/strategies/arbitrage_btc_usdc_binance.pth')
 opportunities = detector.detect_arbitrage(market_data)
 
 for opp in opportunities:
@@ -150,13 +151,13 @@ for opp in opportunities:
 ```
 Pair          | Training Acc | Validation Acc | Best Epoch
 --------------|--------------|----------------|-----------
-BTC/USDT      | 69.2%        | 70.1%          | 45
-ETH/USDT      | 69.8%        | 70.5%          | 42
-XRP/USDT      | 68.9%        | 69.7%          | 48
-XLM/USDT      | 69.5%        | 70.3%          | 44
-HBAR/USDT     | 69.1%        | 69.9%          | 46
-ALGO/USDT     | 69.3%        | 70.2%          | 43
-ADA/USDT      | 69.6%        | 70.4%          | 47
+BTC/USDC      | 69.2%        | 70.1%          | 45
+ETH/USDC      | 69.8%        | 70.5%          | 42
+XRP/USDC      | 68.9%        | 69.7%          | 48
+XLM/USDC      | 69.5%        | 70.3%          | 44
+HBAR/USDC     | 69.1%        | 69.9%          | 46
+ALGO/USDC     | 69.3%        | 70.2%          | 43
+ADA/USDC      | 69.6%        | 70.4%          | 47
 ```
 
 ### GPU Utilization
@@ -219,7 +220,7 @@ python standalone_inference.py
 ### Local Deployment
 ```bash
 # Start inference service
-python src/main.py --mode inference --pairs BTC/USDT,ETH/USDT
+python src/main.py --mode inference --pairs BTC/USDC,ETH/USDC,XRP/USDC
 
 # Monitor performance
 python training_dashboard.py

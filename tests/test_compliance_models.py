@@ -5,7 +5,7 @@ Wave 1 - Category 3: Tests for MiCA compliance enforcement and model accuracy va
 Covers:
 - Integration tests for MiCA compliance enforcement
 - Model accuracy validation tests (>80% threshold)
-- Model loading for all 10 pairs
+- Model loading for all 12 pairs
 - Hyperparameter tuning pipeline smoke tests
 """
 

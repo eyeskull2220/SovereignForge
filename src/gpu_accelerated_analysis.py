@@ -447,6 +447,6 @@ if __name__ == "__main__":
     logger.info(f"Analyzer health: {health['status']}")
 
     # Example analysis (would need real market data)
-    # sample_data = {"BTCUSDT": pd.DataFrame({"close": [50000, 51000, 52000], "volume": [100, 110, 120]})}
+    # sample_data = {"BTCUSDC": pd.DataFrame({"close": [50000, 51000, 52000], "volume": [100, 110, 120]})}
     # result = analyzer.analyze_market_data(sample_data)
     # print(f"Analysis completed in {result.processing_time_ms:.2f}ms")

@@ -385,7 +385,8 @@ class RealTimeInferenceService:
 
         # Trading pairs and models (expected by integration tests)
         self.pairs = ['BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
-                      'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC']
+                      'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
+                      'XDC/USDC', 'ONDO/USDC']
         self.models = {}  # Will be populated by load_models
         from collections import deque
         self.buffers = [deque(maxlen=24) for _ in self.pairs]  # Bounded data buffers

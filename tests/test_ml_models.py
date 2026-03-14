@@ -31,7 +31,7 @@ class TestMLModels(unittest.TestCase):
         """Set up test fixtures"""
         self.batch_size = 32
         self.seq_length = 24
-        self.input_size = 10
+        self.input_size = 17  # 10 technicals + ADX + 6 session one-hot
         self.output_size = 3
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -202,7 +202,7 @@ class TestTrainingPipeline(unittest.TestCase):
         from data_generator import MarketDataGenerator
 
         gen = MarketDataGenerator()
-        df = gen.generate_ohlcv_data('BTC/USDT', days=1)
+        df = gen.generate_ohlcv_data('BTC/USDC', days=1)
 
         # Check required columns
         required_cols = ['timestamp', 'open', 'high', 'low', 'close', 'volume']
@@ -220,7 +220,7 @@ class TestTrainingPipeline(unittest.TestCase):
         from data_generator import MarketDataGenerator
 
         gen = MarketDataGenerator()
-        df = gen.generate_ohlcv_data('BTC/USDT', days=30)  # Need more data for indicators
+        df = gen.generate_ohlcv_data('BTC/USDC', days=30)  # Need more data for indicators
         df_with_indicators = gen.add_technical_indicators(df)
 
         # Check indicator columns exist

@@ -51,13 +51,13 @@ copy personal_config.json personal_data\ 2>nul
 
 REM Copy model files (if they exist)
 echo [+] Checking for model files...
-if exist "models\final_BTC_USDT.pth" (
+if exist "models\strategies\arbitrage_btc_usdc_binance.pth" (
     echo [+] Copying BTC model...
-    copy "models\final_BTC_USDT.pth" "personal_data\models\" 2>nul
+    copy "models\strategies\arbitrage_btc_usdc_binance.pth" "personal_data\models\" 2>nul
 )
-if exist "models\final_ETH_USDT.pth" (
+if exist "models\strategies\arbitrage_eth_usdc_binance.pth" (
     echo [+] Copying ETH model...
-    copy "models\final_ETH_USDT.pth" "personal_data\models\" 2>nul
+    copy "models\strategies\arbitrage_eth_usdc_binance.pth" "personal_data\models\" 2>nul
 )
 
 echo.

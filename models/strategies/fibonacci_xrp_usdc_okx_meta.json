@@ -2,11 +2,11 @@
   "strategy": "fibonacci",
   "pair": "XRP/USDC",
   "exchange": "okx",
-  "best_epoch": 6,
-  "best_val_loss": 0.15835459241226538,
-  "total_epochs": 6,
+  "best_epoch": 3,
+  "best_val_loss": 0.1587819777429104,
+  "total_epochs": 3,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-14T21:38:56.783255",
+  "timestamp": "2026-03-15T23:40:25.282857",
   "forward_window": 18
 }

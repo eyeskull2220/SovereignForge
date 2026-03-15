@@ -2,11 +2,11 @@
   "strategy": "fibonacci",
   "pair": "ONDO/USDC",
   "exchange": "binance",
-  "best_epoch": 2,
-  "best_val_loss": 0.18340319728673393,
-  "total_epochs": 2,
+  "best_epoch": 5,
+  "best_val_loss": 0.18105708658695222,
+  "total_epochs": 5,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-14T21:34:13.823425",
+  "timestamp": "2026-03-15T23:32:05.124828",
   "forward_window": 18
 }

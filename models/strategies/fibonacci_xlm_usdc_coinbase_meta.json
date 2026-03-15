@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "XLM/USDC",
+  "exchange": "coinbase",
+  "best_epoch": 3,
+  "best_val_loss": 0.12623947188258172,
+  "total_epochs": 3,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T23:33:05.520114",
+  "forward_window": 18
+}

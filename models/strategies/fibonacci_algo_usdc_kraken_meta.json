@@ -1,0 +1,12 @@
+{
+  "strategy": "fibonacci",
+  "pair": "ALGO/USDC",
+  "exchange": "kraken",
+  "best_epoch": 4,
+  "best_val_loss": 0.33173099160194397,
+  "total_epochs": 4,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T23:37:56.089513",
+  "forward_window": 18
+}

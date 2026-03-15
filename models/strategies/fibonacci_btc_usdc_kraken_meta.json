@@ -1,12 +1,12 @@
 {
   "strategy": "fibonacci",
   "pair": "BTC/USDC",
-  "exchange": "binance",
+  "exchange": "kraken",
   "best_epoch": 1,
-  "best_val_loss": 0.13387281505597962,
+  "best_val_loss": 0.1315888894685343,
   "total_epochs": 1,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-15T23:20:12.224110",
+  "timestamp": "2026-03-15T23:33:24.133601",
   "forward_window": 18
 }

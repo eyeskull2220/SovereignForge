@@ -1,12 +1,12 @@
 {
   "strategy": "fibonacci",
-  "pair": "IOTA/USDC",
-  "exchange": "okx",
+  "pair": "ETH/USDC",
+  "exchange": "kraken",
   "best_epoch": 4,
-  "best_val_loss": 0.008405387508941608,
+  "best_val_loss": 0.15393253650802832,
   "total_epochs": 4,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-15T23:45:12.172245",
+  "timestamp": "2026-03-15T23:34:46.950222",
   "forward_window": 18
 }

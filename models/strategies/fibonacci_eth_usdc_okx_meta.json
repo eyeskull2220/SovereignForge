@@ -3,10 +3,10 @@
   "pair": "ETH/USDC",
   "exchange": "okx",
   "best_epoch": 1,
-  "best_val_loss": 0.1736325064479415,
+  "best_val_loss": 0.17456297245290545,
   "total_epochs": 1,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-14T21:37:11.066627",
+  "timestamp": "2026-03-15T23:39:19.032146",
   "forward_window": 18
 }

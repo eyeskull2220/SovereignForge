@@ -2,11 +2,11 @@
   "strategy": "fibonacci",
   "pair": "LINK/USDC",
   "exchange": "okx",
-  "best_epoch": 1,
-  "best_val_loss": 0.18177795243352207,
-  "total_epochs": 1,
+  "best_epoch": 2,
+  "best_val_loss": 0.1829942375007603,
+  "total_epochs": 2,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-14T21:43:19.694849",
+  "timestamp": "2026-03-15T23:44:03.906898",
   "forward_window": 18
 }

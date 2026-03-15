@@ -2,11 +2,11 @@
   "strategy": "fibonacci",
   "pair": "VET/USDC",
   "exchange": "binance",
-  "best_epoch": 9,
-  "best_val_loss": 0.15219247719245171,
-  "total_epochs": 9,
+  "best_epoch": 6,
+  "best_val_loss": 0.15357334597243202,
+  "total_epochs": 6,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-14T21:32:44.258087",
+  "timestamp": "2026-03-15T23:30:57.445437",
   "forward_window": 18
 }

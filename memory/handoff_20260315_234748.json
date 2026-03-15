@@ -1,0 +1,29 @@
+{
+  "version": "v1.0.53",
+  "timestamp": "20260315_234748",
+  "created_at": "2026-03-15T23:47:48.505116",
+  "training_summary": {
+    "models_trained": 23,
+    "strategies": [
+      "fibonacci"
+    ],
+    "exchanges": [
+      "kraken",
+      "coinbase",
+      "okx",
+      "binance"
+    ],
+    "best_val_loss": 0.008405387508941608
+  },
+  "backtest_summary": {
+    "avg_sharpe": -17455866385.23098,
+    "avg_win_rate": 0.0,
+    "total_net_pnl": -5.058234626730206
+  },
+  "next_steps": [
+    "Review backtest metrics per model",
+    "Deploy best-performing models to live pipeline",
+    "Monitor live inference performance",
+    "Fetch fresh data and retrain underperformers"
+  ]
+}

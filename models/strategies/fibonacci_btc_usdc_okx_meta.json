@@ -2,11 +2,11 @@
   "strategy": "fibonacci",
   "pair": "BTC/USDC",
   "exchange": "okx",
-  "best_epoch": 1,
-  "best_val_loss": 0.14013491370784703,
-  "total_epochs": 1,
+  "best_epoch": 5,
+  "best_val_loss": 0.14053061794903543,
+  "total_epochs": 5,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-14T21:35:40.890217",
+  "timestamp": "2026-03-15T23:38:19.011008",
   "forward_window": 18
 }

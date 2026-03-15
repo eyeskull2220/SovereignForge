@@ -63,7 +63,7 @@ MICA_PAIRS = [
     "XDC/USDC", "ONDO/USDC",
 ]
 
-EXCHANGES = ["binance", "coinbase", "kraken", "okx"]
+EXCHANGES = ["binance", "coinbase", "kraken", "kucoin", "okx", "bybit", "gate"]
 
 STRATEGIES = ["arbitrage", "fibonacci", "grid", "dca", "mean_reversion", "pairs_arbitrage", "momentum"]
 
@@ -100,7 +100,10 @@ EXCHANGE_FEES = {
     "binance":  {"maker": 0.001, "taker": 0.001},
     "coinbase": {"maker": 0.004, "taker": 0.006},
     "kraken":   {"maker": 0.0016, "taker": 0.0026},
+    "kucoin":   {"maker": 0.001, "taker": 0.001},
     "okx":      {"maker": 0.0008, "taker": 0.001},
+    "bybit":    {"maker": 0.001, "taker": 0.001},
+    "gate":     {"maker": 0.002, "taker": 0.002},
 }
 
 # Network transfer fees (USDC) for cross-exchange arbitrage
@@ -108,7 +111,10 @@ TRANSFER_FEES = {
     "binance":  1.0,   # ~$1 USDC withdrawal
     "coinbase": 0.0,   # Free USDC transfers
     "kraken":   2.5,   # ~$2.50
+    "kucoin":   1.0,   # ~$1
     "okx":      1.0,   # ~$1
+    "bybit":    1.0,   # ~$1
+    "gate":     1.0,   # ~$1
 }
 
 MAX_POSITION_PCT = 0.03             # 3% of portfolio per trade

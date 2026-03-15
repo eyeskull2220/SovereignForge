@@ -123,6 +123,17 @@ class OrderExecutor:
                 execution_result['errors'].append("Invalid arbitrage opportunity")
                 return execution_result
 
+            # Risk manager gate — reject if risk limits are breached
+            if self.risk_manager is not None:
+                try:
+                    if not self.risk_manager.validate_opportunity(arbitrage_opportunity):
+                        execution_result['errors'].append("Rejected by risk manager")
+                        return execution_result
+                except Exception as e:
+                    logger.error(f"Risk manager validation error: {e}")
+                    execution_result['errors'].append(f"Risk check failed: {e}")
+                    return execution_result
+
             # Calculate trade parameters
             trade_params = await self._calculate_trade_parameters(arbitrage_opportunity)
             if not trade_params['valid']:

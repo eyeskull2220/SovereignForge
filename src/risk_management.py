@@ -307,8 +307,8 @@ class RiskManager:
             risk_multiplier = 1.0 - (risk_score * 0.7)  # Reduce by up to 70% for high risk
             kelly_fraction *= risk_multiplier
 
-            # Half-Kelly for safety (more conservative)
-            kelly_fraction *= 0.5
+            # Quarter-Kelly for safety (conservative position sizing)
+            kelly_fraction *= 0.25
 
             # Ensure positive and reasonable bounds
             kelly_fraction = max(0.0, min(kelly_fraction, 0.25))  # Max 25% of capital

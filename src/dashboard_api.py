@@ -72,6 +72,34 @@ CONFIG_SECRET_KEYS = {"telegram_bot_token", "api_key", "api_secret", "passphrase
 
 API_KEY = os.environ.get("SOVEREIGNFORGE_API_KEY", "")
 
+# ---------------------------------------------------------------------------
+# Auth failure tracking — detect brute-force attempts
+# ---------------------------------------------------------------------------
+AUTH_FAILURE_WINDOW_SECONDS = 300  # 5-minute sliding window
+AUTH_FAILURE_THRESHOLD = 10       # alert after this many failures per IP
+
+_auth_failures: Dict[str, List[float]] = defaultdict(list)
+
+# WebSocket invalid message counter (for monitoring)
+_ws_invalid_message_count: int = 0
+
+
+def _record_auth_failure(client_ip: str) -> None:
+    """Record a failed auth attempt and warn if threshold exceeded."""
+    now = time.monotonic()
+    failures = _auth_failures[client_ip]
+    _auth_failures[client_ip] = [
+        t for t in failures if now - t < AUTH_FAILURE_WINDOW_SECONDS
+    ]
+    _auth_failures[client_ip].append(now)
+
+    count = len(_auth_failures[client_ip])
+    if count >= AUTH_FAILURE_THRESHOLD:
+        logger.warning(
+            f"AUTH ALERT: {count} failed API key attempts from {client_ip} "
+            f"in the last {AUTH_FAILURE_WINDOW_SECONDS}s — possible brute-force"
+        )
+
 
 # ---------------------------------------------------------------------------
 # Rate Limiter — sliding window, per-IP, in-memory (no external deps)
@@ -129,6 +157,8 @@ async def verify_api_key(request: Request, x_api_key: str = Header(default="")):
             detail="API key not configured. Set SOVEREIGNFORGE_API_KEY environment variable.",
         )
     if x_api_key != API_KEY:
+        client_ip = request.client.host if request.client else "unknown"
+        _record_auth_failure(client_ip)
         raise HTTPException(status_code=401, detail="Invalid API key")
     client_ip = request.client.host if request.client else "unknown"
     if not _rate_limiter.is_allowed(client_ip):
@@ -164,6 +194,38 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+
+# ---------------------------------------------------------------------------
+# Request body size limit middleware — prevent abuse on POST endpoints
+# ---------------------------------------------------------------------------
+MAX_REQUEST_BODY_BYTES = 1 * 1024 * 1024  # 1 MB
+
+
+class RequestBodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """Reject requests with bodies exceeding MAX_REQUEST_BODY_BYTES."""
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method in ("POST", "PUT", "PATCH"):
+            content_length = request.headers.get("content-length")
+            if content_length is not None:
+                if int(content_length) > MAX_REQUEST_BODY_BYTES:
+                    logger.warning(
+                        f"Rejected oversized request: {int(content_length)} bytes "
+                        f"from {request.client.host if request.client else 'unknown'} "
+                        f"to {request.url.path}"
+                    )
+                    return Response(
+                        content=json.dumps({
+                            "detail": f"Request body too large. "
+                                      f"Maximum size is {MAX_REQUEST_BODY_BYTES} bytes."
+                        }),
+                        status_code=413,
+                        media_type="application/json",
+                    )
+        return await call_next(request)
+
+app.add_middleware(RequestBodySizeLimitMiddleware)
 
 
 # ---------------------------------------------------------------------------
@@ -865,7 +927,12 @@ async def websocket_endpoint(websocket: WebSocket, token: str = Query(default=""
                         "payload": {"timestamp": datetime.utcnow().isoformat()}
                     })
             except json.JSONDecodeError:
-                pass
+                global _ws_invalid_message_count
+                _ws_invalid_message_count += 1
+                logger.debug(
+                    f"Invalid WebSocket JSON message (total invalid: "
+                    f"{_ws_invalid_message_count}): {data[:200]!r}"
+                )
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
 
@@ -988,6 +1055,60 @@ async def pipeline_stop(_auth=Depends(verify_api_key)):
     except Exception as e:
         logger.error(f"Failed to stop: {e}")
         return {"status": "error", "detail": "Operation failed. Check server logs."}
+
+
+CIRCUIT_BREAKER_RESET_SIGNAL = PROJECT_ROOT / ".circuit_breaker_reset"
+
+
+@app.post("/api/circuit-breaker/reset")
+async def reset_circuit_breaker(_auth=Depends(verify_api_key)):
+    """
+    Reset circuit breaker state.
+
+    Writes a signal file that the pipeline picks up on its next cycle to
+    clear both circuit_breaker_active and emergency_stop_active flags in the
+    DynamicRiskAdjustment instance.  Also patches pipeline_state.json
+    immediately so the dashboard reflects the change without waiting for
+    the next pipeline persist cycle.
+    """
+    try:
+        # 1. Write signal file for the running pipeline process
+        CIRCUIT_BREAKER_RESET_SIGNAL.write_text(datetime.now().isoformat())
+        logger.info("Circuit breaker reset signal written")
+
+        # 2. Patch pipeline_state.json for immediate dashboard feedback
+        state_path = PROJECT_ROOT / "reports" / "pipeline_state.json"
+        state = await _load_json_async(state_path)
+        if state is None:
+            state = {}
+
+        if 'dynamic_risk' not in state:
+            state['dynamic_risk'] = {}
+
+        state['dynamic_risk']['circuit_breaker_active'] = False
+        state['dynamic_risk']['emergency_stop_active'] = False
+        state['dynamic_risk']['last_reset'] = datetime.now().isoformat()
+        state['dynamic_risk']['reset_by'] = 'dashboard_api'
+
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = state_path.with_suffix('.tmp')
+        await asyncio.to_thread(tmp.write_text, json.dumps(state, indent=2, default=str))
+        await asyncio.to_thread(tmp.replace, state_path)
+
+        # 3. Broadcast reset event via WebSocket
+        await ws_manager.broadcast({
+            "type": "circuit_breaker_reset",
+            "payload": {"timestamp": datetime.now().isoformat()},
+        })
+
+        return {
+            "status": "reset",
+            "message": "Circuit breaker reset signal sent. Pipeline will clear state on next cycle.",
+            "timestamp": datetime.now().isoformat(),
+        }
+    except Exception as e:
+        logger.error(f"Circuit breaker reset failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset circuit breaker. Check server logs.")
 
 
 @app.get("/api/pipeline/opportunities")

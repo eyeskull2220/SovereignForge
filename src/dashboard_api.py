@@ -36,6 +36,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
+from error_codes import ErrorCode
+
 # ---------------------------------------------------------------------------
 # Paths
 # ---------------------------------------------------------------------------
@@ -154,16 +156,16 @@ async def verify_api_key(request: Request, x_api_key: str = Header(default="")):
     if not API_KEY:
         raise HTTPException(
             status_code=503,
-            detail="API key not configured. Set SOVEREIGNFORGE_API_KEY environment variable.",
+            detail={"code": ErrorCode.AUTH_FAILED, "message": "API key not configured. Set SOVEREIGNFORGE_API_KEY environment variable."},
         )
     if x_api_key != API_KEY:
         client_ip = request.client.host if request.client else "unknown"
         _record_auth_failure(client_ip)
-        raise HTTPException(status_code=401, detail="Invalid API key")
+        raise HTTPException(status_code=401, detail={"code": ErrorCode.AUTH_FAILED, "message": "Invalid API key"})
     client_ip = request.client.host if request.client else "unknown"
     if not _rate_limiter.is_allowed(client_ip):
         logger.warning(f"Rate limit exceeded for {client_ip}")
-        raise HTTPException(status_code=429, detail="Too Many Requests")
+        raise HTTPException(status_code=429, detail={"code": ErrorCode.RATE_LIMITED, "message": "Too Many Requests"})
 
 # ---------------------------------------------------------------------------
 # App
@@ -243,7 +245,7 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error. Check server logs."},
+        content={"code": ErrorCode.INTERNAL_ERROR, "detail": "Internal server error. Check server logs."},
     )
 
 
@@ -259,7 +261,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
     )
     return JSONResponse(
         status_code=422,
-        content={"detail": "Validation error. Check your request parameters."},
+        content={"code": ErrorCode.VALIDATION_ERROR, "detail": "Validation error. Check your request parameters."},
     )
 
 

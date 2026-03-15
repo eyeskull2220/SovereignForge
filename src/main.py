@@ -25,11 +25,9 @@ try:
 except ImportError:
     pass  # python-dotenv not installed; rely on environment variables
 
-try:
-    import psutil
-    _PSUTIL_AVAILABLE = True
-except ImportError:
-    _PSUTIL_AVAILABLE = False
+from utils import get_psutil as _get_psutil
+psutil = _get_psutil()
+_PSUTIL_AVAILABLE = psutil is not None
 
 try:
     import structlog

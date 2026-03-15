@@ -210,7 +210,7 @@ class CapitalAllocator:
         self.save_state()
         return allocations
 
-    def record_trade(self, strategy: str, pnl: float):
+    def record_trade(self, strategy: str, pnl: float) -> None:
         """Record a trade result and compound if enabled."""
         if strategy not in self.strategies:
             self.strategies[strategy] = StrategyPerformance(name=strategy)

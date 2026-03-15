@@ -978,6 +978,42 @@ async def start_ws_broadcast():
     _pipeline_broadcast_task = asyncio.create_task(_broadcast_pipeline_status())
 
 
+SHUTDOWN_GRACE_PERIOD_SECONDS = 5
+
+
+@app.on_event("shutdown")
+async def graceful_shutdown():
+    """Clean up resources and give in-flight requests time to complete."""
+    logger.info("Shutdown initiated — draining connections …")
+
+    # 1. Cancel the background broadcast task
+    global _pipeline_broadcast_task
+    if _pipeline_broadcast_task is not None:
+        _pipeline_broadcast_task.cancel()
+        try:
+            await _pipeline_broadcast_task
+        except asyncio.CancelledError:
+            pass
+        _pipeline_broadcast_task = None
+        logger.info("Pipeline broadcast task cancelled")
+
+    # 2. Close all active WebSocket connections gracefully
+    for ws in list(ws_manager.active_connections):
+        try:
+            await asyncio.wait_for(
+                ws.close(code=1001, reason="Server shutting down"),
+                timeout=2.0,
+            )
+        except Exception:
+            pass
+    ws_manager.active_connections.clear()
+    logger.info("All WebSocket connections closed")
+
+    # 3. Brief grace period so Uvicorn can finish in-flight HTTP responses
+    await asyncio.sleep(SHUTDOWN_GRACE_PERIOD_SECONDS)
+    logger.info("Shutdown complete")
+
+
 # ---------------------------------------------------------------------------
 # Pipeline control
 # ---------------------------------------------------------------------------
@@ -1385,4 +1421,5 @@ if __name__ == "__main__":
         port=port,
         reload=False,
         log_level="info",
+        ws_max_size=1 * 1024 * 1024,  # 1 MB — prevent WebSocket memory exhaustion
     )

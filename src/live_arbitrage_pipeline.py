@@ -52,6 +52,8 @@ except ImportError:
     # Minimal fallback — should never happen in production
     MICA_COMPLIANT_PAIRS = [f"{asset}/USDC" for asset in ['XRP', 'XLM', 'HBAR', 'ALGO', 'ADA', 'LINK', 'IOTA', 'VET', 'XDC', 'ONDO', 'BTC', 'ETH']]
 
+MAX_DEDUP_CACHE_SIZE = 10_000  # Hard upper bound to prevent unbounded memory growth
+
 
 @dataclass
 class ArbitrageOpportunity:
@@ -797,6 +799,17 @@ class LiveArbitragePipeline:
             stale_keys = [k for k, t in self._dedup_cache.items() if now - t > self._dedup_window * 2]
             for k in stale_keys:
                 del self._dedup_cache[k]
+
+            # Hard size bound: evict oldest entries if cache exceeds limit
+            if len(self._dedup_cache) > MAX_DEDUP_CACHE_SIZE:
+                sorted_keys = sorted(self._dedup_cache, key=self._dedup_cache.get)
+                excess = len(self._dedup_cache) - MAX_DEDUP_CACHE_SIZE
+                for k in sorted_keys[:excess]:
+                    del self._dedup_cache[k]
+                logger.warning(
+                    f"Dedup cache exceeded {MAX_DEDUP_CACHE_SIZE} entries; "
+                    f"evicted {excess} oldest entries"
+                )
 
             # Determine buy/sell exchanges from prices
             if len(opportunity.prices) < 2:

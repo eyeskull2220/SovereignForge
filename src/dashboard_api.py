@@ -19,6 +19,8 @@ import platform
 import re
 import subprocess
 import sys
+import time
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -70,8 +72,57 @@ CONFIG_SECRET_KEYS = {"telegram_bot_token", "api_key", "api_secret", "passphrase
 
 API_KEY = os.environ.get("SOVEREIGNFORGE_API_KEY", "")
 
-async def verify_api_key(x_api_key: str = Header(default="")):
-    """Require API key for mutation endpoints. Fail closed if no key configured."""
+
+# ---------------------------------------------------------------------------
+# Rate Limiter — sliding window, per-IP, in-memory (no external deps)
+# ---------------------------------------------------------------------------
+RATE_LIMIT_MAX_REQUESTS = 30   # max POST requests …
+RATE_LIMIT_WINDOW_SECS = 60    # … per this many seconds
+
+
+class _SlidingWindowRateLimiter:
+    """Dict-based sliding window rate limiter.
+
+    Stores a list of timestamps per IP. On each call, expired entries are
+    pruned and the request is allowed only if the window is not full.
+    A periodic sweep removes stale IPs so memory stays bounded.
+    """
+
+    def __init__(self, max_requests: int = RATE_LIMIT_MAX_REQUESTS,
+                 window_secs: int = RATE_LIMIT_WINDOW_SECS):
+        self.max_requests = max_requests
+        self.window_secs = window_secs
+        self._hits: Dict[str, List[float]] = defaultdict(list)
+        self._last_sweep: float = time.monotonic()
+        self._sweep_interval: float = 300.0  # purge stale IPs every 5 min
+
+    def is_allowed(self, ip: str) -> bool:
+        now = time.monotonic()
+        self._maybe_sweep(now)
+        window_start = now - self.window_secs
+        timestamps = self._hits[ip]
+        self._hits[ip] = timestamps = [t for t in timestamps if t > window_start]
+        if len(timestamps) >= self.max_requests:
+            return False
+        timestamps.append(now)
+        return True
+
+    def _maybe_sweep(self, now: float) -> None:
+        """Remove IPs that have no recent activity to prevent unbounded growth."""
+        if now - self._last_sweep < self._sweep_interval:
+            return
+        self._last_sweep = now
+        cutoff = now - self.window_secs
+        stale = [ip for ip, ts in self._hits.items() if not ts or ts[-1] <= cutoff]
+        for ip in stale:
+            del self._hits[ip]
+
+
+_rate_limiter = _SlidingWindowRateLimiter()
+
+
+async def verify_api_key(request: Request, x_api_key: str = Header(default="")):
+    """Require API key + enforce rate limit for mutation (POST) endpoints. Fail closed if no key configured."""
     if not API_KEY:
         raise HTTPException(
             status_code=503,
@@ -79,12 +130,14 @@ async def verify_api_key(x_api_key: str = Header(default="")):
         )
     if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API key")
+    client_ip = request.client.host if request.client else "unknown"
+    if not _rate_limiter.is_allowed(client_ip):
+        logger.warning(f"Rate limit exceeded for {client_ip}")
+        raise HTTPException(status_code=429, detail="Too Many Requests")
 
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
-# Rate limiting: deferred. API key auth added as primary protection.
-# For production, add slowapi: pip install slowapi
 app = FastAPI(
     title="SovereignForge Dashboard API",
     version="1.0.0",

@@ -77,11 +77,14 @@ class WebSocketValidator:
         self.max_reconnect_attempts = 5
         self.reconnect_delay = 5  # seconds
 
-        # Exchange configurations
+        # Exchange configurations — MiCA compliant: USDC only, NEVER USDT
         self.exchange_configs = {
             'binance': {
                 'url': 'wss://stream.binance.com:9443/ws',
-                'pairs': ['btcusdc', 'ethusdc', 'xrpusdc', 'xlmusdc', 'hbarusdc', 'algousdc', 'adausdc'],
+                'pairs': [
+                    'btcusdc', 'ethusdc', 'xrpusdc', 'xlmusdc', 'hbarusdc', 'algousdc',
+                    'adausdc', 'linkusdc', 'iotausdc', 'vetusdc', 'xdcusdc', 'ondousdc'
+                ],
                 'subscription_template': {
                     "method": "SUBSCRIBE",
                     "params": ["{pair}@ticker"],
@@ -90,7 +93,10 @@ class WebSocketValidator:
             },
             'coinbase': {
                 'url': 'wss://ws-feed.pro.coinbase.com',
-                'pairs': ['BTC-USD', 'ETH-USD', 'XRP-USD', 'XLM-USD', 'HBAR-USD', 'ALGO-USD', 'ADA-USD'],
+                'pairs': [
+                    'BTC-USDC', 'ETH-USDC', 'XRP-USDC', 'XLM-USDC', 'HBAR-USDC', 'ALGO-USDC',
+                    'ADA-USDC', 'LINK-USDC', 'IOTA-USDC', 'VET-USDC', 'XDC-USDC', 'ONDO-USDC'
+                ],
                 'subscription_template': {
                     "type": "subscribe",
                     "product_ids": ["{pair}"],
@@ -99,11 +105,63 @@ class WebSocketValidator:
             },
             'kraken': {
                 'url': 'wss://ws.kraken.com',
-                'pairs': ['BTC/USD', 'ETH/USD', 'XRP/USD', 'XLM/USD', 'HBAR/USD', 'ALGO/USD', 'ADA/USD'],
+                'pairs': [
+                    'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC', 'ALGO/USDC',
+                    'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC', 'XDC/USDC', 'ONDO/USDC'
+                ],
                 'subscription_template': {
                     "event": "subscribe",
                     "pair": ["{pair}"],
                     "subscription": {"name": "ticker"}
+                }
+            },
+            'okx': {
+                'url': 'wss://ws.okx.com:8443/ws/v5/public',
+                'pairs': [
+                    'BTC-USDC', 'ETH-USDC', 'XRP-USDC', 'XLM-USDC', 'HBAR-USDC', 'ALGO-USDC',
+                    'ADA-USDC', 'LINK-USDC', 'IOTA-USDC', 'VET-USDC', 'XDC-USDC', 'ONDO-USDC'
+                ],
+                'subscription_template': {
+                    "op": "subscribe",
+                    "args": [{"channel": "tickers", "instId": "{pair}"}]
+                }
+            },
+            'kucoin': {
+                'url': 'wss://ws-api-spot.kucoin.com',
+                'pairs': [
+                    'BTC-USDC', 'ETH-USDC', 'XRP-USDC', 'XLM-USDC', 'HBAR-USDC', 'ALGO-USDC',
+                    'ADA-USDC', 'LINK-USDC', 'IOTA-USDC', 'VET-USDC', 'XDC-USDC', 'ONDO-USDC'
+                ],
+                'subscription_template': {
+                    "id": 1,
+                    "type": "subscribe",
+                    "topic": "/market/ticker:{pair}",
+                    "privateChannel": False,
+                    "response": True
+                }
+            },
+            'bybit': {
+                'url': 'wss://stream.bybit.com/v5/public/spot',
+                'pairs': [
+                    'BTCUSDC', 'ETHUSDC', 'XRPUSDC', 'XLMUSDC', 'HBARUSDC', 'ALGOUSDC',
+                    'ADAUSDC', 'LINKUSDC', 'IOTAUSDC', 'VETUSDC', 'XDCUSDC', 'ONDOUSDC'
+                ],
+                'subscription_template': {
+                    "op": "subscribe",
+                    "args": ["tickers.{pair}"]
+                }
+            },
+            'gate': {
+                'url': 'wss://api.gateio.ws/ws/v4/',
+                'pairs': [
+                    'BTC_USDC', 'ETH_USDC', 'XRP_USDC', 'XLM_USDC', 'HBAR_USDC', 'ALGO_USDC',
+                    'ADA_USDC', 'LINK_USDC', 'IOTA_USDC', 'VET_USDC', 'XDC_USDC', 'ONDO_USDC'
+                ],
+                'subscription_template': {
+                    "time": 0,
+                    "channel": "spot.tickers",
+                    "event": "subscribe",
+                    "payload": ["{pair}"]
                 }
             }
         }
@@ -228,6 +286,14 @@ class WebSocketValidator:
                 ping_msg = json.dumps({"type": "ping"})
             elif connection.exchange == 'kraken':
                 ping_msg = json.dumps({"event": "ping"})
+            elif connection.exchange == 'okx':
+                ping_msg = "ping"
+            elif connection.exchange == 'kucoin':
+                ping_msg = json.dumps({"id": str(int(time.time() * 1000)), "type": "ping"})
+            elif connection.exchange == 'bybit':
+                ping_msg = json.dumps({"op": "ping"})
+            elif connection.exchange == 'gate':
+                ping_msg = json.dumps({"time": int(time.time()), "channel": "spot.ping"})
             else:
                 ping_msg = json.dumps({"ping": True})
 
@@ -295,6 +361,14 @@ class WebSocketValidator:
                 return self._validate_coinbase_message(data)
             elif connection.exchange == 'kraken':
                 return self._validate_kraken_message(data)
+            elif connection.exchange == 'okx':
+                return self._validate_okx_message(data)
+            elif connection.exchange == 'kucoin':
+                return self._validate_kucoin_message(data)
+            elif connection.exchange == 'bybit':
+                return self._validate_bybit_message(data)
+            elif connection.exchange == 'gate':
+                return self._validate_gate_message(data)
             else:
                 return False
 
@@ -388,6 +462,138 @@ class WebSocketValidator:
                 if price <= 0 or volume < 0:
                     return False
             except (ValueError, IndexError):
+                return False
+
+            return True
+
+        except Exception:
+            return False
+
+    def _validate_okx_message(self, data: Dict[str, Any]) -> bool:
+        """Validate OKX WebSocket message"""
+        try:
+            # OKX sends event responses and data pushes
+            if 'event' in data:
+                return True  # Subscription confirmations are OK
+
+            if 'data' not in data or 'arg' not in data:
+                return False
+
+            # Validate ticker data
+            if not isinstance(data['data'], list) or len(data['data']) == 0:
+                return False
+
+            ticker = data['data'][0]
+            required_fields = ['instId', 'last', 'vol24h', 'ts']
+            if not all(field in ticker for field in required_fields):
+                return False
+
+            # Validate numeric values
+            try:
+                price = float(ticker['last'])
+                volume = float(ticker['vol24h'])
+                if price <= 0 or volume < 0:
+                    return False
+            except (ValueError, TypeError):
+                return False
+
+            return True
+
+        except Exception:
+            return False
+
+    def _validate_kucoin_message(self, data: Dict[str, Any]) -> bool:
+        """Validate KuCoin WebSocket message"""
+        try:
+            # KuCoin sends ack, welcome, and push messages
+            msg_type = data.get('type')
+            if msg_type in ('welcome', 'ack', 'pong'):
+                return True  # System messages are OK
+
+            if msg_type != 'message':
+                return False
+
+            if 'data' not in data or 'topic' not in data:
+                return False
+
+            ticker = data['data']
+            required_fields = ['price', 'size', 'bestBid', 'bestAsk']
+            if not all(field in ticker for field in required_fields):
+                return False
+
+            # Validate numeric values
+            try:
+                price = float(ticker['price'])
+                if price <= 0:
+                    return False
+            except (ValueError, TypeError):
+                return False
+
+            return True
+
+        except Exception:
+            return False
+
+    def _validate_bybit_message(self, data: Dict[str, Any]) -> bool:
+        """Validate Bybit WebSocket message"""
+        try:
+            # Bybit sends subscription confirmations and data pushes
+            if 'success' in data:
+                return True  # Subscription responses are OK
+
+            if 'topic' not in data or 'data' not in data:
+                return False
+
+            # Validate ticker topic
+            if not data['topic'].startswith('tickers.'):
+                return False
+
+            ticker = data['data']
+            required_fields = ['symbol', 'lastPrice', 'volume24h', 'turnover24h']
+            if not all(field in ticker for field in required_fields):
+                return False
+
+            # Validate numeric values
+            try:
+                price = float(ticker['lastPrice'])
+                volume = float(ticker['volume24h'])
+                if price <= 0 or volume < 0:
+                    return False
+            except (ValueError, TypeError):
+                return False
+
+            return True
+
+        except Exception:
+            return False
+
+    def _validate_gate_message(self, data: Dict[str, Any]) -> bool:
+        """Validate Gate.io WebSocket message"""
+        try:
+            # Gate.io sends status and update events
+            event = data.get('event')
+            if event == 'subscribe':
+                return True  # Subscription confirmations are OK
+
+            channel = data.get('channel')
+            if channel != 'spot.tickers':
+                return False
+
+            if 'result' not in data:
+                return False
+
+            ticker = data['result']
+            required_fields = ['currency_pair', 'last', 'base_volume', 'quote_volume']
+            if not all(field in ticker for field in required_fields):
+                return False
+
+            # Validate numeric values
+            try:
+                price = float(ticker['last'])
+                volume = float(ticker['base_volume'])
+                if price <= 0 or volume < 0:
+                    return False
+            except (ValueError, TypeError):
                 return False
 
             return True

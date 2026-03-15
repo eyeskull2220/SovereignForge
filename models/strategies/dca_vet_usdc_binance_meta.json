@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "VET/USDC",
+  "exchange": "binance",
+  "best_epoch": 33,
+  "best_val_loss": 0.116120638532771,
+  "total_epochs": 33,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:14:22.040954",
+  "forward_window": 48
+}

@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "HBAR/USDC",
+  "exchange": "binance",
+  "best_epoch": 17,
+  "best_val_loss": 0.10546138286590576,
+  "total_epochs": 17,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:10:53.042274",
+  "forward_window": 48
+}

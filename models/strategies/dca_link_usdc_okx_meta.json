@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "LINK/USDC",
+  "exchange": "okx",
+  "best_epoch": 1,
+  "best_val_loss": 0.16376625580920112,
+  "total_epochs": 1,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:21:09.184554",
+  "forward_window": 48
+}

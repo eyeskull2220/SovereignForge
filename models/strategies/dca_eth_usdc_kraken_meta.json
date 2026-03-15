@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "ETH/USDC",
+  "exchange": "kraken",
+  "best_epoch": 2,
+  "best_val_loss": 0.127104918887982,
+  "total_epochs": 2,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:16:25.748319",
+  "forward_window": 48
+}

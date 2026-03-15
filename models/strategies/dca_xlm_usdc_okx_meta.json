@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "XLM/USDC",
+  "exchange": "okx",
+  "best_epoch": 35,
+  "best_val_loss": 0.19865542211466367,
+  "total_epochs": 35,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:20:15.967553",
+  "forward_window": 48
+}

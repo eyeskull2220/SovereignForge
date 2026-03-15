@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "ONDO/USDC",
+  "exchange": "binance",
+  "best_epoch": 7,
+  "best_val_loss": 0.12346112661891513,
+  "total_epochs": 7,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:14:57.642480",
+  "forward_window": 48
+}

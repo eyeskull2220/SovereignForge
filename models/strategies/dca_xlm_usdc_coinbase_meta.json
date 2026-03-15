@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "XLM/USDC",
+  "exchange": "coinbase",
+  "best_epoch": 6,
+  "best_val_loss": 0.08816434442996979,
+  "total_epochs": 6,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:15:23.423383",
+  "forward_window": 48
+}

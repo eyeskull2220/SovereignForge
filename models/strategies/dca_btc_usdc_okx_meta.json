@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "BTC/USDC",
+  "exchange": "okx",
+  "best_epoch": 1,
+  "best_val_loss": 0.10602419351538023,
+  "total_epochs": 1,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:18:21.175354",
+  "forward_window": 48
+}

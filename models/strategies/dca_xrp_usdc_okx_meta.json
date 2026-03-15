@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "XRP/USDC",
+  "exchange": "okx",
+  "best_epoch": 10,
+  "best_val_loss": 0.12812585574057367,
+  "total_epochs": 10,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:19:18.790766",
+  "forward_window": 48
+}

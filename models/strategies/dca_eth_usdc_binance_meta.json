@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "ETH/USDC",
+  "exchange": "binance",
+  "best_epoch": 3,
+  "best_val_loss": 0.12279459850655662,
+  "total_epochs": 3,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:08:19.770931",
+  "forward_window": 48
+}

@@ -2,11 +2,11 @@
   "strategy": "dca",
   "pair": "BTC/USDC",
   "exchange": "binance",
-  "best_epoch": 1,
-  "best_val_loss": 0.10363689912900106,
-  "total_epochs": 1,
+  "best_epoch": 36,
+  "best_val_loss": 0.10250355394350158,
+  "total_epochs": 36,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-14T22:57:27.848916",
+  "timestamp": "2026-03-15T19:07:48.634853",
   "forward_window": 48
 }

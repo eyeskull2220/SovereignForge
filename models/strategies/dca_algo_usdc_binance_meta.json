@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "ALGO/USDC",
+  "exchange": "binance",
+  "best_epoch": 7,
+  "best_val_loss": 0.11692788932058547,
+  "total_epochs": 7,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:11:28.325437",
+  "forward_window": 48
+}

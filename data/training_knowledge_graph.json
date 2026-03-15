@@ -3092,6 +3092,240 @@
       "val_loss": 0.07178962861399839,
       "epochs": 28,
       "id": "grid_ondo_usdc_bybit_202603142257"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "BTC/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-15T19:08:16.126739",
+      "val_loss": 0.10250355394350158,
+      "epochs": 61,
+      "id": "dca_btc_usdc_binance_202603151908"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ETH/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-15T19:08:46.793547",
+      "val_loss": 0.12279459850655662,
+      "epochs": 28,
+      "id": "dca_eth_usdc_binance_202603151908"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "XRP/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-15T19:10:02.410814",
+      "val_loss": 0.11250491638978323,
+      "epochs": 70,
+      "id": "dca_xrp_usdc_binance_202603151910"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "XLM/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-15T19:10:34.270062",
+      "val_loss": 0.1229007116622395,
+      "epochs": 29,
+      "id": "dca_xlm_usdc_binance_202603151910"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "HBAR/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-15T19:11:20.190305",
+      "val_loss": 0.10546138286590576,
+      "epochs": 42,
+      "id": "dca_hbar_usdc_binance_202603151911"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ALGO/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-15T19:11:55.509058",
+      "val_loss": 0.11692788932058547,
+      "epochs": 32,
+      "id": "dca_algo_usdc_binance_202603151911"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ADA/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-15T19:12:42.739328",
+      "val_loss": 0.12566709882683225,
+      "epochs": 43,
+      "id": "dca_ada_usdc_binance_202603151912"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "LINK/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-15T19:13:11.241369",
+      "val_loss": 0.11992707939611541,
+      "epochs": 26,
+      "id": "dca_link_usdc_binance_202603151913"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "IOTA/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-15T19:13:46.101313",
+      "val_loss": 0.10374607063002056,
+      "epochs": 32,
+      "id": "dca_iota_usdc_binance_202603151913"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "VET/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-15T19:14:50.888181",
+      "val_loss": 0.116120638532771,
+      "epochs": 58,
+      "id": "dca_vet_usdc_binance_202603151914"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ONDO/USDC",
+      "exchange": "binance",
+      "timestamp": "2026-03-15T19:15:21.977010",
+      "val_loss": 0.12346112661891513,
+      "epochs": 32,
+      "id": "dca_ondo_usdc_binance_202603151915"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "XLM/USDC",
+      "exchange": "coinbase",
+      "timestamp": "2026-03-15T19:15:28.777003",
+      "val_loss": 0.08816434442996979,
+      "epochs": 31,
+      "id": "dca_xlm_usdc_coinbase_202603151915"
+    },
+    {
+      "type": "exchange",
+      "id": "kraken"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "BTC/USDC",
+      "exchange": "kraken",
+      "timestamp": "2026-03-15T19:16:22.479070",
+      "val_loss": 0.1117654018396256,
+      "epochs": 51,
+      "id": "dca_btc_usdc_kraken_202603151916"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ETH/USDC",
+      "exchange": "kraken",
+      "timestamp": "2026-03-15T19:16:58.489202",
+      "val_loss": 0.127104918887982,
+      "epochs": 27,
+      "id": "dca_eth_usdc_kraken_202603151916"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "XRP/USDC",
+      "exchange": "kraken",
+      "timestamp": "2026-03-15T19:18:12.809539",
+      "val_loss": 0.12478684718316456,
+      "epochs": 68,
+      "id": "dca_xrp_usdc_kraken_202603151918"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ALGO/USDC",
+      "exchange": "kraken",
+      "timestamp": "2026-03-15T19:18:19.688520",
+      "val_loss": 0.289506409317255,
+      "epochs": 41,
+      "id": "dca_algo_usdc_kraken_202603151918"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "BTC/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-15T19:18:44.078824",
+      "val_loss": 0.10602419351538023,
+      "epochs": 26,
+      "id": "dca_btc_usdc_okx_202603151918"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ETH/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-15T19:19:09.121254",
+      "val_loss": 0.1245632198949655,
+      "epochs": 26,
+      "id": "dca_eth_usdc_okx_202603151919"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "XRP/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-15T19:19:42.351052",
+      "val_loss": 0.12812585574057367,
+      "epochs": 35,
+      "id": "dca_xrp_usdc_okx_202603151919"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "XLM/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-15T19:20:40.370155",
+      "val_loss": 0.19865542211466367,
+      "epochs": 60,
+      "id": "dca_xlm_usdc_okx_202603151920"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "ADA/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-15T19:21:07.656435",
+      "val_loss": 0.16568527929484844,
+      "epochs": 26,
+      "id": "dca_ada_usdc_okx_202603151921"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "LINK/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-15T19:21:34.036483",
+      "val_loss": 0.16376625580920112,
+      "epochs": 26,
+      "id": "dca_link_usdc_okx_202603151921"
+    },
+    {
+      "type": "training_run",
+      "strategy": "dca",
+      "pair": "IOTA/USDC",
+      "exchange": "okx",
+      "timestamp": "2026-03-15T19:22:32.722520",
+      "val_loss": 0.10960826977259583,
+      "epochs": 63,
+      "id": "dca_iota_usdc_okx_202603151922"
     }
   ],
   "edges": [
@@ -7609,6 +7843,351 @@
       "relation": "trains_exchange",
       "source": "grid_ondo_usdc_bybit_202603142257",
       "target": "bybit"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_btc_usdc_binance_202603151908",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_btc_usdc_binance_202603151908",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_btc_usdc_binance_202603151908",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_eth_usdc_binance_202603151908",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_eth_usdc_binance_202603151908",
+      "target": "ETH/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_eth_usdc_binance_202603151908",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_xrp_usdc_binance_202603151910",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_xrp_usdc_binance_202603151910",
+      "target": "XRP/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_xrp_usdc_binance_202603151910",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_xlm_usdc_binance_202603151910",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_xlm_usdc_binance_202603151910",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_xlm_usdc_binance_202603151910",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_hbar_usdc_binance_202603151911",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_hbar_usdc_binance_202603151911",
+      "target": "HBAR/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_hbar_usdc_binance_202603151911",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_algo_usdc_binance_202603151911",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_algo_usdc_binance_202603151911",
+      "target": "ALGO/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_algo_usdc_binance_202603151911",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_ada_usdc_binance_202603151912",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_ada_usdc_binance_202603151912",
+      "target": "ADA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_ada_usdc_binance_202603151912",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_link_usdc_binance_202603151913",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_link_usdc_binance_202603151913",
+      "target": "LINK/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_link_usdc_binance_202603151913",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_iota_usdc_binance_202603151913",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_iota_usdc_binance_202603151913",
+      "target": "IOTA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_iota_usdc_binance_202603151913",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_vet_usdc_binance_202603151914",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_vet_usdc_binance_202603151914",
+      "target": "VET/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_vet_usdc_binance_202603151914",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_ondo_usdc_binance_202603151915",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_ondo_usdc_binance_202603151915",
+      "target": "ONDO/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_ondo_usdc_binance_202603151915",
+      "target": "binance"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_xlm_usdc_coinbase_202603151915",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_xlm_usdc_coinbase_202603151915",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_xlm_usdc_coinbase_202603151915",
+      "target": "coinbase"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_btc_usdc_kraken_202603151916",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_btc_usdc_kraken_202603151916",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_btc_usdc_kraken_202603151916",
+      "target": "kraken"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_eth_usdc_kraken_202603151916",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_eth_usdc_kraken_202603151916",
+      "target": "ETH/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_eth_usdc_kraken_202603151916",
+      "target": "kraken"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_xrp_usdc_kraken_202603151918",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_xrp_usdc_kraken_202603151918",
+      "target": "XRP/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_xrp_usdc_kraken_202603151918",
+      "target": "kraken"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_algo_usdc_kraken_202603151918",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_algo_usdc_kraken_202603151918",
+      "target": "ALGO/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_algo_usdc_kraken_202603151918",
+      "target": "kraken"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_btc_usdc_okx_202603151918",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_btc_usdc_okx_202603151918",
+      "target": "BTC/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_btc_usdc_okx_202603151918",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_eth_usdc_okx_202603151919",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_eth_usdc_okx_202603151919",
+      "target": "ETH/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_eth_usdc_okx_202603151919",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_xrp_usdc_okx_202603151919",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_xrp_usdc_okx_202603151919",
+      "target": "XRP/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_xrp_usdc_okx_202603151919",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_xlm_usdc_okx_202603151920",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_xlm_usdc_okx_202603151920",
+      "target": "XLM/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_xlm_usdc_okx_202603151920",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_ada_usdc_okx_202603151921",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_ada_usdc_okx_202603151921",
+      "target": "ADA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_ada_usdc_okx_202603151921",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_link_usdc_okx_202603151921",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_link_usdc_okx_202603151921",
+      "target": "LINK/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_link_usdc_okx_202603151921",
+      "target": "okx"
+    },
+    {
+      "relation": "uses_strategy",
+      "source": "dca_iota_usdc_okx_202603151922",
+      "target": "dca"
+    },
+    {
+      "relation": "trains_pair",
+      "source": "dca_iota_usdc_okx_202603151922",
+      "target": "IOTA/USDC"
+    },
+    {
+      "relation": "trains_exchange",
+      "source": "dca_iota_usdc_okx_202603151922",
+      "target": "okx"
     }
   ]
 }

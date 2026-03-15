@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "ALGO/USDC",
+  "exchange": "kraken",
+  "best_epoch": 16,
+  "best_val_loss": 0.289506409317255,
+  "total_epochs": 16,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:18:15.594895",
+  "forward_window": 48
+}

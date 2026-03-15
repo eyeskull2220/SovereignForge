@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "IOTA/USDC",
+  "exchange": "okx",
+  "best_epoch": 38,
+  "best_val_loss": 0.10960826977259583,
+  "total_epochs": 38,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:22:09.717959",
+  "forward_window": 48
+}

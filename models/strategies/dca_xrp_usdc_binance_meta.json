@@ -1,0 +1,12 @@
+{
+  "strategy": "dca",
+  "pair": "XRP/USDC",
+  "exchange": "binance",
+  "best_epoch": 45,
+  "best_val_loss": 0.11250491638978323,
+  "total_epochs": 45,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:09:35.600957",
+  "forward_window": 48
+}

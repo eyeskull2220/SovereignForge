@@ -3,10 +3,10 @@
   "pair": "LINK/USDC",
   "exchange": "binance",
   "best_epoch": 5,
-  "best_val_loss": 0.04980094754484607,
+  "best_val_loss": 0.04986613103085094,
   "total_epochs": 5,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-14T22:31:14.820165",
+  "timestamp": "2026-03-15T23:12:34.384961",
   "forward_window": 12
 }

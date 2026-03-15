@@ -2,11 +2,11 @@
   "strategy": "grid",
   "pair": "ADA/USDC",
   "exchange": "okx",
-  "best_epoch": 12,
-  "best_val_loss": 0.08042063005268574,
-  "total_epochs": 12,
+  "best_epoch": 2,
+  "best_val_loss": 0.0790142969124847,
+  "total_epochs": 2,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-14T22:37:15.786410",
+  "timestamp": "2026-03-15T23:17:29.258319",
   "forward_window": 12
 }

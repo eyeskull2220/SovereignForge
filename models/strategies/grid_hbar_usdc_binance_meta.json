@@ -2,11 +2,11 @@
   "strategy": "grid",
   "pair": "HBAR/USDC",
   "exchange": "binance",
-  "best_epoch": 16,
-  "best_val_loss": 0.04308288873854413,
-  "total_epochs": 16,
+  "best_epoch": 15,
+  "best_val_loss": 0.04327803810851442,
+  "total_epochs": 15,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-14T22:29:30.755299",
+  "timestamp": "2026-03-15T23:11:15.809038",
   "forward_window": 12
 }

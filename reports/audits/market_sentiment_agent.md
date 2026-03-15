@@ -5,7 +5,7 @@
 ## Summary
 {
   "agent": "Market Sentiment Agent",
-  "timestamp": "2026-03-15T00:50:41.018503",
+  "timestamp": "2026-03-15T22:58:41.395751",
   "market_mood": {
     "source": "default",
     "activity_level": "unknown",
@@ -160,7 +160,7 @@
   "fear_greed_estimate": {
     "index": 50,
     "label": "neutral",
-    "source": "default"
+    "source": "paper_trading_proxy"
   },
   "actionable_signals": [
     {
@@ -169,5 +169,5 @@
       "action": "Configure CoinGecko API key for live sentiment data"
     }
   ],
-  "execution_time": 0.21
+  "execution_time": 0.25
 }

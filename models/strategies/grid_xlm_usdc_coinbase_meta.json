@@ -1,0 +1,12 @@
+{
+  "strategy": "grid",
+  "pair": "XLM/USDC",
+  "exchange": "coinbase",
+  "best_epoch": 8,
+  "best_val_loss": 0.030451701302081347,
+  "total_epochs": 8,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T23:14:28.017766",
+  "forward_window": 12
+}

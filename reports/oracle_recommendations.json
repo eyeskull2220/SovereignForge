@@ -1,0 +1,717 @@
+{
+  "recommendations": [
+    {
+      "pair": "ALGO/USDC",
+      "exchange": "binance",
+      "action": "buy",
+      "oracle_score": 0.137,
+      "composite_confidence": 0.7155,
+      "risk_rating": "low",
+      "signal_consensus": 3,
+      "position_size_usd": 3.88,
+      "expected_edge_pct": 0.006848,
+      "fee_cost_pct": 0.004,
+      "net_expected_pct": 0.002848,
+      "regime": "low_vol",
+      "breakdown": {
+        "ensemble": {
+          "agreement": 0.714,
+          "strategy_signals": {
+            "arbitrage": 0.2231,
+            "fibonacci": 0.0678,
+            "grid": 0.1598,
+            "dca": -0.0314,
+            "mean_reversion": 0.1417,
+            "pairs_arbitrage": 0.5349,
+            "momentum": -0.2976
+          },
+          "strategy_confidences": {
+            "arbitrage": 0.6558,
+            "fibonacci": 0.8993,
+            "grid": 0.639,
+            "dca": 0.6022,
+            "mean_reversion": 0.8981,
+            "pairs_arbitrage": 0.7962,
+            "momentum": 0.872
+          }
+        },
+        "normalized": {
+          "arbitrage": 0.8942,
+          "fibonacci": -0.0755,
+          "grid": -0.8113,
+          "dca": 0.4574,
+          "mean_reversion": 0.7984,
+          "pairs_arbitrage": 0.7519,
+          "momentum": 0.0698
+        },
+        "directional_consensus": 0.0878,
+        "spread_consensus": 0.8231,
+        "technical": {
+          "direction": 0.01,
+          "strength": 0.01
+        },
+        "sentiment": {
+          "score": 0.0,
+          "confidence": 0.0
+        },
+        "regime": {
+          "current": "low_vol",
+          "clarity": 1.0
+        },
+        "trust": {
+          "arbitrage": 0.5,
+          "fibonacci": 0.5,
+          "grid": 0.5,
+          "dca": 0.5,
+          "mean_reversion": 0.5,
+          "pairs_arbitrage": 0.5,
+          "momentum": 0.5
+        }
+      },
+      "vetoed": false,
+      "veto_reason": "",
+      "timestamp": "2026-03-15 22:16:08.197635+00:00"
+    },
+    {
+      "pair": "IOTA/USDC",
+      "exchange": "okx",
+      "action": "buy",
+      "oracle_score": 0.2089,
+      "composite_confidence": 0.6974,
+      "risk_rating": "medium",
+      "signal_consensus": 2,
+      "position_size_usd": 3.88,
+      "expected_edge_pct": 0.010444,
+      "fee_cost_pct": 0.004,
+      "net_expected_pct": 0.006444,
+      "regime": "low_vol",
+      "breakdown": {
+        "ensemble": {
+          "agreement": 0.714,
+          "strategy_signals": {
+            "arbitrage": -0.0036,
+            "fibonacci": -0.7005,
+            "grid": 0.1298,
+            "dca": 1.0,
+            "mean_reversion": 0.1882,
+            "pairs_arbitrage": 1.0,
+            "momentum": 0.353
+          },
+          "strategy_confidences": {
+            "arbitrage": 0.5117,
+            "fibonacci": 0.5655,
+            "grid": 0.5237,
+            "dca": 0.5122,
+            "mean_reversion": 0.95,
+            "pairs_arbitrage": 0.9164,
+            "momentum": 0.9608
+          }
+        },
+        "normalized": {
+          "arbitrage": 0.47,
+          "fibonacci": -0.8214,
+          "grid": -0.7857,
+          "dca": 1.0,
+          "mean_reversion": 0.7941,
+          "pairs_arbitrage": 1.0,
+          "momentum": 0.9412
+        },
+        "directional_consensus": 0.2256,
+        "spread_consensus": 0.735,
+        "technical": {
+          "direction": 0.0,
+          "strength": 0.0
+        },
+        "sentiment": {
+          "score": 0.0,
+          "confidence": 0.0
+        },
+        "regime": {
+          "current": "low_vol",
+          "clarity": 1.0
+        },
+        "trust": {
+          "arbitrage": 0.5,
+          "fibonacci": 0.5,
+          "grid": 0.5,
+          "dca": 0.5,
+          "mean_reversion": 0.5,
+          "pairs_arbitrage": 0.5,
+          "momentum": 0.5
+        }
+      },
+      "vetoed": false,
+      "veto_reason": "",
+      "timestamp": "2026-03-15 22:16:08.264634+00:00"
+    },
+    {
+      "pair": "LINK/USDC",
+      "exchange": "okx",
+      "action": "buy",
+      "oracle_score": 0.2991,
+      "composite_confidence": 0.6618,
+      "risk_rating": "medium",
+      "signal_consensus": 2,
+      "position_size_usd": 4.56,
+      "expected_edge_pct": 0.014956,
+      "fee_cost_pct": 0.004,
+      "net_expected_pct": 0.010956,
+      "regime": "low_vol",
+      "breakdown": {
+        "ensemble": {
+          "agreement": 0.571,
+          "strategy_signals": {
+            "arbitrage": -0.0302,
+            "fibonacci": 0.5936,
+            "grid": 0.5321,
+            "dca": -0.0194,
+            "mean_reversion": 0.132,
+            "pairs_arbitrage": 0.3389,
+            "momentum": -0.1705
+          },
+          "strategy_confidences": {
+            "arbitrage": 0.6665,
+            "fibonacci": 0.8073,
+            "grid": 0.7161,
+            "dca": 0.6093,
+            "mean_reversion": 0.8886,
+            "pairs_arbitrage": 0.7996,
+            "momentum": 0.9536
+          }
+        },
+        "normalized": {
+          "arbitrage": 0.4141,
+          "fibonacci": 0.6364,
+          "grid": -0.2364,
+          "dca": 0.5373,
+          "mean_reversion": 0.7761,
+          "pairs_arbitrage": 0.7015,
+          "momentum": 0.4478
+        },
+        "directional_consensus": 0.4322,
+        "spread_consensus": 0.5578,
+        "technical": {
+          "direction": -0.08,
+          "strength": 0.08
+        },
+        "sentiment": {
+          "score": 0.0,
+          "confidence": 0.0
+        },
+        "regime": {
+          "current": "low_vol",
+          "clarity": 1.0
+        },
+        "trust": {
+          "arbitrage": 0.5,
+          "fibonacci": 0.5,
+          "grid": 0.5,
+          "dca": 0.5,
+          "mean_reversion": 0.5,
+          "pairs_arbitrage": 0.5,
+          "momentum": 0.5
+        }
+      },
+      "vetoed": false,
+      "veto_reason": "",
+      "timestamp": "2026-03-15 22:16:08.243631+00:00"
+    },
+    {
+      "pair": "ETH/USDC",
+      "exchange": "okx",
+      "action": "buy",
+      "oracle_score": 0.1427,
+      "composite_confidence": 0.6615,
+      "risk_rating": "medium",
+      "signal_consensus": 2,
+      "position_size_usd": 4.56,
+      "expected_edge_pct": 0.007133,
+      "fee_cost_pct": 0.004,
+      "net_expected_pct": 0.003133,
+      "regime": "low_vol",
+      "breakdown": {
+        "ensemble": {
+          "agreement": 0.571,
+          "strategy_signals": {
+            "arbitrage": -0.4049,
+            "fibonacci": -0.3322,
+            "grid": -0.2226,
+            "dca": 0.0219,
+            "mean_reversion": 0.0436,
+            "pairs_arbitrage": 0.7883,
+            "momentum": -0.4003
+          },
+          "strategy_confidences": {
+            "arbitrage": 0.7372,
+            "fibonacci": 0.8071,
+            "grid": 0.7065,
+            "dca": 0.6385,
+            "mean_reversion": 0.8964,
+            "pairs_arbitrage": 0.7412,
+            "momentum": 0.9086
+          }
+        },
+        "normalized": {
+          "arbitrage": -0.7079,
+          "fibonacci": -0.6566,
+          "grid": -0.9798,
+          "dca": 0.719,
+          "mean_reversion": 0.6694,
+          "pairs_arbitrage": 0.8512,
+          "momentum": -0.2893
+        },
+        "directional_consensus": -0.1074,
+        "spread_consensus": 0.0717,
+        "technical": {
+          "direction": 0.9998,
+          "strength": 0.9998
+        },
+        "sentiment": {
+          "score": 0.0,
+          "confidence": 0.0
+        },
+        "regime": {
+          "current": "low_vol",
+          "clarity": 1.0
+        },
+        "trust": {
+          "arbitrage": 0.5,
+          "fibonacci": 0.5,
+          "grid": 0.5,
+          "dca": 0.5,
+          "mean_reversion": 0.5,
+          "pairs_arbitrage": 0.5,
+          "momentum": 0.5
+        }
+      },
+      "vetoed": false,
+      "veto_reason": "",
+      "timestamp": "2026-03-15 22:16:08.112547+00:00"
+    },
+    {
+      "pair": "HBAR/USDC",
+      "exchange": "binance",
+      "action": "buy",
+      "oracle_score": 0.1735,
+      "composite_confidence": 0.6586,
+      "risk_rating": "medium",
+      "signal_consensus": 2,
+      "position_size_usd": 4.56,
+      "expected_edge_pct": 0.008676,
+      "fee_cost_pct": 0.004,
+      "net_expected_pct": 0.004676,
+      "regime": "low_vol",
+      "breakdown": {
+        "ensemble": {
+          "agreement": 0.571,
+          "strategy_signals": {
+            "arbitrage": 0.0719,
+            "fibonacci": -0.0123,
+            "grid": 0.2424,
+            "dca": -0.0988,
+            "mean_reversion": 0.0581,
+            "pairs_arbitrage": 0.8061,
+            "momentum": 0.0434
+          },
+          "strategy_confidences": {
+            "arbitrage": 0.6626,
+            "fibonacci": 0.8812,
+            "grid": 0.6331,
+            "dca": 0.6273,
+            "mean_reversion": 0.8802,
+            "pairs_arbitrage": 0.7776,
+            "momentum": 0.9063
+          }
+        },
+        "normalized": {
+          "arbitrage": 0.7742,
+          "fibonacci": -0.181,
+          "grid": -0.7714,
+          "dca": 0.1719,
+          "mean_reversion": 0.7031,
+          "pairs_arbitrage": 0.8594,
+          "momentum": 0.8594
+        },
+        "directional_consensus": 0.1564,
+        "spread_consensus": 0.8168,
+        "technical": {
+          "direction": -0.01,
+          "strength": 0.01
+        },
+        "sentiment": {
+          "score": 0.0,
+          "confidence": 0.0
+        },
+        "regime": {
+          "current": "low_vol",
+          "clarity": 1.0
+        },
+        "trust": {
+          "arbitrage": 0.5,
+          "fibonacci": 0.5,
+          "grid": 0.5,
+          "dca": 0.5,
+          "mean_reversion": 0.5,
+          "pairs_arbitrage": 0.5,
+          "momentum": 0.5
+        }
+      },
+      "vetoed": false,
+      "veto_reason": "",
+      "timestamp": "2026-03-15 22:16:08.186632+00:00"
+    },
+    {
+      "pair": "LINK/USDC",
+      "exchange": "binance",
+      "action": "buy",
+      "oracle_score": 0.1298,
+      "composite_confidence": 0.604,
+      "risk_rating": "medium",
+      "signal_consensus": 2,
+      "position_size_usd": 4.56,
+      "expected_edge_pct": 0.006492,
+      "fee_cost_pct": 0.004,
+      "net_expected_pct": 0.002492,
+      "regime": "low_vol",
+      "breakdown": {
+        "ensemble": {
+          "agreement": 0.429,
+          "strategy_signals": {
+            "arbitrage": -0.2917,
+            "fibonacci": 0.3606,
+            "grid": -0.06,
+            "dca": -0.0449,
+            "mean_reversion": -0.0312,
+            "pairs_arbitrage": 0.7239,
+            "momentum": 0.0677
+          },
+          "strategy_confidences": {
+            "arbitrage": 0.709,
+            "fibonacci": 0.8978,
+            "grid": 0.681,
+            "dca": 0.608,
+            "mean_reversion": 0.8572,
+            "pairs_arbitrage": 0.7869,
+            "momentum": 0.8862
+          }
+        },
+        "normalized": {
+          "arbitrage": -0.2615,
+          "fibonacci": 0.4679,
+          "grid": -0.945,
+          "dca": 0.3684,
+          "mean_reversion": 0.218,
+          "pairs_arbitrage": 0.8045,
+          "momentum": 0.8797
+        },
+        "directional_consensus": 0.1978,
+        "spread_consensus": 0.2715,
+        "technical": {
+          "direction": -0.08,
+          "strength": 0.08
+        },
+        "sentiment": {
+          "score": 0.0,
+          "confidence": 0.0
+        },
+        "regime": {
+          "current": "low_vol",
+          "clarity": 1.0
+        },
+        "trust": {
+          "arbitrage": 0.5,
+          "fibonacci": 0.5,
+          "grid": 0.5,
+          "dca": 0.5,
+          "mean_reversion": 0.5,
+          "pairs_arbitrage": 0.5,
+          "momentum": 0.5
+        }
+      },
+      "vetoed": false,
+      "veto_reason": "",
+      "timestamp": "2026-03-15 22:16:08.232630+00:00"
+    },
+    {
+      "pair": "ETH/USDC",
+      "exchange": "kraken",
+      "action": "buy",
+      "oracle_score": 0.551,
+      "composite_confidence": 0.6036,
+      "risk_rating": "medium",
+      "signal_consensus": 3,
+      "position_size_usd": 4.56,
+      "expected_edge_pct": 0.02755,
+      "fee_cost_pct": 0.0072,
+      "net_expected_pct": 0.02035,
+      "regime": "low_vol",
+      "breakdown": {
+        "ensemble": {
+          "agreement": 0.4,
+          "strategy_signals": {
+            "arbitrage": -0.1024,
+            "dca": 0.0364,
+            "mean_reversion": -0.046,
+            "pairs_arbitrage": 0.892,
+            "momentum": -0.0681
+          },
+          "strategy_confidences": {
+            "arbitrage": 0.9514,
+            "dca": 0.6199,
+            "mean_reversion": 0.8888,
+            "pairs_arbitrage": 0.7295,
+            "momentum": 0.8707
+          }
+        },
+        "normalized": {
+          "arbitrage": 0.2542,
+          "dca": 0.7333,
+          "mean_reversion": 0.1,
+          "pairs_arbitrage": 0.9,
+          "momentum": 0.6333
+        },
+        "directional_consensus": 0.4889,
+        "spread_consensus": 0.5771,
+        "technical": {
+          "direction": 0.9998,
+          "strength": 0.9998
+        },
+        "sentiment": {
+          "score": 0.0,
+          "confidence": 0.0
+        },
+        "regime": {
+          "current": "low_vol",
+          "clarity": 1.0
+        },
+        "trust": {
+          "arbitrage": 0.5,
+          "dca": 0.5,
+          "mean_reversion": 0.5,
+          "pairs_arbitrage": 0.5,
+          "momentum": 0.5
+        }
+      },
+      "vetoed": false,
+      "veto_reason": "",
+      "timestamp": "2026-03-15 22:16:08.101548+00:00"
+    },
+    {
+      "pair": "BTC/USDC",
+      "exchange": "okx",
+      "action": "buy",
+      "oracle_score": 0.2262,
+      "composite_confidence": 0.6001,
+      "risk_rating": "medium",
+      "signal_consensus": 3,
+      "position_size_usd": 4.56,
+      "expected_edge_pct": 0.011311,
+      "fee_cost_pct": 0.004,
+      "net_expected_pct": 0.007311,
+      "regime": "low_vol",
+      "breakdown": {
+        "ensemble": {
+          "agreement": 0.429,
+          "strategy_signals": {
+            "arbitrage": -0.2996,
+            "fibonacci": 0.1975,
+            "grid": -0.0835,
+            "dca": 0.0421,
+            "mean_reversion": -0.0103,
+            "pairs_arbitrage": 0.5905,
+            "momentum": -0.4299
+          },
+          "strategy_confidences": {
+            "arbitrage": 0.6863,
+            "fibonacci": 0.8416,
+            "grid": 0.6571,
+            "dca": 0.6192,
+            "mean_reversion": 0.884,
+            "pairs_arbitrage": 0.7374,
+            "momentum": 0.9094
+          }
+        },
+        "normalized": {
+          "arbitrage": -0.3103,
+          "fibonacci": 0.134,
+          "grid": -0.9794,
+          "dca": 0.7458,
+          "mean_reversion": 0.4407,
+          "pairs_arbitrage": 0.8305,
+          "momentum": -0.339
+        },
+        "directional_consensus": 0.0004,
+        "spread_consensus": 0.2601,
+        "technical": {
+          "direction": 0.9998,
+          "strength": 0.9998
+        },
+        "sentiment": {
+          "score": 0.0,
+          "confidence": 0.0
+        },
+        "regime": {
+          "current": "low_vol",
+          "clarity": 1.0
+        },
+        "trust": {
+          "arbitrage": 0.5,
+          "fibonacci": 0.5,
+          "grid": 0.5,
+          "dca": 0.5,
+          "mean_reversion": 0.5,
+          "pairs_arbitrage": 0.5,
+          "momentum": 0.5
+        }
+      },
+      "vetoed": false,
+      "veto_reason": "",
+      "timestamp": "2026-03-15 22:16:08.081466+00:00"
+    },
+    {
+      "pair": "BTC/USDC",
+      "exchange": "binance",
+      "action": "buy",
+      "oracle_score": 0.3422,
+      "composite_confidence": 0.5421,
+      "risk_rating": "medium",
+      "signal_consensus": 3,
+      "position_size_usd": 4.56,
+      "expected_edge_pct": 0.017108,
+      "fee_cost_pct": 0.004,
+      "net_expected_pct": 0.013108,
+      "regime": "low_vol",
+      "breakdown": {
+        "ensemble": {
+          "agreement": 0.286,
+          "strategy_signals": {
+            "arbitrage": -0.2916,
+            "fibonacci": 0.3412,
+            "grid": 0.0002,
+            "dca": -0.0382,
+            "mean_reversion": 0.0007,
+            "pairs_arbitrage": 0.4778,
+            "momentum": -0.105
+          },
+          "strategy_confidences": {
+            "arbitrage": 0.6829,
+            "fibonacci": 0.8264,
+            "grid": 0.6325,
+            "dca": 0.6135,
+            "mean_reversion": 0.8724,
+            "pairs_arbitrage": 0.7655,
+            "momentum": 0.9226
+          }
+        },
+        "normalized": {
+          "arbitrage": -0.2749,
+          "fibonacci": 0.4167,
+          "grid": -0.9792,
+          "dca": 0.4655,
+          "mean_reversion": 0.4655,
+          "pairs_arbitrage": 0.8276,
+          "momentum": 0.5862
+        },
+        "directional_consensus": 0.1909,
+        "spread_consensus": 0.2764,
+        "technical": {
+          "direction": 0.9998,
+          "strength": 0.9998
+        },
+        "sentiment": {
+          "score": 0.0,
+          "confidence": 0.0
+        },
+        "regime": {
+          "current": "low_vol",
+          "clarity": 1.0
+        },
+        "trust": {
+          "arbitrage": 0.5,
+          "fibonacci": 0.5,
+          "grid": 0.5,
+          "dca": 0.5,
+          "mean_reversion": 0.5,
+          "pairs_arbitrage": 0.5,
+          "momentum": 0.5
+        }
+      },
+      "vetoed": false,
+      "veto_reason": "",
+      "timestamp": "2026-03-15 22:16:08.061469+00:00"
+    },
+    {
+      "pair": "XLM/USDC",
+      "exchange": "okx",
+      "action": "buy",
+      "oracle_score": 0.1848,
+      "composite_confidence": 0.5379,
+      "risk_rating": "medium",
+      "signal_consensus": 2,
+      "position_size_usd": 4.56,
+      "expected_edge_pct": 0.00924,
+      "fee_cost_pct": 0.004,
+      "net_expected_pct": 0.00524,
+      "regime": "low_vol",
+      "breakdown": {
+        "ensemble": {
+          "agreement": 0.286,
+          "strategy_signals": {
+            "arbitrage": 0.0397,
+            "fibonacci": -0.045,
+            "grid": 0.8767,
+            "dca": 1.0,
+            "mean_reversion": 0.0321,
+            "pairs_arbitrage": -0.5861,
+            "momentum": -0.5891
+          },
+          "strategy_confidences": {
+            "arbitrage": 0.5495,
+            "fibonacci": 0.6792,
+            "grid": 0.623,
+            "dca": 0.59,
+            "mean_reversion": 0.9183,
+            "pairs_arbitrage": 0.8946,
+            "momentum": 0.9638
+          }
+        },
+        "normalized": {
+          "arbitrage": 0.6757,
+          "fibonacci": -0.25,
+          "grid": 0.6154,
+          "dca": 1.0,
+          "mean_reversion": 0.5906,
+          "pairs_arbitrage": 0.3858,
+          "momentum": -0.8583
+        },
+        "directional_consensus": 0.2195,
+        "spread_consensus": 0.5308,
+        "technical": {
+          "direction": 0.0,
+          "strength": 0.0
+        },
+        "sentiment": {
+          "score": 0.0,
+          "confidence": 0.0
+        },
+        "regime": {
+          "current": "low_vol",
+          "clarity": 1.0
+        },
+        "trust": {
+          "arbitrage": 0.5,
+          "fibonacci": 0.5,
+          "grid": 0.5,
+          "dca": 0.5,
+          "mean_reversion": 0.5,
+          "pairs_arbitrage": 0.5,
+          "momentum": 0.5
+        }
+      },
+      "vetoed": false,
+      "veto_reason": "",
+      "timestamp": "2026-03-15 22:16:08.175635+00:00"
+    }
+  ],
+  "updated": "2026-03-15T22:16:08.288700+00:00"
+}

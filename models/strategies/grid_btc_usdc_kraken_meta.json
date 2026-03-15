@@ -1,12 +1,12 @@
 {
   "strategy": "grid",
-  "pair": "ETH/USDC",
-  "exchange": "okx",
+  "pair": "BTC/USDC",
+  "exchange": "kraken",
   "best_epoch": 1,
-  "best_val_loss": 0.059436845572458374,
+  "best_val_loss": 0.038481015008965544,
   "total_epochs": 1,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-15T23:15:58.721624",
+  "timestamp": "2026-03-15T23:14:34.011894",
   "forward_window": 12
 }

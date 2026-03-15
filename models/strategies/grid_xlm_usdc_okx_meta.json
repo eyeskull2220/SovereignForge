@@ -2,11 +2,11 @@
   "strategy": "grid",
   "pair": "XLM/USDC",
   "exchange": "okx",
-  "best_epoch": 35,
-  "best_val_loss": 0.07233151943082296,
-  "total_epochs": 35,
+  "best_epoch": 33,
+  "best_val_loss": 0.07193245702009234,
+  "total_epochs": 33,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-14T22:36:32.135260",
+  "timestamp": "2026-03-15T23:17:10.278364",
   "forward_window": 12
 }

@@ -2,11 +2,11 @@
   "strategy": "grid",
   "pair": "ALGO/USDC",
   "exchange": "binance",
-  "best_epoch": 6,
-  "best_val_loss": 0.046876156730438344,
-  "total_epochs": 6,
+  "best_epoch": 7,
+  "best_val_loss": 0.04633758424056901,
+  "total_epochs": 7,
   "learning_rate": 8.000000000000001e-06,
   "seq_len": 128,
-  "timestamp": "2026-03-14T22:30:04.489736",
+  "timestamp": "2026-03-15T23:11:43.066529",
   "forward_window": 12
 }

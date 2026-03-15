@@ -1,7 +1,7 @@
 {
   "agent_name": "Readiness_Gate",
   "agent_type": "readiness",
-  "timestamp": "2026-03-15T19:05:15.669003",
+  "timestamp": "2026-03-15T21:19:00.693942",
   "health_score": 100.0,
   "findings": [
     {
@@ -33,32 +33,32 @@
       "file": "models/",
       "line": null,
       "category": "model_coverage",
-      "description": "Strategy 'dca': 19/84 models (23%)",
+      "description": "Strategy 'dca': 23/84 models (27%)",
       "recommendation": "Continue training for better coverage"
     },
     {
-      "severity": "medium",
+      "severity": "info",
       "file": "models/",
       "line": null,
       "category": "model_coverage",
-      "description": "Strategy 'mean_reversion': 0/84 models trained",
-      "recommendation": "Run: python gpu_train.py --strategy mean_reversion --all-pairs"
+      "description": "Strategy 'mean_reversion': 23/84 models (27%)",
+      "recommendation": "Continue training for better coverage"
     },
     {
-      "severity": "medium",
+      "severity": "info",
       "file": "models/",
       "line": null,
       "category": "model_coverage",
-      "description": "Strategy 'pairs_arbitrage': 0/84 models trained",
-      "recommendation": "Run: python gpu_train.py --strategy pairs_arbitrage --all-pairs"
+      "description": "Strategy 'pairs_arbitrage': 23/84 models (27%)",
+      "recommendation": "Continue training for better coverage"
     },
     {
-      "severity": "medium",
+      "severity": "info",
       "file": "models/",
       "line": null,
       "category": "model_coverage",
-      "description": "Strategy 'momentum': 0/84 models trained",
-      "recommendation": "Run: python gpu_train.py --strategy momentum --all-pairs"
+      "description": "Strategy 'momentum': 23/84 models (27%)",
+      "recommendation": "Continue training for better coverage"
     },
     {
       "severity": "info",
@@ -77,9 +77,9 @@
       "recommendation": "OK"
     }
   ],
-  "summary": "Paper Trading Readiness: PASS. 4 strategies ready, 0 critical, 0 high findings. No blockers.",
+  "summary": "Paper Trading Readiness: PASS. 7 strategies ready, 0 critical, 0 high findings. No blockers.",
   "files_scanned": 0,
-  "execution_time_seconds": 0.08,
+  "execution_time_seconds": 0.12,
   "recommendations": [
     "Proceed with: python launcher.py start --paper"
   ]

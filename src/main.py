@@ -1030,27 +1030,6 @@ def main():
 
         print("\nHealth check completed!")
 
-    else:
-        # Use legacy CLI for backward compatibility
-        cli = ArbitrageCLI()
-
-        if args.command == 'detect':
-            cli.run_detection(args.symbol, args.continuous, args.interval)
-        elif args.command == 'history':
-            cli.show_history(args.limit)
-        elif args.command == 'stats':
-            cli.show_stats()
-        elif args.command == 'test':
-            cli.test_system()
-        elif args.command == 'risk':
-            cli.show_risk_status()
-        elif args.command == 'backtest':
-            cli.run_backtest(args.symbols, args.days)
-        elif args.command == 'paper':
-            cli.run_paper_trading(args.symbol, args.continuous, args.interval)
-        elif args.command == 'analytics':
-            cli.run_analytics(args.days, args.format)
-
     elif args.command == 'gpu-train':
         # GPU training command
         from gpu_training_cli import GPUTrainingCLI
@@ -1077,6 +1056,27 @@ def main():
 
         gpu_cli = GPUTrainingCLI()
         gpu_cli.show_gpu_status()
+
+    else:
+        # Use legacy CLI for backward compatibility
+        cli = ArbitrageCLI()
+
+        if args.command == 'detect':
+            cli.run_detection(args.symbol, args.continuous, args.interval)
+        elif args.command == 'history':
+            cli.show_history(args.limit)
+        elif args.command == 'stats':
+            cli.show_stats()
+        elif args.command == 'test':
+            cli.test_system()
+        elif args.command == 'risk':
+            cli.show_risk_status()
+        elif args.command == 'backtest':
+            cli.run_backtest(args.symbols, args.days)
+        elif args.command == 'paper':
+            cli.run_paper_trading(args.symbol, args.continuous, args.interval)
+        elif args.command == 'analytics':
+            cli.run_analytics(args.days, args.format)
 
 if __name__ == "__main__":
     main()

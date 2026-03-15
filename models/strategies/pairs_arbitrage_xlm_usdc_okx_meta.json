@@ -1,0 +1,12 @@
+{
+  "strategy": "pairs_arbitrage",
+  "pair": "XLM/USDC",
+  "exchange": "okx",
+  "best_epoch": 83,
+  "best_val_loss": 0.1628172359493975,
+  "total_epochs": 83,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:39:58.044550",
+  "forward_window": 15
+}

@@ -1,0 +1,12 @@
+{
+  "strategy": "pairs_arbitrage",
+  "pair": "IOTA/USDC",
+  "exchange": "binance",
+  "best_epoch": 137,
+  "best_val_loss": 0.23278707961241404,
+  "total_epochs": 137,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:25:05.398322",
+  "forward_window": 15
+}

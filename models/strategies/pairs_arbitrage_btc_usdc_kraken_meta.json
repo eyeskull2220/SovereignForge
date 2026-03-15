@@ -1,0 +1,12 @@
+{
+  "strategy": "pairs_arbitrage",
+  "pair": "BTC/USDC",
+  "exchange": "kraken",
+  "best_epoch": 15,
+  "best_val_loss": 0.22192413608233133,
+  "total_epochs": 15,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:31:40.302085",
+  "forward_window": 15
+}

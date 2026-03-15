@@ -1,0 +1,12 @@
+{
+  "strategy": "pairs_arbitrage",
+  "pair": "BTC/USDC",
+  "exchange": "okx",
+  "best_epoch": 16,
+  "best_val_loss": 0.2326430598894755,
+  "total_epochs": 16,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:35:57.184793",
+  "forward_window": 15
+}

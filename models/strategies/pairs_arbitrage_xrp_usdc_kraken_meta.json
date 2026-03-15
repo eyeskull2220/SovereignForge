@@ -1,0 +1,12 @@
+{
+  "strategy": "pairs_arbitrage",
+  "pair": "XRP/USDC",
+  "exchange": "kraken",
+  "best_epoch": 6,
+  "best_val_loss": 0.22548839281190117,
+  "total_epochs": 6,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:34:56.815334",
+  "forward_window": 15
+}

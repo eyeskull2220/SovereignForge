@@ -1,0 +1,12 @@
+{
+  "strategy": "pairs_arbitrage",
+  "pair": "ADA/USDC",
+  "exchange": "okx",
+  "best_epoch": 29,
+  "best_val_loss": 0.2248942433959908,
+  "total_epochs": 29,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:40:55.987573",
+  "forward_window": 15
+}

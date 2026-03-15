@@ -1,0 +1,12 @@
+{
+  "strategy": "pairs_arbitrage",
+  "pair": "ETH/USDC",
+  "exchange": "okx",
+  "best_epoch": 13,
+  "best_val_loss": 0.23186427222357855,
+  "total_epochs": 13,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:36:40.399969",
+  "forward_window": 15
+}

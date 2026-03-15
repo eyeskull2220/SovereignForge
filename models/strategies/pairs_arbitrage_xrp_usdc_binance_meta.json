@@ -1,0 +1,12 @@
+{
+  "strategy": "pairs_arbitrage",
+  "pair": "XRP/USDC",
+  "exchange": "binance",
+  "best_epoch": 156,
+  "best_val_loss": 0.2261936455965042,
+  "total_epochs": 156,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:06:18.177309",
+  "forward_window": 15
+}

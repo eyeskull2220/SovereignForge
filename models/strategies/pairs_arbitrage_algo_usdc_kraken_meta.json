@@ -1,0 +1,12 @@
+{
+  "strategy": "pairs_arbitrage",
+  "pair": "ALGO/USDC",
+  "exchange": "kraken",
+  "best_epoch": 29,
+  "best_val_loss": 0.2250582119449973,
+  "total_epochs": 29,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:35:35.057948",
+  "forward_window": 15
+}

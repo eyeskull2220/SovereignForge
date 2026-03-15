@@ -1,0 +1,12 @@
+{
+  "strategy": "pairs_arbitrage",
+  "pair": "LINK/USDC",
+  "exchange": "okx",
+  "best_epoch": 121,
+  "best_val_loss": 0.20353202174107235,
+  "total_epochs": 121,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:43:19.273425",
+  "forward_window": 15
+}

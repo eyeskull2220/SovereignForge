@@ -1,0 +1,12 @@
+{
+  "strategy": "pairs_arbitrage",
+  "pair": "XLM/USDC",
+  "exchange": "coinbase",
+  "best_epoch": 13,
+  "best_val_loss": 0.24788348972797394,
+  "total_epochs": 13,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:31:12.810078",
+  "forward_window": 15
+}

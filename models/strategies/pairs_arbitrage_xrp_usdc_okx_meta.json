@@ -1,0 +1,12 @@
+{
+  "strategy": "pairs_arbitrage",
+  "pair": "XRP/USDC",
+  "exchange": "okx",
+  "best_epoch": 59,
+  "best_val_loss": 0.2239276217089759,
+  "total_epochs": 59,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:38:08.338625",
+  "forward_window": 15
+}

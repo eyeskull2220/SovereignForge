@@ -95,7 +95,11 @@ class CapitalAllocator:
 
     MIN_CAPITAL_FLOOR = 50.0  # Halt all trading if capital drops below this
 
-    def __init__(self, config: Dict[str, Any]):
+    # Default persistence path (reports/capital_allocator_state.json)
+    _DEFAULT_STATE_DIR = Path(__file__).resolve().parent.parent / "reports"
+
+    def __init__(self, config: Dict[str, Any],
+                 state_path: Optional[Path] = None):
         alloc_cfg = config.get('capital_allocation', {})
         self.initial_capital = alloc_cfg.get('initial_capital', 300.0)
         self.current_capital = self.initial_capital
@@ -105,6 +109,9 @@ class CapitalAllocator:
         self.rebalance_interval_days = alloc_cfg.get('rebalance_interval_days', 90)
         self.min_allocation_pct = alloc_cfg.get('min_strategy_allocation_pct', 0.10)
         self.max_allocation_pct = alloc_cfg.get('max_strategy_allocation_pct', 0.50)
+
+        # Persistence
+        self._state_path = state_path or (self._DEFAULT_STATE_DIR / "capital_allocator_state.json")
 
         # Strategy tracking
         self.strategies: Dict[str, StrategyPerformance] = {}
@@ -116,6 +123,9 @@ class CapitalAllocator:
                 self.base_weights[name] = scfg.get('weight', 0.1)
 
         self.last_rebalance = time.time()
+
+        # Attempt to restore persisted state (non-fatal on failure)
+        self.load_state()
 
         logger.info(f"CapitalAllocator initialized: ${self.initial_capital} capital, "
                     f"tier={self.get_tier().value}, {len(self.base_weights)} strategies")
@@ -197,6 +207,7 @@ class CapitalAllocator:
                 self.strategies[name] = StrategyPerformance(name=name)
             self.strategies[name].allocation = alloc
 
+        self.save_state()
         return allocations
 
     def record_trade(self, strategy: str, pnl: float):
@@ -231,6 +242,8 @@ class CapitalAllocator:
             perf.halved = True
             logger.warning(f"Circuit breaker triggered for {strategy}: "
                           f"monthly drawdown {perf.monthly_drawdown:.1%} > {self.monthly_drawdown_limit:.1%}")
+
+        self.save_state()
 
     def should_rebalance(self) -> bool:
         elapsed_days = (time.time() - self.last_rebalance) / 86400
@@ -281,3 +294,71 @@ class CapitalAllocator:
                 for name, perf in self.strategies.items()
             },
         }
+
+    # ------------------------------------------------------------------
+    # Persistence — save / load allocator state to JSON
+    # ------------------------------------------------------------------
+
+    def save_state(self):
+        """Persist allocator state (capital, strategy performance, trade history) to disk.
+
+        Uses atomic write-to-temp-then-rename to prevent corruption.
+        """
+        try:
+            state = {
+                'current_capital': self.current_capital,
+                'initial_capital': self.initial_capital,
+                'last_rebalance': self.last_rebalance,
+                'strategies': {},
+            }
+            for name, perf in self.strategies.items():
+                state['strategies'][name] = {
+                    'name': perf.name,
+                    'pnl_history': perf.pnl_history,
+                    'trade_timestamps': perf.trade_timestamps,
+                    'allocation': perf.allocation,
+                    'monthly_high': perf.monthly_high,
+                    'monthly_drawdown': perf.monthly_drawdown,
+                    'halved': perf.halved,
+                }
+
+            self._state_path.parent.mkdir(parents=True, exist_ok=True)
+            tmp_path = self._state_path.with_suffix('.tmp')
+            tmp_path.write_text(json.dumps(state, indent=2))
+            tmp_path.replace(self._state_path)
+
+            logger.debug(f"CapitalAllocator state saved to {self._state_path}")
+        except Exception as e:
+            logger.error(f"Failed to save allocator state: {e}")
+
+    def load_state(self):
+        """Restore allocator state from disk.  Non-fatal on any error."""
+        if not self._state_path.exists():
+            return
+
+        try:
+            with open(self._state_path) as f:
+                state = json.load(f)
+
+            self.current_capital = state.get('current_capital', self.current_capital)
+            self.initial_capital = state.get('initial_capital', self.initial_capital)
+            self.last_rebalance = state.get('last_rebalance', self.last_rebalance)
+
+            for name, sdata in state.get('strategies', {}).items():
+                perf = StrategyPerformance(
+                    name=sdata.get('name', name),
+                    pnl_history=sdata.get('pnl_history', []),
+                    trade_timestamps=sdata.get('trade_timestamps', []),
+                    allocation=sdata.get('allocation', 0.0),
+                    monthly_high=sdata.get('monthly_high', 0.0),
+                    monthly_drawdown=sdata.get('monthly_drawdown', 0.0),
+                    halved=sdata.get('halved', False),
+                )
+                self.strategies[name] = perf
+
+            logger.info(f"CapitalAllocator state restored: ${self.current_capital:.2f} capital, "
+                        f"{len(self.strategies)} strategies")
+        except (json.JSONDecodeError, KeyError, TypeError) as e:
+            logger.warning(f"Corrupt allocator state file, starting fresh: {e}")
+        except Exception as e:
+            logger.error(f"Failed to load allocator state: {e}")

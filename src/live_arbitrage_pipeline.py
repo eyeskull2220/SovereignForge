@@ -630,9 +630,27 @@ class LiveArbitragePipeline:
         ], dtype=np.float64)
         self._market_buffers[pair].append(row)
 
+    def _check_circuit_breaker_reset_signal(self):
+        """Check for dashboard-initiated circuit breaker reset signal file."""
+        signal_path = self._project_root / ".circuit_breaker_reset"
+        if signal_path.exists():
+            try:
+                signal_path.unlink()
+                if self._dynamic_risk is not None:
+                    self._dynamic_risk.circuit_breaker_active = False
+                    self._dynamic_risk.emergency_stop_active = False
+                    logger.info("Circuit breaker RESET via dashboard signal")
+                else:
+                    logger.info("Circuit breaker reset signal received but no DynamicRiskAdjustment instance")
+            except Exception as e:
+                logger.error(f"Failed to process circuit breaker reset signal: {e}")
+
     async def _handle_opportunity(self, opportunity: ArbitrageOpportunity):
         """Handle detected arbitrage opportunity"""
         self.stats['opportunities_detected'] += 1
+
+        # ── Check for external circuit breaker reset signal ──
+        self._check_circuit_breaker_reset_signal()
 
         try:
             # ── Periodic market condition assessment (every 50 opportunities) ──

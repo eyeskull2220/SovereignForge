@@ -23,7 +23,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -68,8 +68,13 @@ CONFIG_SECRET_KEYS = {"telegram_bot_token", "api_key", "api_secret", "passphrase
 API_KEY = os.environ.get("SOVEREIGNFORGE_API_KEY", "")
 
 async def verify_api_key(x_api_key: str = Header(default="")):
-    """Require API key for mutation endpoints. Skip if no key configured."""
-    if API_KEY and x_api_key != API_KEY:
+    """Require API key for mutation endpoints. Fail closed if no key configured."""
+    if not API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail="API key not configured. Set SOVEREIGNFORGE_API_KEY environment variable.",
+        )
+    if x_api_key != API_KEY:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
 # ---------------------------------------------------------------------------
@@ -740,8 +745,14 @@ ws_manager = ConnectionManager()
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for real-time dashboard updates."""
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(default="")):
+    """WebSocket endpoint for real-time dashboard updates. Requires token auth."""
+    if not API_KEY:
+        await websocket.close(code=1008, reason="API key not configured on server")
+        return
+    if token != API_KEY:
+        await websocket.close(code=1008, reason="Invalid or missing token")
+        return
     await ws_manager.connect(websocket)
     try:
         await websocket.send_json({
@@ -940,7 +951,8 @@ async def get_exchange_status():
 
         return {'exchanges': statuses, 'total': len(exchanges)}
     except Exception as e:
-        return {'exchanges': [], 'error': str(e)}
+        logger.error(f"Failed to get exchange status: {e}")
+        return {'exchanges': [], 'error': 'Failed to retrieve exchange status'}
 
 
 @app.get("/api/capital/status")
@@ -984,7 +996,8 @@ async def get_capital_status():
             'allocations': allocations,
         }
     except Exception as e:
-        return {'error': str(e)}
+        logger.error(f"Failed to get capital status: {e}")
+        return {'error': 'Failed to retrieve capital status'}
 
 
 # ---------------------------------------------------------------------------
@@ -1031,7 +1044,8 @@ async def get_agent_report(agent_name: str):
                 return json.loads(json_file.read_text(encoding="utf-8"))
         return {"error": "Report not found", "available": [f.stem for f in reports_dir.glob("*.json")]}
     except Exception as e:
-        return {"error": str(e)}
+        logger.error(f"Failed to get agent report '{agent_name}': {e}")
+        return {"error": "Failed to retrieve agent report"}
 
 
 @app.get("/api/agents/synthesis")
@@ -1043,7 +1057,8 @@ async def get_synthesis_report():
             return json.loads(synthesis_path.read_text(encoding="utf-8"))
         return {"error": "No synthesis report found. Run: python src/agents/runner.py synthesize"}
     except Exception as e:
-        return {"error": str(e)}
+        logger.error(f"Failed to get synthesis report: {e}")
+        return {"error": "Failed to retrieve synthesis report"}
 
 
 @app.get("/api/agents/health")
@@ -1064,7 +1079,8 @@ async def get_system_health():
             }
         return {"health_score": None, "error": "No audit data available"}
     except Exception as e:
-        return {"health_score": None, "error": str(e)}
+        logger.error(f"Failed to get system health: {e}")
+        return {"health_score": None, "error": "Failed to retrieve system health"}
 
 
 @app.get("/api/agents/research")
@@ -1075,13 +1091,15 @@ async def run_research_agents():
         from agents.research_sentiment import MarketSentimentAgent
         results['sentiment'] = MarketSentimentAgent().analyze()
     except Exception as e:
-        results['sentiment'] = {"error": str(e)}
+        logger.error(f"Sentiment agent failed: {e}")
+        results['sentiment'] = {"error": "Sentiment analysis unavailable"}
 
     try:
         from agents.research_performance import StrategyPerformanceAgent
         results['performance'] = StrategyPerformanceAgent().analyze()
     except Exception as e:
-        results['performance'] = {"error": str(e)}
+        logger.error(f"Performance agent failed: {e}")
+        results['performance'] = {"error": "Performance analysis unavailable"}
 
     # Technical analysis is slower (fetches from exchange) — include summary only
     try:
@@ -1093,7 +1111,8 @@ async def run_research_agents():
             'execution_time': ta.get('execution_time', 0),
         }
     except Exception as e:
-        results['technical'] = {"error": str(e)}
+        logger.error(f"Technical analysis agent failed: {e}")
+        results['technical'] = {"error": "Technical analysis unavailable"}
 
     return results
 
@@ -1114,7 +1133,7 @@ async def send_test_alert_endpoint(_auth=Depends(verify_api_key)):
         return {"success": False, "error": f"telegram_alerts module not available: {e}"}
     except Exception as e:
         logger.error(f"Test alert failed: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "Failed to send test alert. Check server logs."}
 
 
 @app.get("/api/alerts/status")

@@ -93,6 +93,8 @@ class CapitalAllocator:
     - Drawdown circuit breaker (5% monthly max per strategy)
     """
 
+    MIN_CAPITAL_FLOOR = 50.0  # Halt all trading if capital drops below this
+
     def __init__(self, config: Dict[str, Any]):
         alloc_cfg = config.get('capital_allocation', {})
         self.initial_capital = alloc_cfg.get('initial_capital', 300.0)
@@ -133,11 +135,21 @@ class CapitalAllocator:
         """Max strategies allowed at current capital level."""
         return self.get_tier_config().max_strategies
 
+    def can_trade(self) -> bool:
+        """Pre-trade check: returns False when capital is below the minimum floor."""
+        if self.current_capital < self.MIN_CAPITAL_FLOOR:
+            logger.critical(f"Capital ${self.current_capital:.2f} below floor ${self.MIN_CAPITAL_FLOOR}. Trading BLOCKED.")
+            return False
+        return True
+
     def allocate(self) -> Dict[str, float]:
         """
         Compute dollar allocation per strategy based on tier, weights, and performance.
         Returns dict of strategy_name → allocation_usd.
         """
+        if not self.can_trade():
+            return {}
+
         tier_cfg = self.get_tier_config()
         max_strategies = tier_cfg.max_strategies
 
@@ -200,9 +212,8 @@ class CapitalAllocator:
             self.current_capital += pnl
 
         # Minimum capital floor — halt all trading if breached
-        MIN_CAPITAL_FLOOR = 50.0
-        if self.current_capital < MIN_CAPITAL_FLOOR:
-            logger.critical(f"Capital ${self.current_capital:.2f} below floor ${MIN_CAPITAL_FLOOR}. HALTING all trading.")
+        if self.current_capital < self.MIN_CAPITAL_FLOOR:
+            logger.critical(f"Capital ${self.current_capital:.2f} below floor ${self.MIN_CAPITAL_FLOOR}. HALTING all trading.")
             self.current_capital = max(self.current_capital, 0)
             # Halt all strategies
             for perf in self.strategies.values():

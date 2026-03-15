@@ -247,6 +247,15 @@ class LiveArbitragePipeline:
         self._pipeline_state_path = self._project_root / "reports" / "pipeline_state.json"
         self._paper_trading_state_path = self._project_root / "reports" / "paper_trading_state.json"
 
+        # ── Cached initial capital (avoid re-reading config on every trade) ──
+        try:
+            _cfg_path = self._project_root / "config" / "trading_config.json"
+            with open(_cfg_path) as _f:
+                _cfg = json.load(_f)
+            self._initial_capital = _cfg.get('capital_allocation', {}).get('initial_capital', 300.0)
+        except Exception:
+            self._initial_capital = 300.0  # Safe fallback
+
         # Pipeline statistics
         self.stats = {
             'opportunities_detected': 0,
@@ -751,7 +760,9 @@ class LiveArbitragePipeline:
                     self.stats['circuit_breaker_blocks'] = self.stats.get('circuit_breaker_blocks', 0) + 1
                     return
             except Exception as e:
-                logger.debug(f"Dynamic risk check skipped: {e}")
+                logger.error(f"Dynamic risk check FAILED — blocking trade for {opportunity.pair}: {e}")
+                self.stats['circuit_breaker_blocks'] = self.stats.get('circuit_breaker_blocks', 0) + 1
+                return
 
         try:
             # Dedup check: skip if same opportunity was recently executed
@@ -788,17 +799,11 @@ class LiveArbitragePipeline:
             # Position sizing: use max_position_size_percent from config
             trading_config = self.config.get('trading', {})
             max_position_pct = trading_config.get('max_position_size_percent', 2.0) / 100.0
-            # Use real portfolio value from risk manager, fallback to config
+            # Use real portfolio value from risk manager, fallback to cached initial_capital
             if hasattr(self.opportunity_filter, 'portfolio_value') and self.opportunity_filter.portfolio_value > 0:
                 base_capital = self.opportunity_filter.portfolio_value
             else:
-                try:
-                    cfg_path = Path(__file__).resolve().parent.parent / "config" / "trading_config.json"
-                    with open(cfg_path) as f:
-                        _cfg = json.load(f)
-                    base_capital = _cfg.get('capital_allocation', {}).get('initial_capital', 300.0)
-                except Exception:
-                    base_capital = 300.0  # Safe fallback — never assume $10k
+                base_capital = self._initial_capital
             quantity = (base_capital * max_position_pct) / buy_price
 
             buy_fee_rate = self._exchange_fees.get(buy_exchange, 0.001)

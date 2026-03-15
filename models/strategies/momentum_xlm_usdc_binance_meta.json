@@ -1,0 +1,12 @@
+{
+  "strategy": "momentum",
+  "pair": "XLM/USDC",
+  "exchange": "binance",
+  "best_epoch": 5,
+  "best_val_loss": 0.09583015768892235,
+  "total_epochs": 5,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:51:39.606489",
+  "forward_window": 36
+}

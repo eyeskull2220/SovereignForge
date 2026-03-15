@@ -1,0 +1,12 @@
+{
+  "strategy": "momentum",
+  "pair": "BTC/USDC",
+  "exchange": "okx",
+  "best_epoch": 2,
+  "best_val_loss": 0.07545071091088984,
+  "total_epochs": 2,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T21:08:27.323562",
+  "forward_window": 36
+}

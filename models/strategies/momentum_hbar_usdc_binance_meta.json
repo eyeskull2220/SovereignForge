@@ -1,0 +1,12 @@
+{
+  "strategy": "momentum",
+  "pair": "HBAR/USDC",
+  "exchange": "binance",
+  "best_epoch": 11,
+  "best_val_loss": 0.07871709536347124,
+  "total_epochs": 11,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:53:07.180205",
+  "forward_window": 36
+}

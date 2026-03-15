@@ -1,0 +1,12 @@
+{
+  "strategy": "momentum",
+  "pair": "ONDO/USDC",
+  "exchange": "binance",
+  "best_epoch": 21,
+  "best_val_loss": 0.09814783794184526,
+  "total_epochs": 21,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T21:02:14.567573",
+  "forward_window": 36
+}

@@ -1,0 +1,12 @@
+{
+  "strategy": "momentum",
+  "pair": "ALGO/USDC",
+  "exchange": "kraken",
+  "best_epoch": 3,
+  "best_val_loss": 0.22544783353805542,
+  "total_epochs": 3,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T21:08:10.819783",
+  "forward_window": 36
+}

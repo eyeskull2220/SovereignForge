@@ -1,0 +1,12 @@
+{
+  "strategy": "momentum",
+  "pair": "LINK/USDC",
+  "exchange": "okx",
+  "best_epoch": 8,
+  "best_val_loss": 0.09674341082572938,
+  "total_epochs": 8,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T21:14:17.531580",
+  "forward_window": 36
+}

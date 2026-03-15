@@ -1,0 +1,12 @@
+{
+  "strategy": "momentum",
+  "pair": "LINK/USDC",
+  "exchange": "binance",
+  "best_epoch": 18,
+  "best_val_loss": 0.08965659414728483,
+  "total_epochs": 18,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:57:32.078275",
+  "forward_window": 36
+}

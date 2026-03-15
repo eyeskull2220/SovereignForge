@@ -1,0 +1,12 @@
+{
+  "strategy": "momentum",
+  "pair": "XRP/USDC",
+  "exchange": "binance",
+  "best_epoch": 17,
+  "best_val_loss": 0.08156298622488975,
+  "total_epochs": 17,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T20:50:32.651395",
+  "forward_window": 36
+}

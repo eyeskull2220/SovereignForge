@@ -1,0 +1,12 @@
+{
+  "strategy": "momentum",
+  "pair": "IOTA/USDC",
+  "exchange": "okx",
+  "best_epoch": 8,
+  "best_val_loss": 0.04906938380251328,
+  "total_epochs": 8,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T21:15:30.086349",
+  "forward_window": 36
+}

@@ -1,177 +1,176 @@
 {
   "agent_name": "Trading Logic Reviewer",
   "agent_type": "audit",
-  "timestamp": "2026-03-14T04:30:00",
-  "health_score": 52.0,
+  "timestamp": "2026-03-15T14:30:00Z",
+  "health_score": 68,
   "findings": [
     {
       "severity": "critical",
-      "file": "src/risk_management.py",
-      "line": 745,
-      "category": "kelly",
-      "description": "TradingRiskManager._kelly_criterion swaps parameter semantics: spread_pct passed as win_probability, confidence as win_amount. Kelly formula computes with wrong inputs.",
-      "recommendation": "Fix call site at line 712 to pass parameters in correct order"
+      "file": "src/order_executor.py",
+      "line": 193,
+      "category": "floating_point_arithmetic",
+      "description": "All monetary P&L calculations use native Python float multiplication: buy_cost = buy_order['executed_price'] * buy_order['executed_quantity']. IEEE 754 double-precision floats accumulate rounding errors. On 10,000 trades/year with average $500 notional, cumulative rounding drift can reach $5-50 annually, and one pathological case (e.g. 0.1 + 0.2 != 0.3 pattern in fee subtraction) could cause a single trade to miscalculate profit by enough to turn a losing trade into a false winner, corrupting strategy metrics.",
+      "recommendation": "Replace all monetary arithmetic in order_executor.py, paper_trading.py, risk_management.py, and capital_allocator.py with Python's decimal.Decimal (quantize to 8 decimal places for crypto quantities, 2 for USD values). At minimum, wrap the P&L calculation: Decimal(str(sell_revenue)) - Decimal(str(buy_cost)) - Decimal(str(fees))."
     },
     {
       "severity": "critical",
-      "file": "src/live_arbitrage_pipeline.py",
-      "line": 696,
-      "category": "hardcoded",
-      "description": "base_capital hardcoded to $10,000 ignoring actual portfolio value. $300 account sizes positions as if $10k = 33x too large.",
-      "recommendation": "Read from config capital_allocation.initial_capital or RiskManager portfolio_value"
+      "file": "src/order_executor.py",
+      "line": 165,
+      "category": "race_condition_partial_fill",
+      "description": "Buy and sell orders are executed concurrently via asyncio.gather (line 165). If sell fills fully but buy only partially fills, lines 168-175 attempt to cancel the buy but the sell has already executed. The system now holds a short position on the sell exchange with no offsetting long. With BTC at $45,000 and a 1% adverse move, this is a $450 loss on a 0.01 BTC trade. The partial fill handler (lines 362-379) only handles its own side; there is no cross-leg reconciliation.",
+      "recommendation": "Implement a two-phase execution: (1) place both orders, (2) poll both for fill confirmation before committing. If either side fails or only partially fills, cancel both sides and reconcile. Add an 'inventory imbalance' tracker that alerts when net exposure deviates from expected."
     },
     {
       "severity": "critical",
-      "file": "src/multi_strategy_training.py",
-      "line": 953,
-      "category": "consistency",
-      "description": "forward_windows dict missing 3 of 7 strategies (mean_reversion, pairs_arbitrage, momentum). Training crashes with KeyError.",
-      "recommendation": "Add MEAN_REVERSION:10, PAIRS_ARBITRAGE:20, MOMENTUM:48 to forward_windows"
+      "file": "src/order_executor.py",
+      "line": 299,
+      "category": "missing_lot_size_rounding",
+      "description": "The quantity parameter is passed directly to exchange.create_order() without rounding to the exchange's lot size or tick size. Binance requires BTC quantities rounded to 5 decimal places (0.00001), XRP to 0 decimals on some pairs. Passing 0.012345678 will cause an 'Invalid quantity' rejection from the exchange, or worse, silent truncation that changes the economics of the trade. This affects every single trade attempted.",
+      "recommendation": "After loading markets (line 90), query exchange.markets[symbol]['precision'] and exchange.markets[symbol]['limits'] for each symbol. Use ccxt's exchange.amount_to_precision(symbol, quantity) and exchange.price_to_precision(symbol, price) before placing orders. Add a minimum notional check (Binance requires >$10 notional per order)."
     },
     {
       "severity": "high",
       "file": "src/order_executor.py",
-      "line": 197,
-      "category": "fees",
-      "description": "Flat 0.1% fee assumption for profitability check. Coinbase is 0.6% taker. 0.3% spread passes validation but loses money on Coinbase.",
-      "recommendation": "Use exchange-specific fee schedules"
+      "line": 218,
+      "category": "fee_calculation_error",
+      "description": "EXCHANGE_FEES hardcodes single fee rates (e.g. coinbase: 0.004) but the actual Coinbase Advanced Trade API charges 0.006 taker / 0.004 maker for <$10K monthly volume. Since arbitrage uses limit orders (line 322), the maker rate applies when orders rest on the book, but taker rate applies when they cross the spread. The code always uses the single rate for validation (line 242-243) but real fills could be 50% more expensive on Coinbase. On $100K annual volume through Coinbase, this is ~$200 in underestimated fees. paper_trading.py (line 99-107) has a separate, more detailed fee table -- the two are inconsistent.",
+      "recommendation": "Consolidate fee schedules into a single source of truth (config/exchange_fees.json). Distinguish maker vs taker rates. Use taker rate for validation (worst case) and actual fill rate from the exchange's fee field in the order response for P&L calculation."
+    },
+    {
+      "severity": "high",
+      "file": "src/backtester.py",
+      "line": 328,
+      "category": "look_ahead_bias",
+      "description": "The backtester's _find_arbitrage_opportunities method compares bid/ask across exchanges at the same timestamp (line 321-325), but in reality these prices would never be simultaneously observable due to network latency (50-200ms between exchanges). The simulated bid/ask spread is a fixed 0.1% (line 298-299) regardless of time of day or volatility, whereas real spreads widen 3-5x during low liquidity periods. This inflates backtest profitability by creating phantom opportunities that would not exist in live trading.",
+      "recommendation": "Add random latency offsets (50-500ms) between exchange price observations. Use time-varying bid/ask spread models based on historical spread data. Introduce a 'stale price' window where if two exchange snapshots are >200ms apart, the opportunity is discarded."
+    },
+    {
+      "severity": "high",
+      "file": "src/backtester.py",
+      "line": 384,
+      "category": "unrealistic_backtest_fees",
+      "description": "Backtest fee calculation uses 0.05% fee + 0.08% slippage per side (line 385), totaling 0.26% round-trip. But the order_executor uses exchange-specific fees (0.1% to 0.4% per side) plus a 0.1% slippage buffer. This means the backtester understates costs by 30-75% compared to live execution, inflating backtest returns and Sharpe ratio. A strategy that shows 0.5% return per trade in backtesting may actually net 0.1% or less live.",
+      "recommendation": "Import EXCHANGE_FEES from paper_trading.py (the most detailed fee table) into the backtester. Apply exchange-specific fees based on which exchanges are in each trade. Use variable slippage that increases with trade size relative to order book depth."
     },
     {
       "severity": "high",
       "file": "src/order_executor.py",
-      "line": 588,
-      "category": "fees",
-      "description": "PaperTradingExecutor uses flat 0.1% fee. Real Coinbase fees are 6x higher. Paper results overly optimistic.",
-      "recommendation": "Use EXCHANGE_FEES dict"
+      "line": 664,
+      "category": "paper_trading_divergence",
+      "description": "Paper trading (PaperTradingExecutor in order_executor.py, line 664) always succeeds with zero slippage on fill price and a flat 0.1% fee. The PaperTradingEngine in paper_trading.py is more realistic (exchange-specific fees, random slippage). But the order_executor's PaperTradingExecutor is what the live pipeline would use for paper mode. This means paper P&L will be systematically better than live: no partial fills, no order rejections, no latency. Estimated annual divergence: paper will overstate returns by 15-30%.",
+      "recommendation": "Deprecate PaperTradingExecutor in order_executor.py in favor of PaperTradingEngine from paper_trading.py. Add simulated partial fills (random 60-100% fill rate), simulated latency (100-500ms), and order book depth checks to the paper trading model."
     },
     {
       "severity": "high",
       "file": "src/risk_management.py",
-      "line": 202,
-      "category": "kelly",
-      "description": "RiskManager Kelly inflates win_probability with spread_bonus and uses spread/costs as odds ratio producing unreasonably high fractions.",
-      "recommendation": "Use historical win rate data for probability estimation"
-    },
-    {
-      "severity": "high",
-      "file": "src/paper_trading.py",
-      "line": 77,
-      "category": "consistency",
-      "description": "Paper trading hardcodes 4-strategy weights {arb:0.4,fib:0.2,grid:0.2,dca:0.2} vs config 7-strategy weights. Inconsistent.",
-      "recommendation": "Load weights from trading_config.json"
-    },
-    {
-      "severity": "high",
-      "file": "src/paper_trading.py",
-      "line": 67,
-      "category": "consistency",
-      "description": "STRATEGIES list only has 4 strategies, missing mean_reversion, pairs_arbitrage, momentum.",
-      "recommendation": "Add all 7 strategies"
+      "line": 512,
+      "category": "stop_loss_logic_flaw",
+      "description": "check_stop_losses() only checks 'current_price <= position.stop_loss' (line 512) and 'current_price >= position.take_profit' (line 516). This is correct for long positions but WRONG for short positions. If side == 'sell' (short), the stop loss should trigger when price rises ABOVE stop_loss, and take_profit when price falls BELOW take_profit. The code does not differentiate by side. A short position with entry at $100, stop_loss at $102 will never trigger because $current_price <= $102 is checked instead of >= $102.",
+      "recommendation": "Add side-aware stop/TP logic: if position.side == 'buy': trigger stop when price <= stop_loss, TP when price >= take_profit. If position.side == 'sell': trigger stop when price >= stop_loss, TP when price <= take_profit. The paper_trading.py already handles this correctly (lines 877-886) -- replicate that pattern."
     },
     {
       "severity": "high",
       "file": "src/risk_management.py",
-      "line": 300,
-      "category": "kelly",
-      "description": "calculate_kelly_metrics EV formula dimensionally inconsistent. Does not account for actual dollar amounts at risk.",
-      "recommendation": "Use: EV = p*(spread-costs) - q*costs"
+      "line": 293,
+      "category": "kelly_criterion_miscalculation",
+      "description": "The Kelly criterion implementation adds a 'spread_bonus' to win probability (line 288-289): win_probability = confidence + min(spread * 10, 0.3). This conflates two separate concepts -- a 3% spread does not make a 55% confidence signal into an 85% confidence signal. The estimated_costs at line 293 is hardcoded at 0.1% regardless of exchange, ignoring that Coinbase costs 0.6% taker. This inflates Kelly fraction and oversizes positions for expensive exchanges. With quarter-Kelly applied (line 311), the error is dampened but still leads to ~20% oversizing on Coinbase trades.",
+      "recommendation": "Remove spread_bonus from win_probability. Use exchange-specific fee rates for estimated_costs. The Kelly formula inputs should be: p = historical win rate for this strategy (or confidence as proxy), b = (expected_profit_after_costs / expected_loss_after_costs). Validate Kelly output against a maximum of 2% of portfolio per trade."
     },
     {
-      "severity": "medium",
-      "file": "src/risk_management.py",
-      "line": 434,
-      "category": "consistency",
-      "description": "check_stop_losses only handles buy-side. Sell positions stop/TP logic is inverted but not implemented.",
-      "recommendation": "Add side-aware stop loss matching TradingRiskManager"
-    },
-    {
-      "severity": "medium",
-      "file": "src/live_arbitrage_pipeline.py",
-      "line": 699,
-      "category": "fees",
-      "description": "Fee calc uses flat 0.1% for both exchanges. Real exchange fees differ significantly.",
-      "recommendation": "Use per-exchange fee rates"
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 427,
+      "category": "divide_by_zero_risk",
+      "description": "In _get_order_price(), total_volume is calculated as sum(min(qty, quantity/3) for _, qty in asks[:3]). If the order book has entries with qty=0 (which exchanges can return during flash crashes or maintenance), total_volume will be 0, and the weighted_price division on line 429 will produce a ZeroDivisionError or inf. The function returns 0.0 on exception (line 449), which then fails the buy_price <= 0 check, but an inf price could slip through and place an order at an absurd price.",
+      "recommendation": "Add explicit check: if total_volume <= 0: return asks[0][0] * 1.0001 (fall back to top-of-book). Also validate that weighted_price is within 5% of the top-of-book price before returning -- an extreme value indicates corrupted order book data."
     },
     {
       "severity": "medium",
       "file": "src/order_executor.py",
-      "line": 315,
-      "category": "slippage",
-      "description": "Partial fill hardcoded to 95%. Creates quantity mismatch between arb legs.",
-      "recommendation": "Check actual filled qty and adjust other leg"
+      "line": 276,
+      "category": "slippage_estimation",
+      "description": "The slippage buffer is a fixed 0.1% (line 276). Real slippage depends on order size relative to order book depth. A $50 order on BTC/USDC has near-zero slippage; a $5,000 order on VET/USDC could have 1-2% slippage on thin books. Using a fixed buffer understates risk on illiquid pairs and overstates it on liquid pairs, leading to both missed opportunities and unexpected losses.",
+      "recommendation": "Calculate slippage dynamically from the order book: walk the book to fill the desired quantity and compute the volume-weighted average price vs. the top-of-book price. Use this as the slippage estimate. Cap at 2% and reject if slippage exceeds the expected spread."
     },
     {
       "severity": "medium",
       "file": "src/capital_allocator.py",
       "line": 76,
-      "category": "rounding",
-      "description": "rolling_sharpe uses sqrt(N trades) annualization instead of time-based. Incomparable across strategies.",
-      "recommendation": "Use sqrt(365/window_days)"
+      "category": "sharpe_ratio_calculation",
+      "description": "rolling_sharpe() computes Sharpe as mean(pnl) / std(pnl) * sqrt(N) where N is the count of trades in the window (line 76). This is not annualized Sharpe -- it scales with trade frequency. A strategy with 100 trades/month will show a Sharpe 10x higher than one with 1 trade/month even if per-trade risk-adjusted returns are identical. This biases allocation toward high-frequency strategies regardless of actual quality.",
+      "recommendation": "Annualize the Sharpe ratio: estimate trades_per_year from the time window, then Sharpe = mean(returns) / std(returns) * sqrt(trades_per_year). Alternatively, use time-based returns (daily or weekly) rather than per-trade returns."
     },
     {
       "severity": "medium",
-      "file": "src/risk_management.py",
-      "line": 865,
-      "category": "rounding",
-      "description": "Sharpe ratio mixes per-trade returns with daily risk-free rate adjustments.",
-      "recommendation": "Match return frequency with risk-free rate period"
+      "file": "src/arbitrage_detector.py",
+      "line": 461,
+      "category": "fee_estimation_inconsistency",
+      "description": "In _prepare_grok_opportunity_data(), fees are estimated as: binance=0.001, coinbase=0.002, others=0.0015. But Coinbase actual taker fee is 0.006 for low-volume traders, and the order_executor uses 0.004. Three different fee estimates exist across the codebase for the same exchange. If Grok reasoning uses the wrong fee to assess opportunity viability, it may recommend executing unprofitable trades.",
+      "recommendation": "Create a single authoritative fee schedule module (e.g., src/fee_schedule.py) imported by all components. Include maker/taker rates, volume tier breakpoints, and network transfer costs."
     },
     {
       "severity": "medium",
-      "file": "src/strategy_ensemble.py",
-      "line": 371,
-      "category": "consistency",
-      "description": "CrossExchangeScorer recomputes signals as simple average, losing confidence-weighted info.",
-      "recommendation": "Use weighted final_signal from EnsembleSignal"
+      "file": "src/backtester.py",
+      "line": 261,
+      "category": "daily_return_calculation_error",
+      "description": "Daily return is calculated as (portfolio_value - peak_value) / peak_value (line 261), but peak_value is the running maximum, not yesterday's close. This means daily_return is actually 'return from all-time high', not daily return. The Sharpe ratio calculation (line 457) then uses these as if they were daily returns, producing a meaningless number.",
+      "recommendation": "Track the previous day's portfolio value separately. daily_return = (today_value - yesterday_value) / yesterday_value. Use this for Sharpe calculation."
+    },
+    {
+      "severity": "medium",
+      "file": "src/portfolio_optimization.py",
+      "line": 424,
+      "category": "synthetic_covariance_matrix",
+      "description": "The covariance matrix uses hardcoded correlations (0.3 intra-class, 0.1 inter-class) instead of actual historical return correlations. Crypto assets have time-varying correlations that spike to 0.9+ during market crashes. Using fixed low correlations understates portfolio risk and leads to over-concentrated positions that suffer correlated drawdowns.",
+      "recommendation": "Calculate the covariance matrix from actual historical price data (at least 90 days of daily returns). Implement a shrinkage estimator (Ledoit-Wolf) for numerical stability with small sample sizes."
+    },
+    {
+      "severity": "medium",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 93,
+      "category": "stale_price_protection",
+      "description": "OpportunityFilter checks probability, spread, and risk score but has no maximum-age check on the opportunity timestamp. An opportunity detected 30 seconds ago may reference prices that have moved 1-2% since detection. The pipeline relies on order_executor's re-pricing (line 267), but by then resources have been allocated to a stale opportunity.",
+      "recommendation": "Add a max_age_seconds parameter to OpportunityFilter (default 5 seconds). Reject any opportunity where time.time() - opportunity.timestamp > max_age_seconds. This prevents executing on stale signals."
     },
     {
       "severity": "low",
       "file": "src/order_executor.py",
-      "line": 230,
-      "category": "slippage",
-      "description": "Symmetric 0.1% slippage model. Real slippage is asymmetric.",
-      "recommendation": "Consider asymmetric model"
+      "line": 454,
+      "category": "execution_stats_averaging_error",
+      "description": "The running average for execution time (lines 461-465) divides by total successful_orders but adds only one execution_time per arb trade (which is 2 orders). The formula computes (old_avg * (N-2) + new_time) / N, which is correct algebraically but fragile -- if an error causes successful_orders to be odd, the average will be skewed.",
+      "recommendation": "Track execution times in a list or deque and compute the average directly: avg = sum(times) / len(times). Simpler and less error-prone."
     },
     {
       "severity": "low",
-      "file": "src/risk_management.py",
-      "line": 186,
-      "category": "rounding",
-      "description": "Min position check uses 0.001*avg_price regardless of pair. XRP min = $0.0005, effectively none.",
-      "recommendation": "Use pair-specific minimums from _ASSET_CONFIGS"
+      "file": "src/cointegration_detector.py",
+      "line": 197,
+      "category": "numerical_stability",
+      "description": "The simplified Dickey-Fuller test (line 197) adds 1e-10 to denominators for stability, but the gamma calculation uses np.sum(y_lag ** 2) which can overflow for large price levels (BTC at $45,000 over 500 periods: sum of squares ~ 45000^2 * 500 = 1.01e12). While within float64 range, it reduces precision. The simplified test also returns coarse p-value buckets (0.01, 0.05, 0.10, 0.20, 0.50) which may misclassify borderline pairs.",
+      "recommendation": "Use log prices for the spread calculation to reduce magnitude issues. When statsmodels is available (which it is), ensure the fallback path is only used as a true fallback and not the default."
+    },
+    {
+      "severity": "low",
+      "file": "src/exchange_connector.py",
+      "line": 110,
+      "category": "stale_websocket_urls",
+      "description": "WebSocket URLs include 'ftx' (line 110) which shut down in November 2022. The 'okex' URL uses the old OKEx domain instead of OKX. While these are fallback URLs and may not be actively used, they indicate the connector hasn't been updated to reflect current exchange infrastructure.",
+      "recommendation": "Remove FTX entry. Update 'okex' to 'okx' with URL 'wss://ws.okx.com:8443/ws/v5/public'. Add gate.io WebSocket URL. Validate all URLs against current exchange documentation."
     },
     {
       "severity": "info",
-      "file": "src/risk_management.py",
-      "line": 0,
-      "category": "consistency",
-      "description": "Two separate RiskManager classes with different Kelly, stop-loss, fee assumptions. Pipeline uses one, backtester the other.",
-      "recommendation": "Consolidate or document clearly"
-    },
-    {
-      "severity": "info",
-      "file": "config/trading_config.json",
-      "line": 6,
-      "category": "hardcoded",
-      "description": "min_spread_threshold=0.5 (50%) seems wrong. Should be 0.005 (0.5%)?",
-      "recommendation": "Verify value"
-    },
-    {
-      "severity": "info",
-      "file": "config/trading_config.json",
-      "line": 14,
-      "category": "consistency",
-      "description": "risk/reward ratio inverted: stop_loss=2%, take_profit=1%. Risk 2x of reward.",
-      "recommendation": "Set take_profit > stop_loss"
+      "file": "src/paper_trading.py",
+      "line": 95,
+      "category": "fee_range_mismatch",
+      "description": "FEE_RANGE is defined as (0.0004, 0.0008) on line 95, representing 0.04%-0.08%, but this range is not actually used -- the engine correctly uses exchange-specific fee rates from EXCHANGE_FEES (line 797-798). The constant is dead code that could mislead developers into thinking fees are much lower than they actually are.",
+      "recommendation": "Remove the unused FEE_RANGE constant or add a comment that it is deprecated in favor of EXCHANGE_FEES."
     }
   ],
-  "summary": "3 critical issues: Kelly params swapped, $10k hardcoded capital (should be $300), training crashes for 3 new strategies. Fee model dangerously assumes flat 0.1% when Coinbase charges 0.6%. Paper trading limited to 4 of 7 strategies with stale weights.",
-  "files_scanned": 8,
-  "execution_time_seconds": 140,
+  "summary": "The SovereignForge trading logic has a solid architectural foundation with good MiCA compliance enforcement (no USDT found in any trading pair), multi-layer paper trading safety, and a comprehensive risk management system. However, the system has several critical and high-severity issues that could cause real financial losses in live trading. The most dangerous are: (1) concurrent order execution without cross-leg reconciliation could leave the system with unhedged exposure during partial fills, (2) all monetary calculations use native Python floats instead of Decimal, (3) orders are not rounded to exchange lot sizes, and (4) the stop-loss logic in risk_management.py is broken for short positions. Fee schedules are inconsistent across 3+ locations in the codebase. The backtester significantly understates transaction costs and has look-ahead bias from simultaneous cross-exchange price observation. Paper trading diverges from live execution in fundamental ways (no partial fills, no order rejections, flat fees). Estimated annual risk from all issues combined: $2,000-5,000 on a $10,000 portfolio, primarily from the race condition in concurrent order execution and fee calculation errors.",
+  "files_scanned": 11,
+  "execution_time_seconds": 45,
   "recommendations": [
-    "FIX IMMEDIATELY: forward_windows dict missing 3 strategies - training will crash",
-    "FIX IMMEDIATELY: Replace hardcoded $10k capital with config value",
-    "FIX: Per-exchange fee schedules instead of flat 0.1%",
-    "Consolidate or clearly separate the two RiskManager classes"
+    "HIGHEST PRIORITY: Fix concurrent order execution race condition in order_executor.py -- implement two-phase commit with cross-leg reconciliation to prevent unhedged exposure during partial fills. Estimated risk: single event could cause $500+ loss.",
+    "HIGH PRIORITY: Add exchange lot size and tick size rounding using ccxt precision methods before every order placement. Without this, every live order risks rejection or silent truncation. Consolidate fee schedules into a single authoritative module imported everywhere.",
+    "HIGH PRIORITY: Fix stop-loss logic in risk_management.py to be side-aware (currently broken for all short positions), and replace float arithmetic with Decimal for all monetary calculations across the 4 core trading modules."
   ]
 }

@@ -1,97 +1,168 @@
 {
   "agent_name": "MiCA Compliance Checker",
   "agent_type": "audit",
-  "timestamp": "2026-03-14T04:35:00",
-  "health_score": 38.0,
+  "timestamp": "2026-03-15T00:00:00Z",
+  "health_score": 72,
   "findings": [
     {
       "severity": "critical",
-      "file": "src/compliance.py",
-      "line": 29,
-      "category": "usdt",
-      "description": "DOGE in compliant_assets - unauthorized meme coin",
-      "recommendation": "Remove DOGE"
+      "file": "src/websocket_validator.py",
+      "line": 84,
+      "category": "USDT_usage",
+      "description": "Binance WebSocket config uses USDT pairs: 'btcusdt', 'ethusdt', 'xrpusdt', 'xlmusdt', 'hbarusdt', 'algousdt', 'adausdt'. This violates MiCA Article 5 (stablecoin requirements). USDT (Tether) is NOT MiCA-compliant. These pairs would subscribe to USDT market data streams, contaminating the system with non-compliant price feeds.",
+      "recommendation": "Replace all USDT WebSocket pairs with USDC equivalents: 'btcusdc', 'ethusdc', 'xrpusdc', 'xlmusdc', 'hbarusdc', 'algousdc', 'adausdc'. This is NON-NEGOTIABLE."
     },
     {
       "severity": "critical",
-      "file": "src/compliance.py",
-      "line": 30,
-      "category": "inconsistency",
-      "description": "VECHAIN ticker but all files use VET. VET/USDC fails checks",
-      "recommendation": "Change to VET"
+      "file": "models/training_results_20260306_153739.json",
+      "line": 2,
+      "category": "USDT_usage",
+      "description": "Training results contain USDT pair data: 'XLM/USDT' and 'HBAR/USDT'. Models trained on USDT pairs produce signals that could lead to non-compliant trade execution. This violates MiCA Article 5. Same violation exists in training_results_20260306_153843.json, training_results_20260306_153005.json, and training_results_20260306_154016.json.",
+      "recommendation": "Delete or quarantine all training result files containing USDT pairs (4 files in models/ directory). Retrain these models exclusively with USDC pair data. USDT-trained models MUST NOT be used for any trading decisions."
     },
     {
       "severity": "critical",
-      "file": "src/compliance.py",
-      "line": 30,
-      "category": "inconsistency",
-      "description": "Missing LINK and IOTA from compliant_assets",
-      "recommendation": "Add LINK, IOTA, VET"
+      "file": "personal_config.json",
+      "line": 12,
+      "category": "USDT_usage",
+      "description": "personal_config.json 'forbidden_pairs' list explicitly references USDT pairs: 'BTC/USDT', 'ETH/USDT', 'DOGE/USDT'. While these are in a 'forbidden' list (correct intent), the presence of USDT pair strings in a config file is a compliance risk. Additionally, BTC/USDC and ETH/USDC are missing from the 'allowed_pairs' list despite being permitted for personal deployment.",
+      "recommendation": "Remove USDT pair strings entirely from the config. Use a positive-only whitelist approach. Add BTC/USDC and ETH/USDC to allowed_pairs for personal deployment consistency."
     },
     {
-      "severity": "critical",
+      "severity": "high",
       "file": "k8s/sovereignforge-configmap.yaml",
       "line": 20,
-      "category": "usdt",
-      "description": "K8s ConfigMap has ALL USDT pairs",
-      "recommendation": "Replace with USDC"
-    },
-    {
-      "severity": "critical",
-      "file": "models/training_results_20260306_154016.json",
-      "line": 2,
-      "category": "usdt",
-      "description": "Training results contain USDT pair data",
-      "recommendation": "Retrain on USDC only"
+      "category": "whitelist_incomplete",
+      "description": "K8s ConfigMap trading-pairs only lists 7 of the 12 allowed pairs: 'BTC/USDC,ETH/USDC,XRP/USDC,XLM/USDC,HBAR/USDC,ALGO/USDC,ADA/USDC'. Missing 5 pairs: LINK/USDC, IOTA/USDC, VET/USDC, XDC/USDC, ONDO/USDC. This creates an inconsistency with compliance.py and trading_config.json whitelists, violating the principle of uniform enforcement.",
+      "recommendation": "Add all 12 compliant pairs to the K8s ConfigMap trading-pairs field to match the canonical whitelist in compliance.py and trading_config.json."
     },
     {
       "severity": "high",
-      "file": "config/trading_config.json",
-      "line": 3,
-      "category": "btc_eth",
-      "description": "BTC/USDC and ETH/USDC enabled. Flagged for personal deployment",
-      "recommendation": "Evaluate compliance"
+      "file": "k8s/configmap.yaml",
+      "line": 22,
+      "category": "whitelist_incomplete",
+      "description": "K8s configmap.yaml ALLOWED_ASSETS does not include BTC and ETH: 'XRP,XLM,HBAR,ALGO,ADA,LINK,IOTA,XDC,ONDO,VET,USDC,RLUSD'. While this may represent strict MiCA mode (non-personal), it is inconsistent with the personal deployment mode used in compliance.py which includes BTC and ETH. This inconsistency could cause deployment failures.",
+      "recommendation": "Align ALLOWED_ASSETS with the personal deployment asset list used throughout the codebase, or add a separate PERSONAL_ALLOWED_ASSETS key."
     },
     {
       "severity": "high",
-      "file": "src/risk_management.py",
-      "line": 676,
-      "category": "inconsistency",
-      "description": "_ASSET_CONFIGS missing 5 pairs: LINK,IOTA,VET,XDC,ONDO",
-      "recommendation": "Add missing configs"
+      "file": "src/exchange_connector.py",
+      "line": 107,
+      "category": "non_compliant_exchange",
+      "description": "WebSocket URL map includes non-MiCA exchanges: 'bitfinex', 'huobi', 'ftx' (defunct), and 'okex' (renamed to okx). FTX is bankrupt and should not appear. These exchanges are not in the MiCA-licensed exchange list. Additionally, 'gate' is missing from the WebSocket URL map despite being in the trading_config.json exchange list.",
+      "recommendation": "Remove bitfinex, huobi, ftx, and okex entries. Add correct entries for gate.io and ensure all 7 configured exchanges have correct WebSocket URLs."
     },
     {
       "severity": "high",
-      "file": "src/data_integration_service.py",
-      "line": 161,
-      "category": "inconsistency",
-      "description": "WebSocket pairs missing XDC/USDC and ONDO/USDC",
-      "recommendation": "Add missing pairs"
+      "file": "src/dashboard_api.py",
+      "line": 59,
+      "category": "whitelist_incomplete",
+      "description": "Dashboard API STRATEGIES constant only lists 4 strategies: ['arbitrage', 'fibonacci', 'grid', 'dca']. The system has 7 strategies. Also, EXCHANGES on line 60 only lists 4 of 7 exchanges. This means the /api/models/{strategy} endpoint will reject valid strategy queries for mean_reversion, pairs_arbitrage, and momentum.",
+      "recommendation": "Update STRATEGIES to include all 7 strategies. Update EXCHANGES to include all 7 exchanges."
     },
     {
       "severity": "high",
-      "file": "tests/test_integration.py",
-      "line": 247,
-      "category": "whitelist",
-      "description": "Test asserts DOGE/USDC is compliant. Wrong.",
-      "recommendation": "Fix after removing DOGE"
+      "file": "src/order_executor.py",
+      "line": 228,
+      "category": "missing_compliance_check",
+      "description": "OrderExecutor._validate_arbitrage_opportunity() does NOT perform MiCA compliance validation on the trading pair. It checks spread, fees, and exchange configuration, but never validates whether the symbol is a MiCA-compliant pair. A non-compliant pair could pass all validation checks. This violates MiCA Article 68 (transaction compliance).",
+      "recommendation": "Add compliance engine validation at the top of _validate_arbitrage_opportunity(): import and use MiCAComplianceEngine.is_pair_compliant(opportunity['symbol']) before any other checks."
     },
     {
       "severity": "medium",
+      "file": "src/exchange_connector.py",
+      "line": 262,
+      "category": "no_compliance_gate",
+      "description": "ExchangeConnector.get_ticker(), get_order_book(), and get_recent_trades() accept arbitrary symbol parameters without compliance check. A caller could pass a non-compliant pair and the system would fetch data for it.",
+      "recommendation": "Add MiCA compliance validation to all public methods that accept a symbol parameter."
+    },
+    {
+      "severity": "medium",
+      "file": "src/database.py",
+      "line": 98,
+      "category": "missing_compliance_check",
+      "description": "DatabaseManager.store_arbitrage_opportunity() defaults symbol to 'BTC/USDC' but does not validate the symbol against the MiCA whitelist. Non-compliant pairs could be stored in the database.",
+      "recommendation": "Add compliance validation before database insertion."
+    },
+    {
+      "severity": "medium",
+      "file": "src/database.py",
+      "line": 1,
+      "category": "data_retention",
+      "description": "No data retention policy is implemented. MiCA Article 68 requires 5-year record retention for all trading activities. The database module has no retention enforcement, no archival strategy, and no mechanism to ensure records are preserved for the required period.",
+      "recommendation": "Implement a data retention policy with 5+ year retention, archival mechanism, and compliance reporting."
+    },
+    {
+      "severity": "medium",
+      "file": "personal_config.json",
+      "line": 63,
+      "category": "data_retention",
+      "description": "personal_config.json sets 'retention_days: 30' which is grossly insufficient. MiCA Article 68 requires 5-year (1825+ days) data retention for all trading records and decisions.",
+      "recommendation": "Change retention_days to at minimum 1825 (5 years)."
+    },
+    {
+      "severity": "medium",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 153,
+      "category": "compliance_resilience",
+      "description": "OpportunityFilter._check_compliance() has a fallback path that bypasses MiCAComplianceEngine when it cannot be imported, falling back to a simple list check. This dual-path approach increases the risk of inconsistency.",
+      "recommendation": "Make MiCAComplianceEngine a hard dependency. If it cannot be imported, the pipeline should refuse to start."
+    },
+    {
+      "severity": "medium",
+      "file": "src/order_executor.py",
+      "line": 1,
+      "category": "audit_trail",
+      "description": "No centralized immutable audit trail system exists. Trade decisions, compliance checks, and risk gate outcomes are logged to rotating log files (100MB max, 5 backups) which will be overwritten. MiCA Article 68 requires complete, non-destructible audit trails.",
+      "recommendation": "Implement a dedicated write-once append-only trade journal with compliance check results, risk gate decisions, and 5+ year preservation."
+    },
+    {
+      "severity": "low",
+      "file": "src/agents/audit_trading.py",
+      "line": 74,
+      "category": "stale_instruction",
+      "description": "audit_trading.py agent prompt says 'Only EUR-denominated pairs are allowed for MiCA compliance'. This is incorrect -- the system uses USDC-denominated pairs, not EUR.",
+      "recommendation": "Update the agent prompt to correctly state USDC/RLUSD stablecoin pairs."
+    },
+    {
+      "severity": "low",
+      "file": "src/data_fetcher.py",
+      "line": 29,
+      "category": "exchange_subset",
+      "description": "RealDataFetcher only initializes 4 of 7 exchanges (binance, coinbase, kraken, okx). Missing: kucoin, bybit, gate.",
+      "recommendation": "Initialize all 7 exchanges in the RealDataFetcher."
+    },
+    {
+      "severity": "info",
       "file": "src/compliance.py",
-      "line": 104,
-      "category": "stale",
-      "description": "last_updated hardcoded 2024-01-01",
-      "recommendation": "Use dynamic timestamp"
+      "line": 1,
+      "category": "compliance_engine",
+      "description": "The MiCA Compliance Engine is well-structured. It correctly prohibits USDT, allows only USDC and RLUSD stablecoins, maintains a complete asset whitelist with personal deployment mode, provides filtering and validation methods, and raises ComplianceViolationError for violations.",
+      "recommendation": "No changes required. This is the canonical source of truth for MiCA compliance."
+    },
+    {
+      "severity": "info",
+      "file": "config/trading_config.json",
+      "line": 1,
+      "category": "compliance_engine",
+      "description": "trading_config.json is fully compliant. All 12 enabled pairs use USDC. No USDT references. Strategy weights sum to 1.00. dry_run_mode is true. All 7 exchanges are listed.",
+      "recommendation": "No changes required."
+    },
+    {
+      "severity": "info",
+      "file": "src/arbitrage_detector.py",
+      "line": 34,
+      "category": "compliance_engine",
+      "description": "ArbitrageDetector imports and uses MiCAComplianceEngine with hard enforcement. Non-compliant pairs raise ComplianceViolationError. This is correct behavior.",
+      "recommendation": "No changes required."
     }
   ],
-  "summary": "5 critical: DOGE in compliance, VECHAIN/VET mismatch, missing LINK/IOTA, USDT in K8s and training data. 11 divergent whitelists.",
-  "files_scanned": 24,
-  "execution_time_seconds": 136,
+  "summary": "MiCA compliance audit detected 3 CRITICAL, 5 HIGH, 5 MEDIUM, 2 LOW, and 3 INFO findings across 14 files. The core compliance engine (compliance.py) is sound and correctly enforces USDC-only stablecoins. However, CRITICAL violations exist in the WebSocket validator (USDT pairs in Binance config), historical training results (models trained on USDT data), and config files referencing USDT. Multiple HIGH-severity whitelist inconsistencies exist between compliance.py and K8s ConfigMaps, dashboard API, and exchange connectors. The order executor lacks a MiCA compliance gate. Data retention is set to 30 days instead of the MiCA-mandated 5 years. No immutable audit trail exists. Health score: 72/100.",
+  "files_scanned": 14,
+  "execution_time_seconds": 0,
   "recommendations": [
-    "Fix compliance.py assets",
-    "Replace USDT in K8s",
-    "Retrain USDT models",
-    "Single whitelist source"
+    "IMMEDIATE: Fix src/websocket_validator.py Binance pairs from USDT to USDC. Delete or quarantine all training result files containing USDT pairs (4 files in models/ directory). These are active CRITICAL violations.",
+    "HIGH PRIORITY: Add MiCA compliance validation to OrderExecutor._validate_arbitrage_opportunity() and all ExchangeConnector public methods. Every code path that handles trading pairs must pass through the compliance engine. No exceptions.",
+    "STRUCTURAL: Implement 5-year data retention policy (MiCA Article 68), create an immutable append-only audit trail for all trading decisions, and unify all whitelists (K8s ConfigMaps, dashboard API, data fetcher) to derive from the single canonical source in compliance.py."
   ]
 }

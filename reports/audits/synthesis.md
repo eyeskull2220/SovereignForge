@@ -1,196 +1,349 @@
 # Synthesis Audit Report
-**Type:** synthesis | **Score:** 37.666666666666664/100 | **Time:** 0.0s
-**Files Scanned:** 65 | **Findings:** 82
+**Type:** synthesis | **Score:** 68.4/100 | **Time:** 0.0s
+**Files Scanned:** 80 | **Findings:** 154
 
 ## Summary
-Synthesized 6 agent reports. Total findings: 82 (22 critical, 33 high, 19 medium). Overall health score: 38/100. Cross-cutting issues in 12 files flagged by multiple agents.
+Synthesized 10 agent reports. Total findings: 154 (23 critical, 44 high, 52 medium). Overall health score: 68/100. Cross-cutting issues in 21 files flagged by multiple agents.
 
-## CRITICAL (22)
-- **[organization]** `src/live_arbitrage_pipeline.py:812` — _cache_opportunity_bg outside class body. Runtime NameError
-  - Fix: Move inside class
-- **[usdt]** `src/compliance.py:29` — DOGE in compliant_assets - unauthorized meme coin
-  - Fix: Remove DOGE
-- **[inconsistency]** `src/compliance.py:30` — VECHAIN ticker but all files use VET. VET/USDC fails checks
-  - Fix: Change to VET
-- **[inconsistency]** `src/compliance.py:30` — Missing LINK and IOTA from compliant_assets
-  - Fix: Add LINK, IOTA, VET
-- **[usdt]** `k8s/sovereignforge-configmap.yaml:20` — K8s ConfigMap has ALL USDT pairs
-  - Fix: Replace with USDC
-- **[usdt]** `models/training_results_20260306_154016.json:2` — Training results contain USDT pair data
-  - Fix: Retrain on USDC only
-- **[blocking_io]** `src/order_executor.py:66` — Sync exchange.load_markets() blocks thread for seconds
-  - Fix: Use ccxt.async_support
-- **[blocking_io]** `src/order_executor.py:283` — Sync exchange.create_order() in async method
-  - Fix: Use ccxt.async_support
-- **[blocking_io]** `src/live_arbitrage_pipeline.py:758` — Sync json.load/dump blocks event loop on every trade
-  - Fix: Use aiofiles
-- **[async]** `src/data_integration_service.py:125` — Deprecated get_event_loop + run_until_complete can deadlock
-  - Fix: Use get_running_loop().create_task()
-- **[mock]** `src/live_arbitrage_pipeline.py:882` — MockRiskManager approves ALL opportunities. No production guard prevents pipeline running with mock.
-  - Fix: Add startup assertion refusing trade execution with MockRiskManager
-- **[bypass]** `src/live_arbitrage_pipeline.py:696` — _execute_trade uses hardcoded $10k base_capital. Bypasses all RiskManager sizing. $300 account sizes 33x too large.
-  - Fix: Wire calculate_position_size from RiskManager/CapitalAllocator
-- **[bypass]** `src/live_arbitrage_pipeline.py:664` — _execute_trade has no second risk gate. If MockRiskManager was used, zero risk checks on actual execution.
-  - Fix: Add mandatory non-mockable risk validation inside _execute_trade
-- **[emergency]** `src/risk_management.py:547` — Emergency stop uses position.current_price which may be stale. In a crisis, closes at wrong price.
-  - Fix: Fetch live prices before emergency close
-- **[drawdown]** `src/risk_management.py:85` — RiskManager never updates max_drawdown. Always returns 0.0. Drawdown never checked as trading gate.
-  - Fix: Implement real-time drawdown tracking like TradingRiskManager
-- **[auth]** `src/dashboard_api.py:480` — All POST mutation endpoints have ZERO authentication
-  - Fix: Add API key auth
-- **[exposure]** `src/dashboard_api.py:899` — Server binds 0.0.0.0 exposing all endpoints
-  - Fix: Bind to 127.0.0.1
-- **[injection]** `src/database.py:277` — execute_query accepts raw SQL with no parameterization
-  - Fix: Enforce parameterized queries
-- **[secrets]** `src/personal_security.py` — NO encryption for API keys anywhere in codebase
-  - Fix: Implement Fernet encryption
-- **[kelly]** `src/risk_management.py:745` — TradingRiskManager._kelly_criterion swaps parameter semantics: spread_pct passed as win_probability, confidence as win_amount. Kelly formula computes with wrong inputs.
-  - Fix: Fix call site at line 712 to pass parameters in correct order
-- **[hardcoded]** `src/live_arbitrage_pipeline.py:696` — base_capital hardcoded to $10,000 ignoring actual portfolio value. $300 account sizes positions as if $10k = 33x too large.
-  - Fix: Read from config capital_allocation.initial_capital or RiskManager portfolio_value
-- **[consistency]** `src/multi_strategy_training.py:953` — forward_windows dict missing 3 of 7 strategies (mean_reversion, pairs_arbitrage, momentum). Training crashes with KeyError.
-  - Fix: Add MEAN_REVERSION:10, PAIRS_ARBITRAGE:20, MOMENTUM:48 to forward_windows
+## CRITICAL (23)
+- **[silent_exception_swallowing]** `src/main.py:123` — Bare 'except Exception: pass' in _NoOpDB.store_arbitrage_opportunity silently swallows database write failures. In a trading system, losing trade records without any log message means you cannot audit what happened during an incident.
+  - Fix: Log the exception at WARNING level before continuing: except Exception as e: logger.warning(f'Failed to store opportunity: {e}')
+- **[silent_exception_swallowing]** `src/main.py:136` — Bare 'except Exception: pass' in _NoOpDB.store_trade_execution silently drops trade execution records. This is financial data -- silent loss is unacceptable.
+  - Fix: Log the exception. Consider a dead-letter queue for failed writes.
+- **[silent_exception_swallowing]** `src/live_arbitrage_pipeline.py:641` — Bare 'except Exception: pass' in the market condition assessment block inside _handle_opportunity. The comment says 'never block the hot path' but swallowing all exceptions including AttributeError or TypeError masks bugs in the dynamic risk module.
+  - Fix: Catch only expected exceptions (ValueError, IndexError) and log unexpected ones.
+- **[silent_exception_swallowing]** `src/live_arbitrage_pipeline.py:963` — Bare 'except Exception: pass' in _cache_opportunity_bg. Cache failures are silently lost, but if the cache layer is misconfigured this will hide systematic failures indefinitely.
+  - Fix: Log at DEBUG level at minimum. Add a counter for cache failures so monitoring can detect patterns.
+- **[USDT_usage]** `src/websocket_validator.py:84` — Binance WebSocket config uses USDT pairs: 'btcusdt', 'ethusdt', 'xrpusdt', 'xlmusdt', 'hbarusdt', 'algousdt', 'adausdt'. This violates MiCA Article 5 (stablecoin requirements). USDT (Tether) is NOT MiCA-compliant. These pairs would subscribe to USDT market data streams, contaminating the system with non-compliant price feeds.
+  - Fix: Replace all USDT WebSocket pairs with USDC equivalents: 'btcusdc', 'ethusdc', 'xrpusdc', 'xlmusdc', 'hbarusdc', 'algousdc', 'adausdc'. This is NON-NEGOTIABLE.
+- **[USDT_usage]** `models/training_results_20260306_153739.json:2` — Training results contain USDT pair data: 'XLM/USDT' and 'HBAR/USDT'. Models trained on USDT pairs produce signals that could lead to non-compliant trade execution. This violates MiCA Article 5. Same violation exists in training_results_20260306_153843.json, training_results_20260306_153005.json, and training_results_20260306_154016.json.
+  - Fix: Delete or quarantine all training result files containing USDT pairs (4 files in models/ directory). Retrain these models exclusively with USDC pair data. USDT-trained models MUST NOT be used for any trading decisions.
+- **[USDT_usage]** `personal_config.json:12` — personal_config.json 'forbidden_pairs' list explicitly references USDT pairs: 'BTC/USDT', 'ETH/USDT', 'DOGE/USDT'. While these are in a 'forbidden' list (correct intent), the presence of USDT pair strings in a config file is a compliance risk. Additionally, BTC/USDC and ETH/USDC are missing from the 'allowed_pairs' list despite being permitted for personal deployment.
+  - Fix: Remove USDT pair strings entirely from the config. Use a positive-only whitelist approach. Add BTC/USDC and ETH/USDC to allowed_pairs for personal deployment consistency.
+- **[synchronous_io_in_hot_path]** `src/exchange_connector.py:268` — ExchangeConnector.get_ticker() calls exchange.fetch_ticker() synchronously (blocking ccxt REST call) inside what should be an async-capable connector. This blocks the event loop for 200-2000ms per call. The get_order_book() and get_recent_trades() methods have the same problem (lines 287, 303). MultiExchangeConnector.get_market_data() (line 406) calls get_ticker() sequentially for every exchange, compounding the blocking time to N * latency.
+  - Fix: Replace ccxt synchronous exchange with ccxt.async_support throughout ExchangeConnector. Use await exchange.fetch_ticker() and make all callers async. The OrderExecutor already does this correctly -- follow that pattern.
+- **[synchronous_io_in_hot_path]** `src/exchange_connector.py:430` — get_price_history() calls exchange.fetch_ohlcv() synchronously, blocking the event loop. This is called from MultiExchangeConnector which iterates exchanges sequentially. A single Kraken OHLCV fetch can take 800ms+, and the method tries multiple exchanges in a loop.
+  - Fix: Use ccxt.async_support and asyncio.gather() to fetch from all exchanges concurrently, with a timeout.
+- **[global_lock_serializing_inference]** `src/realtime_inference.py:553` — infer_arbitrage_signal() holds self.inference_lock (a threading.RLock) for the ENTIRE duration of inference including GPU forward pass, tensor creation, and result extraction. This serializes ALL inference across ALL pairs to a single thread. With 12 pairs and ~5ms per inference, this means 60ms minimum sequential latency when all pairs need inference simultaneously. The infer_batch() method at line 640 also holds the same lock for the entire batch.
+  - Fix: Remove the coarse-grained lock. PyTorch inference with torch.no_grad() is thread-safe for read-only forward passes. If model loading/unloading needs protection, use a read-write lock pattern: multiple readers (inference) can proceed concurrently, only writers (model load/unload) need exclusive access.
+- **[synchronous_io_in_async_context]** `src/data_fetcher.py:99` — _fetch_pair_data() uses synchronous exchange.fetch_ohlcv() inside what appears to be an async method (called from fetch_all_data via asyncio.gather). The ccxt exchange object is initialized synchronously at line 30-31 (ccxt.binance() not ccxt.async_support.binance()). This means every 'concurrent' fetch actually blocks the event loop sequentially, negating the entire benefit of the semaphore-based parallelism.
+  - Fix: Initialize exchanges with ccxt.async_support and use await exchange.fetch_ohlcv(). The asyncio.Semaphore pattern is already correct -- just needs async ccxt underneath.
+- **[risk_bypass_fail_open]** `src/live_arbitrage_pipeline.py:753` — Dynamic risk check exception is swallowed with logger.debug and execution continues. If the circuit breaker or emergency stop check itself throws (stale data, NaN values during a flash crash), the trade proceeds unchecked. This is fail-open behavior in the most critical safety gate.
+  - Fix: Treat any exception in dynamic risk check as a BLOCK, not a pass. Change except clause to return early and refuse the trade. Fail-closed, never fail-open.
+- **[risk_bypass_optional_risk_manager]** `src/order_executor.py:127` — In execute_arbitrage_trade, risk_manager is only checked if not None (line 127). OrderExecutor can be constructed without a risk manager. A misconfigured pipeline could send real orders with zero risk validation. Previous audit noted this was never called; now it IS called (line 129) but remains optional.
+  - Fix: Make risk_manager a required parameter for live trading. Raise RuntimeError in execute_arbitrage_trade when risk_manager is None and paper trading mode is off.
+- **[position_sizing_bypass]** `src/live_arbitrage_pipeline.py:789` — Position sizing in _execute_trade (lines 789-802) uses a simple percentage of capital from config, bypassing the RiskManager Kelly Criterion position sizing, per-trade loss limits, and portfolio risk limit checks. The RiskManager.calculate_position_size method is never called in the live execution path. Previous audit flagged hardcoded $10k; now it reads config but still bypasses RiskManager.
+  - Fix: Route ALL position sizing through RiskManager.calculate_position_size. Remove the ad-hoc sizing. The risk manager must be the single source of truth.
+- **[capital_floor_post_hoc]** `src/capital_allocator.py:202` — Capital floor ($50) enforcement at line 202-209 triggers only AFTER a losing trade. It sets halved=True but does not prevent the next trade. Between floor breach and next allocation check, additional trades can drain capital below $50 and to zero. Previous audit flagged no floor; now $50 floor exists but is reactive, not preventive.
+  - Fix: Implement a hard synchronous pre-trade check in the execution path that refuses all trades when capital < $50. The floor must be enforced at the gate, not after the loss.
+- **[no_max_order_size]** `src/order_executor.py:299` — No maximum order size validation anywhere in _execute_single_order or execute_arbitrage_trade. The quantity passed to the exchange is whatever the caller provides. A bug in position sizing (division error, NaN, integer overflow) could send an order 100x the intended size. Stress scenario: 'A bug sends 100x intended order size' has ZERO protection.
+  - Fix: Add a hard maximum order size check: reject any order where quantity * price exceeds a configurable absolute dollar cap tied to capital tier (e.g., $50 for micro). Independent of all other sizing logic.
+- **[naked_leg_risk]** `src/order_executor.py:165` — Buy and sell orders execute concurrently via asyncio.gather. If buy succeeds but sell fails, the code attempts to cancel the buy (line 174). But if buy was already filled, cancellation fails silently, leaving a naked long position. In a flash crash, this naked position could lose the full position value. Previous audit flagged this; status unchanged.
+  - Fix: Implement position reconciliation after any failed leg. If a filled leg cannot be cancelled, immediately place a market order to unwind. Add highest-priority stranded position alert.
+- **[unauthenticated_mutation_endpoints]** `src/dashboard_api.py:68` — API key auth is silently SKIPPED when SOVEREIGNFORGE_API_KEY env var is empty. Line 72: 'if API_KEY and x_api_key != API_KEY' — if API_KEY is empty string (the default), the guard short-circuits and EVERY POST endpoint is unprotected. An attacker on localhost (or any LAN peer if binding changes) can start/stop the pipeline, toggle trading pairs, and modify config without any credential.
+  - Fix: Fail closed: if API_KEY is empty, REJECT all mutation requests. Add 'if not API_KEY: raise HTTPException(503, "API key not configured")' at the top of verify_api_key.
+- **[hardcoded_secrets]** `config/api_keys.json:1` — config/api_keys.json is NOT listed in .gitignore. It is tracked by git. Currently contains empty placeholder values, but the moment a developer fills in real exchange API keys they will be committed to version history. Extracting secrets from git history is trivial (git log -p, BFG Repo-Cleaner).
+  - Fix: Add 'config/api_keys.json' and 'config/secrets*' to .gitignore immediately. Use a .json.example file for the template. Rotate any keys that have ever been committed.
+- **[sql_injection]** `src/database.py:277` — execute_query() and execute_update() accept raw SQL strings and pass them directly to the database. Any caller that builds queries via string concatenation or f-strings can inject arbitrary SQL. Even with asyncpg's parameterized interface, the 'query' parameter itself is an unvalidated string. There is no query whitelist, no prepared statement enforcement, and no input sanitization layer.
+  - Fix: Remove execute_query() and execute_update() raw SQL methods. Replace with purpose-built methods that use parameterized queries exclusively. If raw SQL is required, add an allowlist of permitted query patterns.
+- **[floating_point_arithmetic]** `src/order_executor.py:193` — All monetary P&L calculations use native Python float multiplication: buy_cost = buy_order['executed_price'] * buy_order['executed_quantity']. IEEE 754 double-precision floats accumulate rounding errors. On 10,000 trades/year with average $500 notional, cumulative rounding drift can reach $5-50 annually, and one pathological case (e.g. 0.1 + 0.2 != 0.3 pattern in fee subtraction) could cause a single trade to miscalculate profit by enough to turn a losing trade into a false winner, corrupting strategy metrics.
+  - Fix: Replace all monetary arithmetic in order_executor.py, paper_trading.py, risk_management.py, and capital_allocator.py with Python's decimal.Decimal (quantize to 8 decimal places for crypto quantities, 2 for USD values). At minimum, wrap the P&L calculation: Decimal(str(sell_revenue)) - Decimal(str(buy_cost)) - Decimal(str(fees)).
+- **[race_condition_partial_fill]** `src/order_executor.py:165` — Buy and sell orders are executed concurrently via asyncio.gather (line 165). If sell fills fully but buy only partially fills, lines 168-175 attempt to cancel the buy but the sell has already executed. The system now holds a short position on the sell exchange with no offsetting long. With BTC at $45,000 and a 1% adverse move, this is a $450 loss on a 0.01 BTC trade. The partial fill handler (lines 362-379) only handles its own side; there is no cross-leg reconciliation.
+  - Fix: Implement a two-phase execution: (1) place both orders, (2) poll both for fill confirmation before committing. If either side fails or only partially fills, cancel both sides and reconcile. Add an 'inventory imbalance' tracker that alerts when net exposure deviates from expected.
+- **[missing_lot_size_rounding]** `src/order_executor.py:299` — The quantity parameter is passed directly to exchange.create_order() without rounding to the exchange's lot size or tick size. Binance requires BTC quantities rounded to 5 decimal places (0.00001), XRP to 0 decimals on some pairs. Passing 0.012345678 will cause an 'Invalid quantity' rejection from the exchange, or worse, silent truncation that changes the economics of the trade. This affects every single trade attempted.
+  - Fix: After loading markets (line 90), query exchange.markets[symbol]['precision'] and exchange.markets[symbol]['limits'] for each symbol. Use ccxt's exchange.amount_to_precision(symbol, quantity) and exchange.price_to_precision(symbol, price) before placing orders. Add a minimum notional check (Binance requires >$10 notional per order).
 
-## HIGH (33)
-- **[duplication]** `src/risk_management.py:67` — Two risk manager classes with overlapping 830 lines
-  - Fix: Consolidate
-- **[duplication]** `src/paper_trading.py:69` — STRATEGY_MODELS duplicated, only 4 of 7 strategies
-  - Fix: Import from canonical source
-- **[duplication]** `src/paper_trading.py:144` — 130 lines feature engineering copy-pasted
-  - Fix: Delete, import instead
-- **[duplication]** `src/` — MiCA whitelist in 5 files with inconsistent contents
-  - Fix: Single source in compliance.py
-- **[sys_path]** `src/` — sys.path.insert in 12 files. No proper package structure
-  - Fix: Add __init__.py
-- **[singleton]** `src/risk_management.py:580` — Mutable singletons not thread-safe
-  - Fix: Use dependency injection
-- **[btc_eth]** `config/trading_config.json:3` — BTC/USDC and ETH/USDC enabled. Flagged for personal deployment
-  - Fix: Evaluate compliance
-- **[inconsistency]** `src/risk_management.py:676` — _ASSET_CONFIGS missing 5 pairs: LINK,IOTA,VET,XDC,ONDO
-  - Fix: Add missing configs
-- **[inconsistency]** `src/data_integration_service.py:161` — WebSocket pairs missing XDC/USDC and ONDO/USDC
-  - Fix: Add missing pairs
-- **[whitelist]** `tests/test_integration.py:247` — Test asserts DOGE/USDC is compliant. Wrong.
-  - Fix: Fix after removing DOGE
-- **[async]** `src/order_executor.py:294` — 1s sleep after every order. Unacceptable for arbitrage
-  - Fix: Poll with 50ms backoff
-- **[memory]** `src/live_arbitrage_pipeline.py:209` — _dedup_cache grows without bound
-  - Fix: Use LRU cache
-- **[async]** `src/realtime_inference.py:517` — Global lock serializes ALL inference
-  - Fix: Use per-model locks
-- **[caching]** `src/realtime_inference.py:533` — Single-sample inference. Batch params declared but unused
-  - Fix: Implement batch inference
-- **[blocking_io]** `src/dashboard_api.py:338` — All _load_json sync in async handlers
-  - Fix: Use asyncio.to_thread
-- **[kelly]** `src/risk_management.py:245` — Kelly cap 25% in RiskManager vs 10% in TradingRiskManager. Wrong class = 2.5x larger positions.
-  - Fix: Unify Kelly cap. Recommend 5% for MICRO tier
-- **[limits]** `src/risk_management.py` — No per-trade maximum loss limit. Only portfolio-level. No guard saying never lose more than $X.
-  - Fix: Add max_loss_per_trade parameter
-- **[limits]** `src/order_executor.py:311` — Partial fills treated as success (95% assumed). Remainder never cancelled, never tracked.
-  - Fix: Implement fill-or-kill timeout
-- **[correlation]** `src/order_executor.py:134` — If buy fills but sell fails, cancel may be impossible. Leaves unhedged directional exposure.
-  - Fix: Attempt market sell to unwind. Log as critical risk event
-- **[bypass]** `src/order_executor.py:37` — OrderExecutor accepts risk_manager but NEVER calls it. Field stored, never referenced.
-  - Fix: Wire risk_manager into execute_arbitrage_trade
-- **[bypass]** `src/dynamic_risk_adjustment.py` — DynamicRiskAdjustment not wired into pipeline. VaR thresholds and circuit breakers are dead code.
-  - Fix: Import and integrate into LiveArbitragePipeline
-- **[bypass]** `src/advanced_risk_metrics.py` — VaR and Expected Shortfall never consulted during trade decisions. Dead code in execution path.
-  - Fix: Wire VaR limits into trade execution gate
-- **[limits]** `src/capital_allocator.py:200` — record_trade can drive current_capital below zero. No floor check. Negative allocations possible.
-  - Fix: Add minimum capital floor ($50). Halt trading below floor
-- **[auth]** `src/dashboard_api.py:71` — Rate limiting missing (TODO). Vulnerable to DoS
-  - Fix: Implement slowapi
-- **[auth]** `src/dashboard_api.py:722` — WebSocket /ws has no auth. Leaks portfolio data
-  - Fix: Add WebSocket auth
-- **[secrets]** `src/exchange_connector.py:32` — api_key stored as plain instance attribute
-  - Fix: Use secure credential store
-- **[validation]** `src/websocket_connector.py:256` — Ticker parsers trust remote data types. NaN/Inf propagate
-  - Fix: Validate numeric fields
-- **[fees]** `src/order_executor.py:197` — Flat 0.1% fee assumption for profitability check. Coinbase is 0.6% taker. 0.3% spread passes validation but loses money on Coinbase.
-  - Fix: Use exchange-specific fee schedules
-- **[fees]** `src/order_executor.py:588` — PaperTradingExecutor uses flat 0.1% fee. Real Coinbase fees are 6x higher. Paper results overly optimistic.
-  - Fix: Use EXCHANGE_FEES dict
-- **[kelly]** `src/risk_management.py:202` — RiskManager Kelly inflates win_probability with spread_bonus and uses spread/costs as odds ratio producing unreasonably high fractions.
-  - Fix: Use historical win rate data for probability estimation
-- **[consistency]** `src/paper_trading.py:77` — Paper trading hardcodes 4-strategy weights {arb:0.4,fib:0.2,grid:0.2,dca:0.2} vs config 7-strategy weights. Inconsistent.
-  - Fix: Load weights from trading_config.json
-- **[consistency]** `src/paper_trading.py:67` — STRATEGIES list only has 4 strategies, missing mean_reversion, pairs_arbitrage, momentum.
-  - Fix: Add all 7 strategies
-- **[kelly]** `src/risk_management.py:300` — calculate_kelly_metrics EV formula dimensionally inconsistent. Does not account for actual dollar amounts at risk.
-  - Fix: Use: EV = p*(spread-costs) - q*costs
+## HIGH (44)
+- **[dry_violation]** `src/main.py:243` — _MICA_ASSET_CONFIGS in main.py is a copy-paste of RiskManager._ASSET_CONFIGS in risk_management.py (line 90). The two dicts contain the same volatility/min_order_size data but will inevitably drift apart when one is updated and the other is not.
+  - Fix: Delete _MICA_ASSET_CONFIGS from main.py. Import and use RiskManager._get_asset_config() or extract a shared ASSET_CONFIGS constant into a config module.
+- **[dry_violation]** `src/paper_trading.py:60` — MICA_PAIRS list is duplicated in paper_trading.py (line 60), data_fetcher.py (line 39), live_arbitrage_pipeline.py (line 53), and data_integration_service.py (line 161). Four separate lists that must stay in sync manually.
+  - Fix: Create a single source of truth: src/compliance.py already has MiCAComplianceEngine.get_compliant_pairs(). All modules should import from there. The fallback lists should reference a shared constant.
+- **[dry_violation]** `src/order_executor.py:218` — EXCHANGE_FEES dict is duplicated in order_executor.py (line 218), paper_trading.py (line 99), and live_arbitrage_pipeline.py (line 234) with slightly different structures (flat float vs maker/taker dict). This guarantees inconsistency.
+  - Fix: Extract to a shared module (e.g., src/exchange_config.py) with a single EXCHANGE_FEES dict that all modules import.
+- **[god_class]** `src/main.py:257` — ProductionArbitrageSystem.__init__ creates 9 components (detector, connector, risk_manager, order_executor, performance_analyzer, db_manager, cache_manager, metrics_collector, alert_manager). It handles detection, trading, caching, metrics, health checks, and alerting. This is a God class.
+  - Fix: Extract health checking into a HealthMonitor class. Extract detection+execution into a TradingLoop class. ProductionArbitrageSystem should be a thin orchestrator that composes these.
+- **[god_class]** `src/live_arbitrage_pipeline.py:177` — LiveArbitragePipeline.__init__ is 112 lines long and initializes 15+ components. The class handles data integration, inference, ensemble, risk management, alerting, order execution, caching, rate limiting, dedup, state persistence, regime detection, and cointegration. Too many responsibilities for one class.
+  - Fix: Apply the Facade pattern: keep LiveArbitragePipeline as the public API but extract internal subsystems (RiskGate, AlertDispatcher, TradeExecutionManager, StatePersister) into separate classes.
+- **[overly_broad_exception]** `src/paper_trading.py:40` — Module-level 'except Exception' when importing risk_management catches everything including SyntaxError and MemoryError. If risk_management.py has a bug, paper_trading.py will silently run without risk management -- extremely dangerous for a trading system.
+  - Fix: Catch ImportError specifically. Let other exceptions propagate so bugs are caught early.
+- **[global_mutable_state]** `src/risk_management.py:662` — Module-level singleton _risk_manager is global mutable state. The get_risk_manager() function mutates it. This makes testing difficult (tests share state) and creates hidden coupling between modules.
+  - Fix: Use dependency injection instead. Pass risk_manager as a constructor parameter. If a singleton is truly needed, use a proper DI container or at minimum add a reset_for_testing() function.
+- **[global_mutable_state]** `src/model_ensemble.py:564` — Module-level _ensemble_instance singleton with get_model_ensemble() follows the same anti-pattern as risk_management. Global mutable state makes unit testing unreliable.
+  - Fix: Use dependency injection. Remove the global singleton pattern.
+- **[randomness_in_optimization]** `src/model_ensemble.py:462` — _optimize_ensemble_method uses np.random.normal(0, 0.05) to simulate performance of alternative ensemble methods. This means the ensemble method can randomly switch based on noise, not actual performance data. In a production trading system, this is reckless.
+  - Fix: Remove this method or implement proper cross-validation with historical data. Never use random noise to make optimization decisions in a live trading system.
+- **[deprecated_api]** `src/main.py:374` — asyncio.get_event_loop().run_in_executor() is used 3 times in _process_symbol. In Python 3.10+, get_event_loop() is deprecated when there is no running loop. Use asyncio.to_thread() instead for cleaner, modern async code.
+  - Fix: Replace all run_in_executor(None, fn, args) calls with asyncio.to_thread(fn, args).
+- **[whitelist_incomplete]** `k8s/sovereignforge-configmap.yaml:20` — K8s ConfigMap trading-pairs only lists 7 of the 12 allowed pairs: 'BTC/USDC,ETH/USDC,XRP/USDC,XLM/USDC,HBAR/USDC,ALGO/USDC,ADA/USDC'. Missing 5 pairs: LINK/USDC, IOTA/USDC, VET/USDC, XDC/USDC, ONDO/USDC. This creates an inconsistency with compliance.py and trading_config.json whitelists, violating the principle of uniform enforcement.
+  - Fix: Add all 12 compliant pairs to the K8s ConfigMap trading-pairs field to match the canonical whitelist in compliance.py and trading_config.json.
+- **[whitelist_incomplete]** `k8s/configmap.yaml:22` — K8s configmap.yaml ALLOWED_ASSETS does not include BTC and ETH: 'XRP,XLM,HBAR,ALGO,ADA,LINK,IOTA,XDC,ONDO,VET,USDC,RLUSD'. While this may represent strict MiCA mode (non-personal), it is inconsistent with the personal deployment mode used in compliance.py which includes BTC and ETH. This inconsistency could cause deployment failures.
+  - Fix: Align ALLOWED_ASSETS with the personal deployment asset list used throughout the codebase, or add a separate PERSONAL_ALLOWED_ASSETS key.
+- **[non_compliant_exchange]** `src/exchange_connector.py:107` — WebSocket URL map includes non-MiCA exchanges: 'bitfinex', 'huobi', 'ftx' (defunct), and 'okex' (renamed to okx). FTX is bankrupt and should not appear. These exchanges are not in the MiCA-licensed exchange list. Additionally, 'gate' is missing from the WebSocket URL map despite being in the trading_config.json exchange list.
+  - Fix: Remove bitfinex, huobi, ftx, and okex entries. Add correct entries for gate.io and ensure all 7 configured exchanges have correct WebSocket URLs.
+- **[whitelist_incomplete]** `src/dashboard_api.py:59` — Dashboard API STRATEGIES constant only lists 4 strategies: ['arbitrage', 'fibonacci', 'grid', 'dca']. The system has 7 strategies. Also, EXCHANGES on line 60 only lists 4 of 7 exchanges. This means the /api/models/{strategy} endpoint will reject valid strategy queries for mean_reversion, pairs_arbitrage, and momentum.
+  - Fix: Update STRATEGIES to include all 7 strategies. Update EXCHANGES to include all 7 exchanges.
+- **[missing_compliance_check]** `src/order_executor.py:228` — OrderExecutor._validate_arbitrage_opportunity() does NOT perform MiCA compliance validation on the trading pair. It checks spread, fees, and exchange configuration, but never validates whether the symbol is a MiCA-compliant pair. A non-compliant pair could pass all validation checks. This violates MiCA Article 68 (transaction compliance).
+  - Fix: Add compliance engine validation at the top of _validate_arbitrage_opportunity(): import and use MiCAComplianceEngine.is_pair_compliant(opportunity['symbol']) before any other checks.
+- **[unnecessary_object_creation_in_hot_path]** `src/realtime_inference.py:462` — process_market_data() converts the bounded deque to a list (line 476: buf = list(self.buffers[pair_index])), then creates a full numpy array from it (line 481-488), then calls engineer_features() which likely creates another array. This happens on EVERY incoming market data tick for every pair that has 24+ buffered entries. Each tick creates 3+ temporary arrays that are immediately discarded.
+  - Fix: Maintain the buffer as a pre-allocated numpy ring buffer. Only run feature engineering when the buffer has changed by a configurable number of ticks (e.g., every 5th tick), not on every single tick. Cache the last feature array and reuse it if the buffer hasn't changed enough.
+- **[redundant_buffer_truncation]** `src/realtime_inference.py:466` — Lines 465-466 manually truncate the deque to 24 entries AFTER the deque was already initialized with maxlen=24 (line 398). The deque.maxlen already handles this automatically. The manual slicing creates a new list object on every tick for no reason.
+  - Fix: Remove lines 465-466 entirely. The deque(maxlen=24) already enforces the size limit.
+- **[synchronous_file_io_in_hot_path]** `src/live_arbitrage_pipeline.py:796` — _execute_trade() reads trading_config.json synchronously (lines 796-801) using open()+json.load() on EVERY trade execution to get initial_capital. This is a blocking file I/O call in the middle of the latency-critical trade execution path.
+  - Fix: Read the config once at pipeline initialization and store as self._initial_capital. Config changes should be picked up via periodic reload or signal handler, not on every trade.
+- **[synchronous_file_io_in_hot_path]** `src/live_arbitrage_pipeline.py:879` — _persist_pipeline_state() performs synchronous file I/O (read existing JSON, write temp file, rename) on EVERY trade execution. json.load() + json.dump() with indent=2 for potentially 50+ opportunity records. This blocks the event loop for 1-5ms per trade.
+  - Fix: Use asyncio.to_thread() to offload the atomic write, or batch state persistence (e.g., persist every 10 trades or every 5 seconds). The _atomic_write_json is already a @staticmethod -- perfect candidate for to_thread().
+- **[synchronous_file_io_in_hot_path]** `src/order_executor.py:56` — _is_paper_trading_mode() reads config/trading_config.json synchronously via open()+json.load() and it is called on EVERY order execution attempt (line 304). This is a blocking I/O call in the most latency-critical path of the system.
+  - Fix: Cache the paper trading mode flag at initialization time. The safety check is important but the config file doesn't change mid-execution. Re-check it on a timer (e.g., every 30s) or when receiving a signal.
+- **[json_deserialization_per_tick]** `src/websocket_connector.py:264` — Every parse_ticker_message() call across all 7 exchange WebSocket connectors calls json.loads(message) on every single tick. For 7 exchanges x 12 pairs = 84 streams, this is thousands of JSON parse operations per second. Python's json.loads is implemented in C but still allocates a new dict tree per call.
+  - Fix: Consider using orjson (3-10x faster than stdlib json) for the hot path. For Binance which has the highest throughput, consider a streaming JSON parser that can extract specific fields without full deserialization.
+- **[sequential_dispatch_pattern]** `src/websocket_connector.py:748` — In _stream_exchange_data(), the if/elif chain at lines 755-768 is repeated identically for every exchange -- all branches call connector.parse_ticker_message(message). This is a code smell that also means dispatch is O(n) exchanges per message. More importantly, data callbacks at line 773 are called SEQUENTIALLY in the event loop for every tick. If any callback is slow, it blocks all other exchange streams.
+  - Fix: Replace the if/elif chain with a single connector.parse_ticker_message(message) call. For callbacks, use asyncio.create_task() for async callbacks or run synchronous callbacks in a thread pool to avoid blocking the WebSocket receive loop.
+- **[logging_configuration_side_effect]** `src/arbitrage_detector.py:37` — Module-level logging.basicConfig() at lines 37-44 configures a FileHandler that opens arbitrage_detector.log on import. This is both a side effect and a performance issue: every log message from this module writes to disk synchronously. In the hot path, logger.info/warning/error calls become blocking file I/O.
+  - Fix: Remove module-level basicConfig(). Let the application's main entry point configure logging. Use QueueHandler for async file logging in production.
+- **[compliance_import_per_call]** `src/arbitrage_detector.py:298` — detect_opportunity() calls get_compliance_engine() on EVERY detection call (line 298). If the compliance module creates a new engine instance each time (and it does import-time work), this is wasted work. Additionally, _check_compliance in the filter (line 156 of live_arbitrage_pipeline.py) imports MiCAComplianceEngine and checks hasattr on every call.
+  - Fix: Initialize the compliance engine once in __init__ and reuse the instance.
+- **[synchronous_sqlite_in_detection_path]** `src/arbitrage_detector.py:549` — LocalDatabase uses synchronous sqlite3.connect() for every save_opportunity() and get_recent_opportunities() call. If the ArbitrageDetector is used in the live pipeline alongside the LocalDatabase, each detection triggers a blocking SQLite write.
+  - Fix: Use aiosqlite for async operations, or offload writes to a background thread via asyncio.to_thread(). Better yet, use the async DatabaseManager (database.py) which already has asyncpg pooling.
+- **[circuit_breaker_loosens_under_stress]** `src/dynamic_risk_adjustment.py:287` — Circuit breaker and emergency stop thresholds are MULTIPLIED by total_adjustment (lines 287-288), making them LOOSER during crashes. In CRASH regime, total_adjustment ~2.0, so emergency stop rises from 15% to 30%. The system becomes MORE tolerant of losses when it should be LESS tolerant. Position size correctly tightens (line 282 divides), but thresholds do the opposite.
+  - Fix: Circuit breaker thresholds must TIGHTEN under stress. Divide by total_adjustment, or keep as fixed absolute values. This asymmetry is dangerous.
+- **[hardcoded_correlations]** `src/portfolio_optimization.py:424` — Covariance matrix uses hardcoded correlations: 0.3 same-class, 0.1 cross-class. During crypto crises, correlations spike to 0.8-0.95 (everything sells together). The optimizer will overestimate diversification and recommend oversized positions that all move against you simultaneously.
+  - Fix: Use rolling historical correlations with a stress overlay: max(observed_correlation, 0.7) during VOLATILE/CRASH regimes. Never assume stable correlations in crypto.
+- **[emergency_stop_stale_prices]** `src/risk_management.py:629` — Emergency stop closes positions using position.current_price which is only updated when check_stop_losses is called. During exchange outage or network partition, current_price could be minutes old. P&L calculation and actual fill price will diverge dramatically. Flagged in previous audit; still unresolved.
+  - Fix: Emergency stop should use market orders with no price assumption. Log expected vs actual fill price. Flag that emergency close used potentially stale pricing.
+- **[risk_assessment_failure_swallowed]** `src/live_arbitrage_pipeline.py:641` — Market condition assessment (lines 630-642) uses bare except: pass. If regime detection fails, system continues with stale regime data. Comment: 'Market assessment is advisory -- never block hot path.' This philosophy is wrong: inability to assess conditions IS elevated risk.
+  - Fix: If assessment fails 3 consecutive times, auto-activate conservative mode (halve position sizes). Track failures as a metric. Absence of risk data is risk data.
+- **[volatility_percentile_calculation_bug]** `src/dynamic_risk_adjustment.py:162` — Line 162: np.percentile(self.volatility_history, current_volatility * 100). This passes current_vol*100 as the percentile rank to compute, not computing what percentile the current vol is at. If current_vol=0.03, it computes the 3rd percentile of history -- meaningless. Entire regime detection receives garbage volatility input.
+  - Fix: Replace with: scipy.stats.percentileofscore(self.volatility_history, current_volatility). This computes what percentile the current observation falls at.
+- **[mitigation_reset_race]** `src/risk_intelligence_engine.py:279` — All mitigation actions reset to False before recalculating (line 279). If update_market_data is called rapidly, there is a window where emergency_stop=False before new assessment completes. A concurrent trade check sees emergency_stop=False and proceeds.
+  - Fix: Calculate new actions into local variable, then atomically swap. Or use threading.Lock around mitigation state. Never clear emergency stop before confirming new state.
+- **[websocket_input_validation]** `src/dashboard_api.py:756` — WebSocket endpoint at /ws accepts unlimited-size messages with no authentication. Line 756: 'data = await websocket.receive_text()'. An attacker can: (1) open 10 connections to exhaust MAX_WS_CONNECTIONS, denying service to legitimate dashboard clients, (2) send arbitrarily large JSON payloads to exhaust server memory, (3) send messages at high frequency with no rate limiting. There is no origin validation on WebSocket upgrade requests.
+  - Fix: Add message size limits (e.g. 4KB max). Add origin validation on WebSocket handshake. Add per-connection rate limiting. Require auth token in WebSocket connection query params.
+- **[error_leaking_internals]** `src/dashboard_api.py:942` — Multiple endpoints (lines 942, 987, 1034, 1078, 1096) catch exceptions and return str(e) directly to the client. Exception messages from Python can contain file paths, module names, database connection strings, and stack trace fragments. Attack scenario: trigger an error in /api/exchanges/status to learn internal path structure and library versions.
+  - Fix: Never return raw exception messages. Log the full exception server-side, return a generic error message to the client. Example: return {'error': 'Internal server error', 'code': 'EXCHANGE_STATUS_ERROR'}.
+- **[missing_rate_limiting]** `src/dashboard_api.py:78` — No rate limiting on any endpoint. The comment on line 78 says 'Rate limiting: deferred'. This means an attacker can: (1) brute-force the API key via rapid POST requests to any mutation endpoint, (2) DoS the server by flooding GET endpoints that perform file I/O (training log parsing, JSON file reads), (3) exhaust file descriptors via rapid WebSocket connections.
+  - Fix: Add rate limiting immediately. Use slowapi or a custom middleware. Critical limits: auth endpoints 5 req/min, mutation endpoints 10 req/min, read endpoints 60 req/min.
+- **[csrf_protection]** `src/dashboard_api.py:86` — CORS allows credentials (allow_credentials=True) with specific origins, but there is zero CSRF protection on state-changing POST endpoints. If a user has the dashboard open in a browser and visits a malicious site, the attacker can forge POST requests to /api/paper-trading/start, /api/pipeline/start, /api/config/toggle-pair etc. The browser will include cookies/credentials automatically.
+  - Fix: Add CSRF token validation. Use a double-submit cookie pattern or require a custom header (e.g. X-Requested-With) that cannot be set by cross-origin form submissions.
+- **[network_monitoring_bypass]** `src/personal_security.py:164` — The 172.x.x.x check on line 164 treats ALL 172.* addresses as private. RFC 1918 only reserves 172.16.0.0-172.31.255.255. Addresses like 172.1.2.3 or 172.32.0.0 are PUBLIC routable IPs. An attacker establishing connections via public 172.x IPs would bypass the external connection detector, allowing data exfiltration to appear as 'local' traffic.
+  - Fix: Check the full RFC 1918 range: remote_ip.startswith('172.') and 16 <= int(remote_ip.split('.')[1]) <= 31. Better: use ipaddress.ip_address(remote_ip).is_private from the Python standard library.
+- **[websocket_input_validation]** `src/websocket_connector.py:264` — All parse_ticker_message() methods across 7 exchange connectors (BinanceWebSocket, CoinbaseWebSocket, KrakenWebSocket, etc.) accept raw JSON from untrusted WebSocket feeds with no size limit validation and no schema enforcement beyond basic key checks. A compromised or malicious exchange feed could send crafted payloads with extreme float values (1e308), deeply nested objects, or oversized strings to cause memory exhaustion or numeric overflow. The MarketData __post_init__ validator catches NaN/Inf but does not check for extreme magnitudes.
+  - Fix: Add message size limits before JSON parsing (reject messages > 64KB). Validate numeric ranges (price > 0, price < 1e9). Use pydantic or similar for strict schema validation of exchange messages.
+- **[fee_calculation_error]** `src/order_executor.py:218` — EXCHANGE_FEES hardcodes single fee rates (e.g. coinbase: 0.004) but the actual Coinbase Advanced Trade API charges 0.006 taker / 0.004 maker for <$10K monthly volume. Since arbitrage uses limit orders (line 322), the maker rate applies when orders rest on the book, but taker rate applies when they cross the spread. The code always uses the single rate for validation (line 242-243) but real fills could be 50% more expensive on Coinbase. On $100K annual volume through Coinbase, this is ~$200 in underestimated fees. paper_trading.py (line 99-107) has a separate, more detailed fee table -- the two are inconsistent.
+  - Fix: Consolidate fee schedules into a single source of truth (config/exchange_fees.json). Distinguish maker vs taker rates. Use taker rate for validation (worst case) and actual fill rate from the exchange's fee field in the order response for P&L calculation.
+- **[look_ahead_bias]** `src/backtester.py:328` — The backtester's _find_arbitrage_opportunities method compares bid/ask across exchanges at the same timestamp (line 321-325), but in reality these prices would never be simultaneously observable due to network latency (50-200ms between exchanges). The simulated bid/ask spread is a fixed 0.1% (line 298-299) regardless of time of day or volatility, whereas real spreads widen 3-5x during low liquidity periods. This inflates backtest profitability by creating phantom opportunities that would not exist in live trading.
+  - Fix: Add random latency offsets (50-500ms) between exchange price observations. Use time-varying bid/ask spread models based on historical spread data. Introduce a 'stale price' window where if two exchange snapshots are >200ms apart, the opportunity is discarded.
+- **[unrealistic_backtest_fees]** `src/backtester.py:384` — Backtest fee calculation uses 0.05% fee + 0.08% slippage per side (line 385), totaling 0.26% round-trip. But the order_executor uses exchange-specific fees (0.1% to 0.4% per side) plus a 0.1% slippage buffer. This means the backtester understates costs by 30-75% compared to live execution, inflating backtest returns and Sharpe ratio. A strategy that shows 0.5% return per trade in backtesting may actually net 0.1% or less live.
+  - Fix: Import EXCHANGE_FEES from paper_trading.py (the most detailed fee table) into the backtester. Apply exchange-specific fees based on which exchanges are in each trade. Use variable slippage that increases with trade size relative to order book depth.
+- **[paper_trading_divergence]** `src/order_executor.py:664` — Paper trading (PaperTradingExecutor in order_executor.py, line 664) always succeeds with zero slippage on fill price and a flat 0.1% fee. The PaperTradingEngine in paper_trading.py is more realistic (exchange-specific fees, random slippage). But the order_executor's PaperTradingExecutor is what the live pipeline would use for paper mode. This means paper P&L will be systematically better than live: no partial fills, no order rejections, no latency. Estimated annual divergence: paper will overstate returns by 15-30%.
+  - Fix: Deprecate PaperTradingExecutor in order_executor.py in favor of PaperTradingEngine from paper_trading.py. Add simulated partial fills (random 60-100% fill rate), simulated latency (100-500ms), and order book depth checks to the paper trading model.
+- **[stop_loss_logic_flaw]** `src/risk_management.py:512` — check_stop_losses() only checks 'current_price <= position.stop_loss' (line 512) and 'current_price >= position.take_profit' (line 516). This is correct for long positions but WRONG for short positions. If side == 'sell' (short), the stop loss should trigger when price rises ABOVE stop_loss, and take_profit when price falls BELOW take_profit. The code does not differentiate by side. A short position with entry at $100, stop_loss at $102 will never trigger because $current_price <= $102 is checked instead of >= $102.
+  - Fix: Add side-aware stop/TP logic: if position.side == 'buy': trigger stop when price <= stop_loss, TP when price >= take_profit. If position.side == 'sell': trigger stop when price >= stop_loss, TP when price <= take_profit. The paper_trading.py already handles this correctly (lines 877-886) -- replicate that pattern.
+- **[kelly_criterion_miscalculation]** `src/risk_management.py:293` — The Kelly criterion implementation adds a 'spread_bonus' to win probability (line 288-289): win_probability = confidence + min(spread * 10, 0.3). This conflates two separate concepts -- a 3% spread does not make a 55% confidence signal into an 85% confidence signal. The estimated_costs at line 293 is hardcoded at 0.1% regardless of exchange, ignoring that Coinbase costs 0.6% taker. This inflates Kelly fraction and oversizes positions for expensive exchanges. With quarter-Kelly applied (line 311), the error is dampened but still leads to ~20% oversizing on Coinbase trades.
+  - Fix: Remove spread_bonus from win_probability. Use exchange-specific fee rates for estimated_costs. The Kelly formula inputs should be: p = historical win rate for this strategy (or confidence as proxy), b = (expected_profit_after_costs / expected_loss_after_costs). Validate Kelly output against a maximum of 2% of portfolio per trade.
+- **[divide_by_zero_risk]** `src/order_executor.py:427` — In _get_order_price(), total_volume is calculated as sum(min(qty, quantity/3) for _, qty in asks[:3]). If the order book has entries with qty=0 (which exchanges can return during flash crashes or maintenance), total_volume will be 0, and the weighted_price division on line 429 will produce a ZeroDivisionError or inf. The function returns 0.0 on exception (line 449), which then fails the buy_price <= 0 check, but an inf price could slip through and place an order at an absurd price.
+  - Fix: Add explicit check: if total_volume <= 0: return asks[0][0] * 1.0001 (fall back to top-of-book). Also validate that weighted_price is within 5% of the top-of-book price before returning -- an extreme value indicates corrupted order book data.
 
-## MEDIUM (19)
-- **[error_handling]** `src/order_executor.py:532` — PaperTrading super().__init__ tries load_markets with empty configs
-  - Fix: Override _init_exchanges
-- **[types]** `src/strategy_ensemble.py` — predict() no shape validation on input
-  - Fix: Add shape check
-- **[stale]** `src/compliance.py:104` — last_updated hardcoded 2024-01-01
-  - Fix: Use dynamic timestamp
-- **[vectorization]** `src/multi_strategy_training.py:336` — RSI/EMA/BB use Python loops. 10-100x slower than numpy
-  - Fix: Vectorize
-- **[drawdown]** `src/capital_allocator.py:210` — No portfolio-level circuit breaker. Multiple strategies at 4.9% each = 15%+ portfolio drawdown with no trigger.
-  - Fix: Add aggregate portfolio drawdown circuit breaker at 8%
-- **[limits]** `src/capital_allocator.py:219` — Quarterly rebalance resets ALL circuit breakers unconditionally. No recovery evidence required.
-  - Fix: Only reset if strategy shows positive P&L in last 7 days
-- **[limits]** `src/risk_management.py:486` — Daily loss check uses abs() - triggers on large GAINS too. Logic bug.
-  - Fix: Use < -max_daily_loss_pct, not abs()
-- **[emergency]** `src/risk_management.py:896` — TradingRiskManager emergency_stop uses 0.1% slippage. In crash, slippage is 2-10%.
-  - Fix: Use 3% crash slippage estimate
-- **[limits]** `src/portfolio_optimization.py:83` — Defaults to $10k capital ignoring config $300. min_diversification=5 impractical for $300.
-  - Fix: Read from config, reduce to 2-3 for MICRO tier
-- **[bypass]** `src/paper_trading.py:107` — Paper trading uses own hardcoded risk constants. Not testing same risk path as live.
-  - Fix: Use same risk management classes
-- **[kelly]** `src/paper_trading.py:860` — Paper sizing = MAX_POSITION_PCT * magnitude * confidence. Ignores Kelly entirely.
-  - Fix: Use unified position sizing through risk layer
-- **[cors]** `src/dashboard_api.py` — Wildcard methods/headers with credentials=True
-  - Fix: Restrict to specific methods
-- **[exposure]** `src/dashboard_api.py:897` — No TLS/HTTPS configuration
-  - Fix: Deploy behind TLS proxy
-- **[consistency]** `src/risk_management.py:434` — check_stop_losses only handles buy-side. Sell positions stop/TP logic is inverted but not implemented.
-  - Fix: Add side-aware stop loss matching TradingRiskManager
-- **[fees]** `src/live_arbitrage_pipeline.py:699` — Fee calc uses flat 0.1% for both exchanges. Real exchange fees differ significantly.
-  - Fix: Use per-exchange fee rates
-- **[slippage]** `src/order_executor.py:315` — Partial fill hardcoded to 95%. Creates quantity mismatch between arb legs.
-  - Fix: Check actual filled qty and adjust other leg
-- **[rounding]** `src/capital_allocator.py:76` — rolling_sharpe uses sqrt(N trades) annualization instead of time-based. Incomparable across strategies.
-  - Fix: Use sqrt(365/window_days)
-- **[rounding]** `src/risk_management.py:865` — Sharpe ratio mixes per-trade returns with daily risk-free rate adjustments.
-  - Fix: Match return frequency with risk-free rate period
-- **[consistency]** `src/strategy_ensemble.py:371` — CrossExchangeScorer recomputes signals as simple average, losing confidence-weighted info.
-  - Fix: Use weighted final_signal from EnsembleSignal
+## MEDIUM (52)
+- **[silent_exception_in_retry_loop]** `src/order_executor.py:343` — In _execute_single_order's polling loop, bare 'except Exception: continue' silently retries on any error including programming errors. If fetch_order has a bug, this will silently retry 10 times before failing.
+  - Fix: Catch ccxt.BaseError specifically. Log unexpected exceptions.
+- **[silent_exception_swallowing]** `src/order_executor.py:384` — Bare 'except Exception: pass' when cancelling unfilled order remainder. If cancellation fails, there is an orphaned order on the exchange with no record or alert.
+  - Fix: Log the failure and add the order ID to a 'stale_orders' list for manual review.
+- **[silent_exception_swallowing]** `src/order_executor.py:601` — close_exchanges() catches all exceptions per exchange with bare except:pass. If closing fails, resources leak silently.
+  - Fix: Log each failure at WARNING level.
+- **[stale_configuration]** `src/exchange_connector.py:107` — WebSocket URLs dict contains 'ftx' (bankrupt since Nov 2022) and 'huobi' (rebranded to HTX). These are dead endpoints that will never connect, creating confusion and wasted connection attempts.
+  - Fix: Remove ftx and huobi entries. Add the 7 exchanges listed in CLAUDE.md: binance, coinbase, kraken, kucoin, okx, bybit, gate.
+- **[magic_number]** `src/exchange_connector.py:439` — Synthetic fallback price data uses hardcoded base_price=45000 without explanation. This creates misleading data that looks real but is not.
+  - Fix: Log a clear WARNING when returning synthetic data. Use a named constant SYNTHETIC_BTC_PRICE = 45000 with a comment explaining it is a placeholder.
+- **[magic_number]** `src/backtester.py:93` — _generate_price_series has 7 hardcoded exchange_multipliers and 12 hardcoded volatility_multipliers. These magic numbers are embedded in a deeply nested method with no documentation of their derivation.
+  - Fix: Extract to named constants or a data class. Document the source of each multiplier.
+- **[sync_async_mismatch]** `src/backtester.py:596` — WalkForwardOptimizer.optimize_parameters calls self.backtester.run_backtest() which is an async method, but optimize_parameters is a sync method. This will return a coroutine object, not results.
+  - Fix: Make optimize_parameters async or use asyncio.run() to execute the coroutine.
+- **[magic_number]** `src/main.py:803` — Paper trading uses hardcoded quantity=0.01 for all trades regardless of asset. 0.01 BTC is ~$450 but 0.01 XRP is $0.005. Position sizing should be value-based, not quantity-based.
+  - Fix: Calculate quantity based on a fixed USDC value divided by current price.
+- **[control_flow_bug]** `src/main.py:1054` — The gpu-train and gpu-status commands are checked outside the if/elif chain (after line 1053). The gpu-train block uses 'if' instead of 'elif', so it runs regardless of which command was selected. Then gpu-status uses 'elif' chained to gpu-train's if, not to the main chain.
+  - Fix: Move gpu-train and gpu-status into the main if/elif chain where other commands are handled.
+- **[return_type_inconsistency]** `src/risk_management.py:206` — RiskManager.calculate_position_size returns float, but TradingRiskManager.calculate_position_size (line 783) returns Dict. Same method name, incompatible return types. Callers must know which subclass they have, which defeats polymorphism.
+  - Fix: Standardize on one return type. The Dict return is more informative -- refactor the base class method to also return a Dict with an 'approved' key.
+- **[sql_injection_risk]** `src/database.py:277` — execute_query accepts raw SQL strings and passes them directly to conn.fetch(). Any caller building queries with string concatenation can introduce SQL injection.
+  - Fix: Add input validation or restrict to a whitelist of allowed query patterns. Document that callers MUST use parameterized queries.
+- **[missing_null_check]** `src/database.py:264` — get_pandas_dataframe references self.engine and pd without checking if they are None. If asyncpg or pandas are not installed, this will raise AttributeError at runtime.
+  - Fix: Add guard: if self.engine is None or pd is None: raise RuntimeError('Database engine or pandas not available')
+- **[sync_in_async]** `src/data_fetcher.py:99` — _fetch_pair_data is declared async but calls exchange.fetch_ohlcv() which is a synchronous ccxt method (not ccxt.async_support). This blocks the event loop during each fetch.
+  - Fix: Use ccxt.async_support for async fetch_ohlcv, or wrap with asyncio.to_thread().
+- **[module_level_side_effects]** `src/paper_trading.py:136` — Module-level code creates directories (LOG_DIR.mkdir), creates file handlers (_RotatingFileHandler), and attaches them to loggers. Merely importing paper_trading.py creates files on disk and modifies the logging system.
+  - Fix: Move logging setup into a setup_logging() function called from __main__ or the engine's __init__.
+- **[magic_number]** `src/capital_allocator.py:203` — MIN_CAPITAL_FLOOR = 50.0 is defined as a local variable inside record_trade() instead of as a class constant. This critical safety threshold is buried deep in a method.
+  - Fix: Move to a class-level constant or make it configurable via the config dict.
+- **[assertion_in_production]** `src/strategy_ensemble.py:236` — assert statement used in production inference path: 'assert not model.training'. Assertions are stripped when Python runs with -O flag.
+  - Fix: Replace with an explicit if-check that raises a RuntimeError or logs a warning.
+- **[no_compliance_gate]** `src/exchange_connector.py:262` — ExchangeConnector.get_ticker(), get_order_book(), and get_recent_trades() accept arbitrary symbol parameters without compliance check. A caller could pass a non-compliant pair and the system would fetch data for it.
+  - Fix: Add MiCA compliance validation to all public methods that accept a symbol parameter.
+- **[missing_compliance_check]** `src/database.py:98` — DatabaseManager.store_arbitrage_opportunity() defaults symbol to 'BTC/USDC' but does not validate the symbol against the MiCA whitelist. Non-compliant pairs could be stored in the database.
+  - Fix: Add compliance validation before database insertion.
+- **[data_retention]** `src/database.py:1` — No data retention policy is implemented. MiCA Article 68 requires 5-year record retention for all trading activities. The database module has no retention enforcement, no archival strategy, and no mechanism to ensure records are preserved for the required period.
+  - Fix: Implement a data retention policy with 5+ year retention, archival mechanism, and compliance reporting.
+- **[data_retention]** `personal_config.json:63` — personal_config.json sets 'retention_days: 30' which is grossly insufficient. MiCA Article 68 requires 5-year (1825+ days) data retention for all trading records and decisions.
+  - Fix: Change retention_days to at minimum 1825 (5 years).
+- **[compliance_resilience]** `src/live_arbitrage_pipeline.py:153` — OpportunityFilter._check_compliance() has a fallback path that bypasses MiCAComplianceEngine when it cannot be imported, falling back to a simple list check. This dual-path approach increases the risk of inconsistency.
+  - Fix: Make MiCAComplianceEngine a hard dependency. If it cannot be imported, the pipeline should refuse to start.
+- **[audit_trail]** `src/order_executor.py:1` — No centralized immutable audit trail system exists. Trade decisions, compliance checks, and risk gate outcomes are logged to rotating log files (100MB max, 5 backups) which will be overwritten. MiCA Article 68 requires complete, non-destructible audit trails.
+  - Fix: Implement a dedicated write-once append-only trade journal with compliance check results, risk gate decisions, and 5+ year preservation.
+- **[threading_lock_in_model_loader]** `src/realtime_inference.py:151` — SecureModelLoader.model_lock is a threading.RLock protecting loaded_models dict. Every call to load_model_securely, unload_model, and (via inference_lock) every inference call acquires this lock. Since the RealTimeInferenceService.inference_lock already serializes access, the model_lock adds redundant contention. Additionally, model loading does blocking file I/O (torch.load) under the lock, blocking all other model operations.
+  - Fix: Use a per-model lock or a reader-writer pattern. Model loading (rare) should acquire exclusive write lock. Inference (frequent) should only need a shared read lock or no lock at all since model dict is effectively read-only after startup.
+- **[cpu_gpu_transfer_per_inference]** `src/realtime_inference.py:563` — Every single inference call creates a new tensor on CPU (torch.from_numpy) then transfers it to GPU (.to(device)) at line 563. For 12 pairs running inference every few seconds, this is hundreds of CPU-GPU transfers per minute. The device lookup via next(model.parameters()).device is also called on every inference.
+  - Fix: Pre-allocate a pinned memory tensor buffer for each model. Use non_blocking=True for CPU->GPU transfers. Cache the device per model at load time instead of calling next(model.parameters()).device on every inference.
+- **[global_lock_on_analysis]** `src/gpu_accelerated_analysis.py:77` — GPUAcceleratedAnalyzer holds self.analysis_lock (threading.RLock) for the entire analyze_market_data() call including all sub-analyses (arbitrage, volatility, correlation, efficiency). This serializes ALL analysis even though different analysis types on different data could run concurrently on the GPU.
+  - Fix: Remove the coarse lock or replace with per-analysis-type locks. GPU operations are inherently serialized by CUDA stream, so a Python-level lock is redundant for GPU-only work.
+- **[unnecessary_cpu_gpu_transfer]** `src/gpu_accelerated_analysis.py:259` — _compute_correlation_matrix() moves all price tensors from GPU back to CPU (prices.cpu().numpy() at line 259) to compute correlation with numpy's np.corrcoef. This GPU->CPU->compute->result pattern defeats the purpose of GPU acceleration.
+  - Fix: Compute correlation on GPU using torch.corrcoef() which is available in PyTorch 1.10+. Keep data on GPU throughout the analysis pipeline.
+- **[unbounded_batch_requeue]** `src/gpu_optimizer.py:230` — In _process_model_batches(), when a batch arrives for a different model_name (line 238-240), it is put back into the shared inference_queue. Under load with multiple models, this creates a hot loop of dequeue-check-requeue that wastes CPU cycles. Each re-queued batch is re-examined by every model processor.
+  - Fix: Use per-model queues instead of a single shared queue. Each model's processor dequeues only from its own queue, eliminating the requeue churn.
+- **[asyncio_lock_contention]** `src/cache_layer.py:56` — LRUCache uses a single asyncio.Lock for all get/set/delete operations. Under high tick rates (7 exchanges x 12 pairs = 84 concurrent cache operations per tick cycle), this lock becomes a bottleneck. Every cache_ticker and get_ticker call contends on the same lock.
+  - Fix: Use sharded locking: partition the key space into N shards (e.g., 16), each with its own lock. Hash the key to determine the shard. This reduces contention by N-fold.
+- **[json_serialization_on_every_cache_write]** `src/cache_layer.py:170` — RedisCache.set() calls json.dumps() on every cache write (line 180) and RedisCache.get() calls json.loads() on every cache read (line 170). For market_data with a 2-second TTL, this is 42 serialize + 42 deserialize operations per tick cycle across all exchanges and pairs.
+  - Fix: Use msgpack or pickle for Redis serialization (faster than JSON). For the LRU cache, store Python objects directly (already doing this -- good). Consider using Redis HSET with binary values instead of JSON strings.
+- **[import_in_hot_path]** `src/live_arbitrage_pipeline.py:697` — _handle_opportunity() imports multi_channel_alerts.Alert and AlertPriority inside the hot path (lines 697-698) on EVERY opportunity that triggers an alert. Python caches imports but the import machinery still needs to check the cache and build local references.
+  - Fix: Move the import to module level or at least to __init__. Store references to Alert and AlertPriority as instance attributes.
+- **[unbounded_list_growth]** `src/order_executor.py:45` — self.order_history (line 45) is an unbounded list that grows with every trade. In a long-running production system, this will consume increasing memory over weeks/months of operation.
+  - Fix: Use collections.deque(maxlen=10000) or periodically flush old entries to the database. Same applies to paper_orders in PaperTradingExecutor (line 630).
+- **[dataframe_copy_on_fetch]** `src/data_fetcher.py:105` — _fetch_pair_data() creates a new DataFrame per fetch, then _save_data() converts each DataFrame to dict with .tolist() calls that copy all data. For 12 pairs x 4 exchanges x 1000 candles, this creates significant memory pressure during data refresh.
+  - Fix: Use numpy arrays directly instead of DataFrames for OHLCV storage. Convert to DataFrame only when needed for analysis. The .tolist() calls can be replaced with .values.tolist() on a single column view.
+- **[rebalance_resets_breakers]** `src/capital_allocator.py:228` — Quarterly rebalance resets ALL circuit breakers unconditionally (halved=False). A strategy that lost 20% gets fully re-enabled after 90 days with no human review.
+  - Fix: Require manual acknowledgment to re-enable halved strategies. At minimum, re-enable at 50% allocation.
+- **[zero_risk_on_insufficient_data]** `src/advanced_risk_metrics.py:126` — Insufficient data (<100 obs HS VaR, <30 MC VaR) returns (0.0, 0.0). Zero VaR = 'no risk'. At startup or after data gaps, this could lead to maximum position sizes.
+  - Fix: Return conservative high values (VaR=0.10, ES=0.15) when data insufficient, or None requiring callers to handle explicitly.
+- **[order_polling_timeout]** `src/order_executor.py:337` — Order polling retries 10 times, max ~16 seconds. During exchange congestion in a crash, confirmations take 30-60s. Code may conclude order failed when it filled, causing duplicate orders.
+  - Fix: Extend max polling to 60 seconds. Add pending-confirmation state preventing duplicates. Reconcile all recent fills after timeout.
+- **[no_exchange_health_check]** `src/live_arbitrage_pipeline.py:393` — No pre-trade exchange health check. If buy exchange fills but sell exchange is offline, naked position risk. Stress scenario #2 (exchange offline mid-trade) has no explicit handling.
+  - Fix: Add pre-flight health check: ping both exchanges and verify orderbook freshness (timestamp < 5s) before committing to execution.
+- **[cumulative_kelly_exposure]** `src/risk_management.py:314` — Kelly capped at 25% per trade. With max_open_positions=5, cumulative Kelly exposure can reach 31.25% -- aggressive for $300-$500 micro accounts.
+  - Fix: Add cumulative exposure check capping total Kelly exposure across all open positions. 15% max for micro tier.
+- **[callback_exception_handling]** `src/dynamic_risk_adjustment.py:429` — Circuit breaker callbacks use asyncio.create_task without ensuring event loop exists. If no loop running, RuntimeError thrown. Kill switch depends on event loop health.
+  - Fix: Wrap callbacks to execute synchronously if async dispatch fails. Kill switch must not depend on event loop.
+- **[insufficient_data_defaults_ranging]** `src/regime_detector.py:132` — With <30 candles, defaults to RANGING regime which boosts grid/mean_reversion (1.6x). During startup or after data gaps, system favors strategies worst for trending/crashing markets.
+  - Fix: Default to HIGH_VOLATILITY (conservative) or None requiring minimum position sizes when data insufficient.
+- **[silent_validation_failure]** `src/risk_management.py:200` — validate_opportunity catches all exceptions and returns False. If risk system itself is broken (e.g., division by zero), every opportunity fails silently with no alert. System appears running but never trades.
+  - Fix: Count consecutive validation exceptions. After N failures, send critical alert differentiating 'rejected by rules' from 'risk system broken'.
+- **[secrets_in_environment]** `src/telegram_alerts.py:198` — Telegram bot token is read from TELEGRAM_BOT_TOKEN environment variable with empty string default. The token grants full control of the bot (read messages, send messages to any chat). Environment variables are visible via /proc/PID/environ on Linux, in process listings, and in container orchestrator dashboards. No scoping or rotation mechanism exists.
+  - Fix: Store the token in an encrypted secrets file or a secrets manager. At minimum, validate the token format before use. Add token rotation support.
+- **[subprocess_environment_inheritance]** `src/dashboard_api.py:504` — paper_trading_start() and pipeline_start() launch subprocesses with environment variables derived from os.environ. While the script paths are hardcoded (not user-controlled), the entire parent environment is passed to child processes via env={**os.environ, ...}. Any malicious env vars (LD_PRELOAD, PYTHONPATH manipulation) in the parent environment propagate to child processes.
+  - Fix: Sanitize the environment passed to subprocesses. Create a minimal env dict with only required variables instead of inheriting all of os.environ.
+- **[secrets_in_environment]** `src/database.py:33` — DATABASE_URL from environment variable may contain username, password, host, and port in the connection string (e.g. postgresql://user:password@host:5432/db). This string is used directly in both asyncpg.create_pool() and SQLAlchemy create_engine(). If an error occurs, the connection string may be logged or leaked in exception messages.
+  - Fix: Parse DATABASE_URL and redact credentials before any logging. Use separate env vars for host/user/password/database. Ensure error handlers never log the raw connection string.
+- **[insecure_tls]** `src/order_executor.py:84` — Exchange connections via ccxt use default SSL settings without explicit certificate verification configuration. While ccxt enables SSL by default, there is no explicit ssl_context configuration, no certificate pinning, and no check that HTTPS is enforced. A MITM attacker on the network could potentially intercept exchange API calls if system CA certificates are compromised.
+  - Fix: Explicitly configure ssl_context with certificate verification. Consider certificate pinning for critical exchange endpoints. Add 'verify_ssl': True to exchange config.
+- **[hardcoded_secrets]** `src/live_arbitrage_pipeline.py:411` — Pipeline reads API keys from config/api_keys.json using a hardcoded relative path. The file is loaded into memory as a plain dict. No encryption at rest, no access logging, no file permission checks. Combined with the .gitignore gap, keys are at high risk of exposure.
+  - Fix: Encrypt api_keys.json at rest using Fernet or age. Check file permissions (0600) before reading. Log all access to the keys file. Use a secrets manager for production.
+- **[compliance_violation]** `src/websocket_validator.py:84` — WebSocket validator hardcodes USDT pairs (btcusdt, ethusdt, xrpusdt, etc.) on line 84. This violates the MiCA compliance rule stated in the project: 'NEVER use USDT. Only USDC and RLUSD stablecoins.' While this is a test/validation module, it could lead to accidental USDT trading pair configuration.
+  - Fix: Replace all USDT pairs with USDC equivalents: btcusdc, ethusdc, etc. Add a compliance check that rejects any pair containing 'USDT'.
+- **[slippage_estimation]** `src/order_executor.py:276` — The slippage buffer is a fixed 0.1% (line 276). Real slippage depends on order size relative to order book depth. A $50 order on BTC/USDC has near-zero slippage; a $5,000 order on VET/USDC could have 1-2% slippage on thin books. Using a fixed buffer understates risk on illiquid pairs and overstates it on liquid pairs, leading to both missed opportunities and unexpected losses.
+  - Fix: Calculate slippage dynamically from the order book: walk the book to fill the desired quantity and compute the volume-weighted average price vs. the top-of-book price. Use this as the slippage estimate. Cap at 2% and reject if slippage exceeds the expected spread.
+- **[sharpe_ratio_calculation]** `src/capital_allocator.py:76` — rolling_sharpe() computes Sharpe as mean(pnl) / std(pnl) * sqrt(N) where N is the count of trades in the window (line 76). This is not annualized Sharpe -- it scales with trade frequency. A strategy with 100 trades/month will show a Sharpe 10x higher than one with 1 trade/month even if per-trade risk-adjusted returns are identical. This biases allocation toward high-frequency strategies regardless of actual quality.
+  - Fix: Annualize the Sharpe ratio: estimate trades_per_year from the time window, then Sharpe = mean(returns) / std(returns) * sqrt(trades_per_year). Alternatively, use time-based returns (daily or weekly) rather than per-trade returns.
+- **[fee_estimation_inconsistency]** `src/arbitrage_detector.py:461` — In _prepare_grok_opportunity_data(), fees are estimated as: binance=0.001, coinbase=0.002, others=0.0015. But Coinbase actual taker fee is 0.006 for low-volume traders, and the order_executor uses 0.004. Three different fee estimates exist across the codebase for the same exchange. If Grok reasoning uses the wrong fee to assess opportunity viability, it may recommend executing unprofitable trades.
+  - Fix: Create a single authoritative fee schedule module (e.g., src/fee_schedule.py) imported by all components. Include maker/taker rates, volume tier breakpoints, and network transfer costs.
+- **[daily_return_calculation_error]** `src/backtester.py:261` — Daily return is calculated as (portfolio_value - peak_value) / peak_value (line 261), but peak_value is the running maximum, not yesterday's close. This means daily_return is actually 'return from all-time high', not daily return. The Sharpe ratio calculation (line 457) then uses these as if they were daily returns, producing a meaningless number.
+  - Fix: Track the previous day's portfolio value separately. daily_return = (today_value - yesterday_value) / yesterday_value. Use this for Sharpe calculation.
+- **[synthetic_covariance_matrix]** `src/portfolio_optimization.py:424` — The covariance matrix uses hardcoded correlations (0.3 intra-class, 0.1 inter-class) instead of actual historical return correlations. Crypto assets have time-varying correlations that spike to 0.9+ during market crashes. Using fixed low correlations understates portfolio risk and leads to over-concentrated positions that suffer correlated drawdowns.
+  - Fix: Calculate the covariance matrix from actual historical price data (at least 90 days of daily returns). Implement a shrinkage estimator (Ledoit-Wolf) for numerical stability with small sample sizes.
+- **[stale_price_protection]** `src/live_arbitrage_pipeline.py:93` — OpportunityFilter checks probability, spread, and risk score but has no maximum-age check on the opportunity timestamp. An opportunity detected 30 seconds ago may reference prices that have moved 1-2% since detection. The pipeline relies on order_executor's re-pricing (line 267), but by then resources have been allocated to a stale opportunity.
+  - Fix: Add a max_age_seconds parameter to OpportunityFilter (default 5 seconds). Reject any opportunity where time.time() - opportunity.timestamp > max_age_seconds. This prevents executing on stale signals.
 
-## LOW (4)
-- **[todo]** `src/dashboard_api.py:71` — Stale TODO for rate limiting
-  - Fix: Implement or track
-- **[limits]** `src/risk_management.py:580` — Singleton get_risk_manager() has no locking. Race conditions possible.
-  - Fix: Add threading.Lock around state mutations
-- **[slippage]** `src/order_executor.py:230` — Symmetric 0.1% slippage model. Real slippage is asymmetric.
-  - Fix: Consider asymmetric model
-- **[rounding]** `src/risk_management.py:186` — Min position check uses 0.001*avg_price regardless of pair. XRP min = $0.0005, effectively none.
-  - Fix: Use pair-specific minimums from _ASSET_CONFIGS
+## LOW (21)
+- **[function_too_long]** `src/main.py:956` — main() is 127 lines handling 12 different commands in one monolithic block.
+  - Fix: Extract each command handler into a separate function. Use a command dispatch dict instead of if/elif chains.
+- **[function_too_long]** `src/live_arbitrage_pipeline.py:735` — _execute_trade method is 120 lines. It handles dedup checking, exchange selection, fee calculation, position sizing, trade execution, stats updates, and state persistence.
+  - Fix: Extract fee calculation, position sizing, and state persistence into helper methods.
+- **[function_too_long]** `src/backtester.py:62` — _generate_price_series is 105 lines of synthetic data generation with deeply nested logic.
+  - Fix: Extract the volume generation and OHLC simulation into separate helper functions.
+- **[shadowed_attribute]** `src/risk_management.py:743` — TradingRiskManager.__init__ reassigns self.max_drawdown from config dict, overwriting the base class's tracked max_drawdown value. Same name, different semantics (running max vs limit threshold).
+  - Fix: Rename the subclass attribute to max_drawdown_limit to avoid confusion.
+- **[unbounded_memory]** `src/model_ensemble.py:392` — prediction_history grows to 1000 entries then gets trimmed to 500. This sawtooth pattern creates GC pressure.
+  - Fix: Use collections.deque(maxlen=500) instead of list with manual trimming.
+- **[magic_number]** `src/paper_trading.py:609` — SIGNAL_SCALE=10.0, CONF_SCALE=4.0, MAG_SCALE=4.0 are local variables with no documentation of how these scaling factors were derived.
+  - Fix: Move to module-level named constants with documentation of the calibration methodology.
+- **[stale_instruction]** `src/agents/audit_trading.py:74` — audit_trading.py agent prompt says 'Only EUR-denominated pairs are allowed for MiCA compliance'. This is incorrect -- the system uses USDC-denominated pairs, not EUR.
+  - Fix: Update the agent prompt to correctly state USDC/RLUSD stablecoin pairs.
+- **[exchange_subset]** `src/data_fetcher.py:29` — RealDataFetcher only initializes 4 of 7 exchanges (binance, coinbase, kraken, okx). Missing: kucoin, bybit, gate.
+  - Fix: Initialize all 7 exchanges in the RealDataFetcher.
+- **[dataclass_validation_per_tick]** `src/websocket_connector.py:91` — MarketData.__post_init__ imports math and checks 6 float fields for NaN/Inf on every tick. While the validation is valuable, the import statement and isinstance checks add micro-overhead per tick. With 84 streams, this runs thousands of times per second.
+  - Fix: Move 'import math' to module level. Use a single numpy isfinite check on an array of all 6 values instead of individual checks.
+- **[redundant_ssl_strategies]** `src/websocket_connector.py:119` — WebSocketConnector.connect() tries 3 connection strategies (lines 119-141), but strategy 1 and strategy 3 are identical (both use ssl=True). This wastes time on retry with no actual change in behavior.
+  - Fix: Remove the duplicate strategy. Consider using a single ssl.create_default_context() with appropriate timeout.
+- **[datetime_creation_per_inference]** `src/realtime_inference.py:595` — datetime.now() is called on every inference result creation (line 595). While cheap individually, datetime.now() involves a system call. With 12 pairs inferring every few seconds, this adds up.
+  - Fix: Use time.time() for timestamps in hot paths and only convert to datetime for display/storage. Or batch-timestamp: use a single datetime.now() per batch cycle.
+- **[threading_rlock_with_asyncio]** `src/gpu_optimizer.py:82` — GPUOptimizer uses both threading.RLock (memory_lock) and asyncio.Lock (batch_lock). Mixing threading and asyncio primitives can lead to subtle issues: acquiring a threading lock in an async context blocks the entire event loop.
+  - Fix: Use asyncio.Lock consistently for all operations that run in the async context. Use threading locks only for the background optimization thread that runs in a separate thread.
+- **[monitoring_loop_not_implemented]** `src/risk_intelligence_engine.py:376` — Monitoring loop sleeps and catches exceptions but performs no risk assessment. Continuous monitoring is documented as active but is actually a no-op.
+  - Fix: Implement periodic VaR computation, circuit breaker checks, and mitigation updates. Until then, document that monitoring is manual-trigger only.
+- **[garch_uncalibrated]** `src/advanced_risk_metrics.py:166` — Monte Carlo VaR uses fixed GARCH alpha=0.1, beta=0.85 never calibrated to data. Crypto-appropriate parameters differ significantly. VaR may underestimate tail risk.
+  - Fix: Calibrate GARCH parameters on actual return series or use filtered historical simulation.
+- **[assert_in_production]** `src/strategy_ensemble.py:236` — assert not model.training can be disabled with python -O. If model enters training mode in production, predictions unreliable and memory spikes.
+  - Fix: Replace assert with explicit if-check and raise RuntimeError.
+- **[path_traversal]** `src/dashboard_api.py:1028` — get_agent_report() accepts user-supplied agent_name and constructs a file path: reports_dir / f'{name}.json'. While the name is somewhat constrained by URL routing, there is no explicit sanitization against path traversal characters (../, null bytes). An attacker could potentially read arbitrary JSON files by passing names like '../../../etc/passwd'.
+  - Fix: Sanitize agent_name: reject any name containing '/', '\', '..', or null bytes. Use Path.resolve() and verify the result is still within reports_dir.
+- **[network_monitoring_bypass]** `src/personal_security.py:147` — verify_local_execution() connects to 8.8.8.8:80 (Google DNS) as a fallback to determine the local IP. This creates an actual outbound network connection during a 'local execution' check, which is ironic. If DNS is being monitored, this connection reveals the system is running SovereignForge.
+  - Fix: Use socket.gethostname() or platform-specific methods to determine local IP without making outbound connections.
+- **[information_disclosure]** `src/exchange_connector.py:438` — get_price_history() falls back to synthetic data (line 438-440) when exchange data is unavailable. If this synthetic data is used for trading decisions without clear flagging, it could lead to trades based on fabricated prices. The synthetic data generation is deterministic and predictable.
+  - Fix: Raise an exception instead of returning synthetic data. If fallback is required, clearly mark the data as synthetic and prevent it from triggering trade execution.
+- **[execution_stats_averaging_error]** `src/order_executor.py:454` — The running average for execution time (lines 461-465) divides by total successful_orders but adds only one execution_time per arb trade (which is 2 orders). The formula computes (old_avg * (N-2) + new_time) / N, which is correct algebraically but fragile -- if an error causes successful_orders to be odd, the average will be skewed.
+  - Fix: Track execution times in a list or deque and compute the average directly: avg = sum(times) / len(times). Simpler and less error-prone.
+- **[numerical_stability]** `src/cointegration_detector.py:197` — The simplified Dickey-Fuller test (line 197) adds 1e-10 to denominators for stability, but the gamma calculation uses np.sum(y_lag ** 2) which can overflow for large price levels (BTC at $45,000 over 500 periods: sum of squares ~ 45000^2 * 500 = 1.01e12). While within float64 range, it reduces precision. The simplified test also returns coarse p-value buckets (0.01, 0.05, 0.10, 0.20, 0.50) which may misclassify borderline pairs.
+  - Fix: Use log prices for the spread calculation to reduce magnitude issues. When statsmodels is available (which it is), ensure the fallback path is only used as a true fallback and not the default.
+- **[stale_websocket_urls]** `src/exchange_connector.py:110` — WebSocket URLs include 'ftx' (line 110) which shut down in November 2022. The 'okex' URL uses the old OKEx domain instead of OKX. While these are fallback URLs and may not be actively used, they indicate the connector hasn't been updated to reflect current exchange infrastructure.
+  - Fix: Remove FTX entry. Update 'okex' to 'okx' with URL 'wss://ws.okx.com:8443/ws/v5/public'. Add gate.io WebSocket URL. Validate all URLs against current exchange documentation.
 
-## INFO (4)
-- **[limits]** `src/risk_management.py:616` — Two risk manager classes with different defaults, Kelly caps, drawdown logic, APIs.
-  - Fix: Consolidate into single class
-- **[consistency]** `src/risk_management.py` — Two separate RiskManager classes with different Kelly, stop-loss, fee assumptions. Pipeline uses one, backtester the other.
-  - Fix: Consolidate or document clearly
-- **[hardcoded]** `config/trading_config.json:6` — min_spread_threshold=0.5 (50%) seems wrong. Should be 0.005 (0.5%)?
-  - Fix: Verify value
-- **[consistency]** `config/trading_config.json:14` — risk/reward ratio inverted: stop_loss=2%, take_profit=1%. Risk 2x of reward.
-  - Fix: Set take_profit > stop_loss
+## INFO (14)
+- **[sys_path_hack]** `src/dashboard_api.py:1109` — sys.path.insert(0, ...) used in 4 files (dashboard_api.py x2, swarm_optimizer.py, autotuner.py). These are import path hacks that make the project structure fragile.
+  - Fix: Install the project as an editable package (pip install -e .) with a proper pyproject.toml.
+- **[deprecated_api]** `src/data_integration_service.py:125` — asyncio.get_event_loop() and asyncio.ensure_future() are used in _on_market_data_sync. These are discouraged in modern Python.
+  - Fix: Use asyncio.get_running_loop() inside async contexts.
+- **[backwards_compat_alias]** `src/risk_management.py:688` — RiskManagementEngine = RiskManager and get_risk_management_engine = get_risk_manager are backwards compatibility aliases that add confusion about which name is canonical.
+  - Fix: Grep the codebase for usage. If these aliases are no longer used, remove them.
+- **[dead_code]** `src/exchange_connector.py:107` — WebSocket URL entries for 'ftx' (defunct) and 'huobi' (rebranded) are dead code that can never successfully connect.
+  - Fix: Remove dead entries. Update to match the 7 exchanges documented in CLAUDE.md.
+- **[compliance_engine]** `src/compliance.py:1` — The MiCA Compliance Engine is well-structured. It correctly prohibits USDT, allows only USDC and RLUSD stablecoins, maintains a complete asset whitelist with personal deployment mode, provides filtering and validation methods, and raises ComplianceViolationError for violations.
+  - Fix: No changes required. This is the canonical source of truth for MiCA compliance.
+- **[compliance_engine]** `config/trading_config.json:1` — trading_config.json is fully compliant. All 12 enabled pairs use USDC. No USDT references. Strategy weights sum to 1.00. dry_run_mode is true. All 7 exchanges are listed.
+  - Fix: No changes required.
+- **[compliance_engine]** `src/arbitrage_detector.py:34` — ArbitrageDetector imports and uses MiCAComplianceEngine with hard enforcement. Non-compliant pairs raise ComplianceViolationError. This is correct behavior.
+  - Fix: No changes required.
+- **[synchronous_pandas_query]** `src/database.py:264` — get_pandas_dataframe() uses synchronous SQLAlchemy engine.connect() which blocks the event loop if called from async context. While this method exists alongside proper async methods, callers may not realize it blocks.
+  - Fix: Add a docstring warning about blocking behavior, or provide an async wrapper using asyncio.to_thread().
+- **[double_lock_acquisition]** `src/exchange_rate_limiter.py:102` — TokenBucket.acquire() acquires the lock, calculates wait time, releases the lock, sleeps, then re-acquires the lock. The second acquisition may find tokens consumed by a concurrent caller, leading to over-throttling.
+  - Fix: This is a minor fairness issue rather than a performance bug. Consider using asyncio.Condition for a more precise wake-up pattern.
+- **[quarter_kelly_positive]** `src/risk_management.py:310` — System uses Quarter-Kelly (0.25 fraction) for position sizing -- appropriately conservative. Half-Kelly used in calculate_kelly_metrics creates inconsistency between analysis display and execution.
+  - Fix: Standardize on Quarter-Kelly for both analysis and execution.
+- **[paper_trading_safety_positive]** `src/order_executor.py:50` — Multi-layer paper trading safety (env var AND config must agree for live) is a strong control preventing accidental live trading. Well-implemented at lines 50-63.
+  - Fix: No change needed. Consider adding manual confirmation prompt before first live trade per session.
+- **[network_exposure]** `src/dashboard_api.py:1150` — Server binds to 127.0.0.1:8420 — good. However, the port is configurable via SOVEREIGNFORGE_DASHBOARD_PORT env var and the host is not configurable. A reverse proxy or Docker network configuration could still expose this.
+  - Fix: Document that 127.0.0.1 binding is intentional and must not be changed. Add a startup warning if running behind a reverse proxy without TLS.
+- **[information_disclosure]** `src/websocket_connector.py:198` — User-Agent header set to 'SovereignForge/1.0' reveals the application name and version to all exchange WebSocket endpoints. This enables fingerprinting of the trading system.
+  - Fix: Use a generic User-Agent or match common browser/library user agents to avoid system fingerprinting.
+- **[fee_range_mismatch]** `src/paper_trading.py:95` — FEE_RANGE is defined as (0.0004, 0.0008) on line 95, representing 0.04%-0.08%, but this range is not actually used -- the engine correctly uses exchange-specific fee rates from EXCHANGE_FEES (line 797-798). The constant is dead code that could mislead developers into thinking fees are much lower than they actually are.
+  - Fix: Remove the unused FEE_RANGE constant or add a comment that it is deprecated in favor of EXCHANGE_FEES.
 
 ## Top Recommendations
-- FIX IMMEDIATELY: 22 critical issues
-- Fix soon: 33 high-severity issues
-- Multi-agent concern: src/ flagged by duplication, sys_path
-- Multi-agent concern: src/capital_allocator.py flagged by drawdown, limits, rounding
-- Multi-agent concern: src/compliance.py flagged by inconsistency, stale, usdt
-- Multi-agent concern: src/dashboard_api.py flagged by auth, blocking_io, cors, exposure
-- Multi-agent concern: src/data_integration_service.py flagged by async, inconsistency
-- Multi-agent concern: src/live_arbitrage_pipeline.py flagged by blocking_io, bypass, fees, hardcoded, memory, mock, organization
-- Multi-agent concern: src/multi_strategy_training.py flagged by consistency, vectorization
-- Multi-agent concern: src/order_executor.py flagged by async, blocking_io, bypass, correlation, error_handling, fees, limits, slippage
-- Multi-agent concern: src/paper_trading.py flagged by bypass, consistency, duplication, kelly
-- Multi-agent concern: src/realtime_inference.py flagged by async, caching
-- Multi-agent concern: src/risk_management.py flagged by consistency, drawdown, duplication, emergency, inconsistency, kelly, limits, rounding, singleton
-- Multi-agent concern: src/strategy_ensemble.py flagged by consistency, types
+- FIX IMMEDIATELY: 23 critical issues
+- Fix soon: 44 high-severity issues
+- Multi-agent concern: personal_config.json flagged by USDT_usage, data_retention
+- Multi-agent concern: src/arbitrage_detector.py flagged by compliance_import_per_call, fee_estimation_inconsistency, logging_configuration_side_effect, synchronous_sqlite_in_detection_path
+- Multi-agent concern: src/backtester.py flagged by daily_return_calculation_error, look_ahead_bias, magic_number, sync_async_mismatch, unrealistic_backtest_fees
+- Multi-agent concern: src/cache_layer.py flagged by asyncio_lock_contention, json_serialization_on_every_cache_write
+- Multi-agent concern: src/capital_allocator.py flagged by capital_floor_post_hoc, magic_number, rebalance_resets_breakers, sharpe_ratio_calculation
+- Multi-agent concern: src/dashboard_api.py flagged by csrf_protection, error_leaking_internals, missing_rate_limiting, subprocess_environment_inheritance, unauthenticated_mutation_endpoints, websocket_input_validation, whitelist_incomplete
+- Multi-agent concern: src/data_fetcher.py flagged by dataframe_copy_on_fetch, sync_in_async, synchronous_io_in_async_context
+- Multi-agent concern: src/database.py flagged by data_retention, missing_compliance_check, missing_null_check, secrets_in_environment, sql_injection, sql_injection_risk
+- Multi-agent concern: src/dynamic_risk_adjustment.py flagged by callback_exception_handling, circuit_breaker_loosens_under_stress, volatility_percentile_calculation_bug
+- Multi-agent concern: src/exchange_connector.py flagged by magic_number, no_compliance_gate, non_compliant_exchange, stale_configuration, synchronous_io_in_hot_path
+- Multi-agent concern: src/gpu_accelerated_analysis.py flagged by global_lock_on_analysis, unnecessary_cpu_gpu_transfer
+- Multi-agent concern: src/live_arbitrage_pipeline.py flagged by compliance_resilience, god_class, hardcoded_secrets, import_in_hot_path, no_exchange_health_check, position_sizing_bypass, risk_assessment_failure_swallowed, risk_bypass_fail_open, silent_exception_swallowing, stale_price_protection, synchronous_file_io_in_hot_path
+- Multi-agent concern: src/main.py flagged by control_flow_bug, deprecated_api, dry_violation, god_class, magic_number, silent_exception_swallowing
+- Multi-agent concern: src/model_ensemble.py flagged by global_mutable_state, randomness_in_optimization
+- Multi-agent concern: src/order_executor.py flagged by audit_trail, divide_by_zero_risk, dry_violation, fee_calculation_error, floating_point_arithmetic, insecure_tls, missing_compliance_check, missing_lot_size_rounding, naked_leg_risk, no_max_order_size, order_polling_timeout, paper_trading_divergence, race_condition_partial_fill, risk_bypass_optional_risk_manager, silent_exception_in_retry_loop, silent_exception_swallowing, slippage_estimation, synchronous_file_io_in_hot_path, unbounded_list_growth
+- Multi-agent concern: src/paper_trading.py flagged by dry_violation, module_level_side_effects, overly_broad_exception
+- Multi-agent concern: src/portfolio_optimization.py flagged by hardcoded_correlations, synthetic_covariance_matrix
+- Multi-agent concern: src/realtime_inference.py flagged by cpu_gpu_transfer_per_inference, global_lock_serializing_inference, redundant_buffer_truncation, threading_lock_in_model_loader, unnecessary_object_creation_in_hot_path
+- Multi-agent concern: src/risk_management.py flagged by cumulative_kelly_exposure, emergency_stop_stale_prices, global_mutable_state, kelly_criterion_miscalculation, return_type_inconsistency, silent_validation_failure, stop_loss_logic_flaw
+- Multi-agent concern: src/websocket_connector.py flagged by json_deserialization_per_tick, sequential_dispatch_pattern, websocket_input_validation
+- Multi-agent concern: src/websocket_validator.py flagged by USDT_usage, compliance_violation

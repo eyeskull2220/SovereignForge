@@ -1,97 +1,256 @@
 {
   "agent_name": "Performance Analyst",
   "agent_type": "audit",
-  "timestamp": "2026-03-14T04:35:00",
-  "health_score": 38.0,
+  "timestamp": "2026-03-15T00:00:00Z",
+  "health_score": 58,
   "findings": [
     {
       "severity": "critical",
-      "file": "src/order_executor.py",
-      "line": 66,
-      "category": "blocking_io",
-      "description": "Sync exchange.load_markets() blocks thread for seconds",
-      "recommendation": "Use ccxt.async_support"
+      "file": "src/exchange_connector.py",
+      "line": 268,
+      "category": "synchronous_io_in_hot_path",
+      "description": "ExchangeConnector.get_ticker() calls exchange.fetch_ticker() synchronously (blocking ccxt REST call) inside what should be an async-capable connector. This blocks the event loop for 200-2000ms per call. The get_order_book() and get_recent_trades() methods have the same problem (lines 287, 303). MultiExchangeConnector.get_market_data() (line 406) calls get_ticker() sequentially for every exchange, compounding the blocking time to N * latency.",
+      "recommendation": "Replace ccxt synchronous exchange with ccxt.async_support throughout ExchangeConnector. Use await exchange.fetch_ticker() and make all callers async. The OrderExecutor already does this correctly -- follow that pattern."
     },
     {
       "severity": "critical",
-      "file": "src/order_executor.py",
-      "line": 283,
-      "category": "blocking_io",
-      "description": "Sync exchange.create_order() in async method",
-      "recommendation": "Use ccxt.async_support"
+      "file": "src/exchange_connector.py",
+      "line": 430,
+      "category": "synchronous_io_in_hot_path",
+      "description": "get_price_history() calls exchange.fetch_ohlcv() synchronously, blocking the event loop. This is called from MultiExchangeConnector which iterates exchanges sequentially. A single Kraken OHLCV fetch can take 800ms+, and the method tries multiple exchanges in a loop.",
+      "recommendation": "Use ccxt.async_support and asyncio.gather() to fetch from all exchanges concurrently, with a timeout."
     },
     {
       "severity": "critical",
-      "file": "src/live_arbitrage_pipeline.py",
-      "line": 758,
-      "category": "blocking_io",
-      "description": "Sync json.load/dump blocks event loop on every trade",
-      "recommendation": "Use aiofiles"
+      "file": "src/realtime_inference.py",
+      "line": 553,
+      "category": "global_lock_serializing_inference",
+      "description": "infer_arbitrage_signal() holds self.inference_lock (a threading.RLock) for the ENTIRE duration of inference including GPU forward pass, tensor creation, and result extraction. This serializes ALL inference across ALL pairs to a single thread. With 12 pairs and ~5ms per inference, this means 60ms minimum sequential latency when all pairs need inference simultaneously. The infer_batch() method at line 640 also holds the same lock for the entire batch.",
+      "recommendation": "Remove the coarse-grained lock. PyTorch inference with torch.no_grad() is thread-safe for read-only forward passes. If model loading/unloading needs protection, use a read-write lock pattern: multiple readers (inference) can proceed concurrently, only writers (model load/unload) need exclusive access."
     },
     {
       "severity": "critical",
-      "file": "src/data_integration_service.py",
-      "line": 125,
-      "category": "async",
-      "description": "Deprecated get_event_loop + run_until_complete can deadlock",
-      "recommendation": "Use get_running_loop().create_task()"
-    },
-    {
-      "severity": "high",
-      "file": "src/order_executor.py",
-      "line": 294,
-      "category": "async",
-      "description": "1s sleep after every order. Unacceptable for arbitrage",
-      "recommendation": "Poll with 50ms backoff"
-    },
-    {
-      "severity": "high",
-      "file": "src/live_arbitrage_pipeline.py",
-      "line": 209,
-      "category": "memory",
-      "description": "_dedup_cache grows without bound",
-      "recommendation": "Use LRU cache"
+      "file": "src/data_fetcher.py",
+      "line": 99,
+      "category": "synchronous_io_in_async_context",
+      "description": "_fetch_pair_data() uses synchronous exchange.fetch_ohlcv() inside what appears to be an async method (called from fetch_all_data via asyncio.gather). The ccxt exchange object is initialized synchronously at line 30-31 (ccxt.binance() not ccxt.async_support.binance()). This means every 'concurrent' fetch actually blocks the event loop sequentially, negating the entire benefit of the semaphore-based parallelism.",
+      "recommendation": "Initialize exchanges with ccxt.async_support and use await exchange.fetch_ohlcv(). The asyncio.Semaphore pattern is already correct -- just needs async ccxt underneath."
     },
     {
       "severity": "high",
       "file": "src/realtime_inference.py",
-      "line": 517,
-      "category": "async",
-      "description": "Global lock serializes ALL inference",
-      "recommendation": "Use per-model locks"
+      "line": 462,
+      "category": "unnecessary_object_creation_in_hot_path",
+      "description": "process_market_data() converts the bounded deque to a list (line 476: buf = list(self.buffers[pair_index])), then creates a full numpy array from it (line 481-488), then calls engineer_features() which likely creates another array. This happens on EVERY incoming market data tick for every pair that has 24+ buffered entries. Each tick creates 3+ temporary arrays that are immediately discarded.",
+      "recommendation": "Maintain the buffer as a pre-allocated numpy ring buffer. Only run feature engineering when the buffer has changed by a configurable number of ticks (e.g., every 5th tick), not on every single tick. Cache the last feature array and reuse it if the buffer hasn't changed enough."
     },
     {
       "severity": "high",
       "file": "src/realtime_inference.py",
-      "line": 533,
-      "category": "caching",
-      "description": "Single-sample inference. Batch params declared but unused",
-      "recommendation": "Implement batch inference"
+      "line": 466,
+      "category": "redundant_buffer_truncation",
+      "description": "Lines 465-466 manually truncate the deque to 24 entries AFTER the deque was already initialized with maxlen=24 (line 398). The deque.maxlen already handles this automatically. The manual slicing creates a new list object on every tick for no reason.",
+      "recommendation": "Remove lines 465-466 entirely. The deque(maxlen=24) already enforces the size limit."
     },
     {
       "severity": "high",
-      "file": "src/dashboard_api.py",
-      "line": 338,
-      "category": "blocking_io",
-      "description": "All _load_json sync in async handlers",
-      "recommendation": "Use asyncio.to_thread"
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 796,
+      "category": "synchronous_file_io_in_hot_path",
+      "description": "_execute_trade() reads trading_config.json synchronously (lines 796-801) using open()+json.load() on EVERY trade execution to get initial_capital. This is a blocking file I/O call in the middle of the latency-critical trade execution path.",
+      "recommendation": "Read the config once at pipeline initialization and store as self._initial_capital. Config changes should be picked up via periodic reload or signal handler, not on every trade."
+    },
+    {
+      "severity": "high",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 879,
+      "category": "synchronous_file_io_in_hot_path",
+      "description": "_persist_pipeline_state() performs synchronous file I/O (read existing JSON, write temp file, rename) on EVERY trade execution. json.load() + json.dump() with indent=2 for potentially 50+ opportunity records. This blocks the event loop for 1-5ms per trade.",
+      "recommendation": "Use asyncio.to_thread() to offload the atomic write, or batch state persistence (e.g., persist every 10 trades or every 5 seconds). The _atomic_write_json is already a @staticmethod -- perfect candidate for to_thread()."
+    },
+    {
+      "severity": "high",
+      "file": "src/order_executor.py",
+      "line": 56,
+      "category": "synchronous_file_io_in_hot_path",
+      "description": "_is_paper_trading_mode() reads config/trading_config.json synchronously via open()+json.load() and it is called on EVERY order execution attempt (line 304). This is a blocking I/O call in the most latency-critical path of the system.",
+      "recommendation": "Cache the paper trading mode flag at initialization time. The safety check is important but the config file doesn't change mid-execution. Re-check it on a timer (e.g., every 30s) or when receiving a signal."
+    },
+    {
+      "severity": "high",
+      "file": "src/websocket_connector.py",
+      "line": 264,
+      "category": "json_deserialization_per_tick",
+      "description": "Every parse_ticker_message() call across all 7 exchange WebSocket connectors calls json.loads(message) on every single tick. For 7 exchanges x 12 pairs = 84 streams, this is thousands of JSON parse operations per second. Python's json.loads is implemented in C but still allocates a new dict tree per call.",
+      "recommendation": "Consider using orjson (3-10x faster than stdlib json) for the hot path. For Binance which has the highest throughput, consider a streaming JSON parser that can extract specific fields without full deserialization."
+    },
+    {
+      "severity": "high",
+      "file": "src/websocket_connector.py",
+      "line": 748,
+      "category": "sequential_dispatch_pattern",
+      "description": "In _stream_exchange_data(), the if/elif chain at lines 755-768 is repeated identically for every exchange -- all branches call connector.parse_ticker_message(message). This is a code smell that also means dispatch is O(n) exchanges per message. More importantly, data callbacks at line 773 are called SEQUENTIALLY in the event loop for every tick. If any callback is slow, it blocks all other exchange streams.",
+      "recommendation": "Replace the if/elif chain with a single connector.parse_ticker_message(message) call. For callbacks, use asyncio.create_task() for async callbacks or run synchronous callbacks in a thread pool to avoid blocking the WebSocket receive loop."
+    },
+    {
+      "severity": "high",
+      "file": "src/arbitrage_detector.py",
+      "line": 37,
+      "category": "logging_configuration_side_effect",
+      "description": "Module-level logging.basicConfig() at lines 37-44 configures a FileHandler that opens arbitrage_detector.log on import. This is both a side effect and a performance issue: every log message from this module writes to disk synchronously. In the hot path, logger.info/warning/error calls become blocking file I/O.",
+      "recommendation": "Remove module-level basicConfig(). Let the application's main entry point configure logging. Use QueueHandler for async file logging in production."
+    },
+    {
+      "severity": "high",
+      "file": "src/arbitrage_detector.py",
+      "line": 298,
+      "category": "compliance_import_per_call",
+      "description": "detect_opportunity() calls get_compliance_engine() on EVERY detection call (line 298). If the compliance module creates a new engine instance each time (and it does import-time work), this is wasted work. Additionally, _check_compliance in the filter (line 156 of live_arbitrage_pipeline.py) imports MiCAComplianceEngine and checks hasattr on every call.",
+      "recommendation": "Initialize the compliance engine once in __init__ and reuse the instance."
+    },
+    {
+      "severity": "high",
+      "file": "src/arbitrage_detector.py",
+      "line": 549,
+      "category": "synchronous_sqlite_in_detection_path",
+      "description": "LocalDatabase uses synchronous sqlite3.connect() for every save_opportunity() and get_recent_opportunities() call. If the ArbitrageDetector is used in the live pipeline alongside the LocalDatabase, each detection triggers a blocking SQLite write.",
+      "recommendation": "Use aiosqlite for async operations, or offload writes to a background thread via asyncio.to_thread(). Better yet, use the async DatabaseManager (database.py) which already has asyncpg pooling."
     },
     {
       "severity": "medium",
-      "file": "src/multi_strategy_training.py",
-      "line": 336,
-      "category": "vectorization",
-      "description": "RSI/EMA/BB use Python loops. 10-100x slower than numpy",
-      "recommendation": "Vectorize"
+      "file": "src/realtime_inference.py",
+      "line": 151,
+      "category": "threading_lock_in_model_loader",
+      "description": "SecureModelLoader.model_lock is a threading.RLock protecting loaded_models dict. Every call to load_model_securely, unload_model, and (via inference_lock) every inference call acquires this lock. Since the RealTimeInferenceService.inference_lock already serializes access, the model_lock adds redundant contention. Additionally, model loading does blocking file I/O (torch.load) under the lock, blocking all other model operations.",
+      "recommendation": "Use a per-model lock or a reader-writer pattern. Model loading (rare) should acquire exclusive write lock. Inference (frequent) should only need a shared read lock or no lock at all since model dict is effectively read-only after startup."
+    },
+    {
+      "severity": "medium",
+      "file": "src/realtime_inference.py",
+      "line": 563,
+      "category": "cpu_gpu_transfer_per_inference",
+      "description": "Every single inference call creates a new tensor on CPU (torch.from_numpy) then transfers it to GPU (.to(device)) at line 563. For 12 pairs running inference every few seconds, this is hundreds of CPU-GPU transfers per minute. The device lookup via next(model.parameters()).device is also called on every inference.",
+      "recommendation": "Pre-allocate a pinned memory tensor buffer for each model. Use non_blocking=True for CPU->GPU transfers. Cache the device per model at load time instead of calling next(model.parameters()).device on every inference."
+    },
+    {
+      "severity": "medium",
+      "file": "src/gpu_accelerated_analysis.py",
+      "line": 77,
+      "category": "global_lock_on_analysis",
+      "description": "GPUAcceleratedAnalyzer holds self.analysis_lock (threading.RLock) for the entire analyze_market_data() call including all sub-analyses (arbitrage, volatility, correlation, efficiency). This serializes ALL analysis even though different analysis types on different data could run concurrently on the GPU.",
+      "recommendation": "Remove the coarse lock or replace with per-analysis-type locks. GPU operations are inherently serialized by CUDA stream, so a Python-level lock is redundant for GPU-only work."
+    },
+    {
+      "severity": "medium",
+      "file": "src/gpu_accelerated_analysis.py",
+      "line": 259,
+      "category": "unnecessary_cpu_gpu_transfer",
+      "description": "_compute_correlation_matrix() moves all price tensors from GPU back to CPU (prices.cpu().numpy() at line 259) to compute correlation with numpy's np.corrcoef. This GPU->CPU->compute->result pattern defeats the purpose of GPU acceleration.",
+      "recommendation": "Compute correlation on GPU using torch.corrcoef() which is available in PyTorch 1.10+. Keep data on GPU throughout the analysis pipeline."
+    },
+    {
+      "severity": "medium",
+      "file": "src/gpu_optimizer.py",
+      "line": 230,
+      "category": "unbounded_batch_requeue",
+      "description": "In _process_model_batches(), when a batch arrives for a different model_name (line 238-240), it is put back into the shared inference_queue. Under load with multiple models, this creates a hot loop of dequeue-check-requeue that wastes CPU cycles. Each re-queued batch is re-examined by every model processor.",
+      "recommendation": "Use per-model queues instead of a single shared queue. Each model's processor dequeues only from its own queue, eliminating the requeue churn."
+    },
+    {
+      "severity": "medium",
+      "file": "src/cache_layer.py",
+      "line": 56,
+      "category": "asyncio_lock_contention",
+      "description": "LRUCache uses a single asyncio.Lock for all get/set/delete operations. Under high tick rates (7 exchanges x 12 pairs = 84 concurrent cache operations per tick cycle), this lock becomes a bottleneck. Every cache_ticker and get_ticker call contends on the same lock.",
+      "recommendation": "Use sharded locking: partition the key space into N shards (e.g., 16), each with its own lock. Hash the key to determine the shard. This reduces contention by N-fold."
+    },
+    {
+      "severity": "medium",
+      "file": "src/cache_layer.py",
+      "line": 170,
+      "category": "json_serialization_on_every_cache_write",
+      "description": "RedisCache.set() calls json.dumps() on every cache write (line 180) and RedisCache.get() calls json.loads() on every cache read (line 170). For market_data with a 2-second TTL, this is 42 serialize + 42 deserialize operations per tick cycle across all exchanges and pairs.",
+      "recommendation": "Use msgpack or pickle for Redis serialization (faster than JSON). For the LRU cache, store Python objects directly (already doing this -- good). Consider using Redis HSET with binary values instead of JSON strings."
+    },
+    {
+      "severity": "medium",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 697,
+      "category": "import_in_hot_path",
+      "description": "_handle_opportunity() imports multi_channel_alerts.Alert and AlertPriority inside the hot path (lines 697-698) on EVERY opportunity that triggers an alert. Python caches imports but the import machinery still needs to check the cache and build local references.",
+      "recommendation": "Move the import to module level or at least to __init__. Store references to Alert and AlertPriority as instance attributes."
+    },
+    {
+      "severity": "medium",
+      "file": "src/order_executor.py",
+      "line": 45,
+      "category": "unbounded_list_growth",
+      "description": "self.order_history (line 45) is an unbounded list that grows with every trade. In a long-running production system, this will consume increasing memory over weeks/months of operation.",
+      "recommendation": "Use collections.deque(maxlen=10000) or periodically flush old entries to the database. Same applies to paper_orders in PaperTradingExecutor (line 630)."
+    },
+    {
+      "severity": "medium",
+      "file": "src/data_fetcher.py",
+      "line": 105,
+      "category": "dataframe_copy_on_fetch",
+      "description": "_fetch_pair_data() creates a new DataFrame per fetch, then _save_data() converts each DataFrame to dict with .tolist() calls that copy all data. For 12 pairs x 4 exchanges x 1000 candles, this creates significant memory pressure during data refresh.",
+      "recommendation": "Use numpy arrays directly instead of DataFrames for OHLCV storage. Convert to DataFrame only when needed for analysis. The .tolist() calls can be replaced with .values.tolist() on a single column view."
+    },
+    {
+      "severity": "low",
+      "file": "src/websocket_connector.py",
+      "line": 91,
+      "category": "dataclass_validation_per_tick",
+      "description": "MarketData.__post_init__ imports math and checks 6 float fields for NaN/Inf on every tick. While the validation is valuable, the import statement and isinstance checks add micro-overhead per tick. With 84 streams, this runs thousands of times per second.",
+      "recommendation": "Move 'import math' to module level. Use a single numpy isfinite check on an array of all 6 values instead of individual checks."
+    },
+    {
+      "severity": "low",
+      "file": "src/websocket_connector.py",
+      "line": 119,
+      "category": "redundant_ssl_strategies",
+      "description": "WebSocketConnector.connect() tries 3 connection strategies (lines 119-141), but strategy 1 and strategy 3 are identical (both use ssl=True). This wastes time on retry with no actual change in behavior.",
+      "recommendation": "Remove the duplicate strategy. Consider using a single ssl.create_default_context() with appropriate timeout."
+    },
+    {
+      "severity": "low",
+      "file": "src/realtime_inference.py",
+      "line": 595,
+      "category": "datetime_creation_per_inference",
+      "description": "datetime.now() is called on every inference result creation (line 595). While cheap individually, datetime.now() involves a system call. With 12 pairs inferring every few seconds, this adds up.",
+      "recommendation": "Use time.time() for timestamps in hot paths and only convert to datetime for display/storage. Or batch-timestamp: use a single datetime.now() per batch cycle."
+    },
+    {
+      "severity": "low",
+      "file": "src/gpu_optimizer.py",
+      "line": 82,
+      "category": "threading_rlock_with_asyncio",
+      "description": "GPUOptimizer uses both threading.RLock (memory_lock) and asyncio.Lock (batch_lock). Mixing threading and asyncio primitives can lead to subtle issues: acquiring a threading lock in an async context blocks the entire event loop.",
+      "recommendation": "Use asyncio.Lock consistently for all operations that run in the async context. Use threading locks only for the background optimization thread that runs in a separate thread."
+    },
+    {
+      "severity": "info",
+      "file": "src/database.py",
+      "line": 264,
+      "category": "synchronous_pandas_query",
+      "description": "get_pandas_dataframe() uses synchronous SQLAlchemy engine.connect() which blocks the event loop if called from async context. While this method exists alongside proper async methods, callers may not realize it blocks.",
+      "recommendation": "Add a docstring warning about blocking behavior, or provide an async wrapper using asyncio.to_thread()."
+    },
+    {
+      "severity": "info",
+      "file": "src/exchange_rate_limiter.py",
+      "line": 102,
+      "category": "double_lock_acquisition",
+      "description": "TokenBucket.acquire() acquires the lock, calculates wait time, releases the lock, sleeps, then re-acquires the lock. The second acquisition may find tokens consumed by a concurrent caller, leading to over-throttling.",
+      "recommendation": "This is a minor fairness issue rather than a performance bug. Consider using asyncio.Condition for a more precise wake-up pattern."
     }
   ],
-  "summary": "4 critical: sync ccxt in async, sync file I/O on hot paths, asyncio bridge deadlock. 1s sleep per order, no batch inference.",
-  "files_scanned": 9,
-  "execution_time_seconds": 163,
+  "summary": "Health score: 58/100. The trading hot path (WebSocket tick -> detection -> execution) has 4 CRITICAL and 10 HIGH severity issues that collectively add 200-3000ms of unnecessary latency per trading cycle.\n\nLATENCY BUDGET BREAKDOWN (per opportunity):\n- WebSocket receive + JSON parse: ~1ms (acceptable, but could use orjson)\n- ExchangeConnector blocking REST calls: 200-2000ms (CRITICAL -- uses sync ccxt)\n- Inference lock contention: 5-60ms (CRITICAL -- serializes all pairs)\n- Feature engineering array copies: 2-10ms (HIGH -- per-tick waste)\n- Config file reads per trade: 1-5ms (HIGH -- reads JSON on every trade)\n- State persistence I/O: 1-5ms (HIGH -- synchronous write per trade)\n- Paper trading mode check: 1-3ms (HIGH -- reads config per order)\n\nTotal estimated hot path latency: 210-3083ms\nTarget for competitive arbitrage: <50ms end-to-end\n\nTOP ISSUES:\n1. exchange_connector.py uses synchronous ccxt throughout, blocking the event loop for hundreds of milliseconds per REST call\n2. realtime_inference.py has a global inference lock that serializes all GPU inference to a single thread\n3. Multiple synchronous file I/O operations (config reads, state writes) scattered throughout the hot path\n4. data_fetcher.py uses sync ccxt despite async method signatures, making its 'parallel' fetching sequential\n\nPOSITIVE OBSERVATIONS:\n- order_executor.py correctly uses ccxt.async_support with lazy initialization\n- cache_layer.py has a solid two-tier architecture (Redis + LRU)\n- exchange_rate_limiter.py has a well-implemented token bucket with per-exchange limits\n- websocket_connector.py has proper circuit breaker and reconnection logic\n- database.py has proper async connection pooling with asyncpg\n- Pipeline uses deque(maxlen=N) for bounded buffers in several places\n- Pipeline has fire-and-forget cache writes via asyncio.create_task()",
+  "files_scanned": 12,
+  "execution_time_seconds": 0,
   "recommendations": [
-    "Switch to ccxt.async_support",
-    "Non-blocking file I/O",
-    "Batch GPU inference",
-    "Vectorize features"
+    "PRIORITY 1: Replace synchronous ccxt in exchange_connector.py and data_fetcher.py with ccxt.async_support. This single change eliminates 200-2000ms of event loop blocking per REST call.",
+    "PRIORITY 2: Replace the coarse-grained threading.RLock in realtime_inference.py with a reader-writer pattern or remove it entirely (PyTorch inference is thread-safe under torch.no_grad). This unblocks concurrent inference across all 12 trading pairs.",
+    "PRIORITY 3: Eliminate all synchronous file I/O from the hot path -- cache trading_config.json at init time, use asyncio.to_thread() for state persistence, and move the paper trading mode check to initialization with periodic refresh."
   ]
 }

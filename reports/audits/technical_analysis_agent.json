@@ -1,0 +1,11 @@
+{
+  "agent_name": "Technical Analysis Agent",
+  "agent_type": "research",
+  "timestamp": "2026-03-15T00:50:41.225714",
+  "health_score": 100.0,
+  "findings": [],
+  "summary": "{\n  \"agent\": \"Technical Analysis Agent\",\n  \"timestamp\": \"2026-03-15T00:50:41.225596\",\n  \"exchange\": \"binance\",\n  \"pairs_analyzed\": 0,\n  \"analyses\": {},\n  \"cross_pair_signals\": [],\n  \"execution_time\": 0.0\n}",
+  "files_scanned": 0,
+  "execution_time_seconds": 0.0,
+  "recommendations": []
+}

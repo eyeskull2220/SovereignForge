@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "ALGO/USDC",
+  "exchange": "binance",
+  "best_epoch": 106,
+  "best_val_loss": 0.08945359951919979,
+  "total_epochs": 106,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:36:57.122174",
+  "forward_window": 12
+}

@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "XRP/USDC",
+  "exchange": "okx",
+  "best_epoch": 64,
+  "best_val_loss": 0.09000106983714634,
+  "total_epochs": 64,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:52:45.382546",
+  "forward_window": 12
+}

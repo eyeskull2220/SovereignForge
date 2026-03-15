@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "XRP/USDC",
+  "exchange": "kraken",
+  "best_epoch": 34,
+  "best_val_loss": 0.09216735652595195,
+  "total_epochs": 34,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:49:40.339370",
+  "forward_window": 12
+}

@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "XLM/USDC",
+  "exchange": "okx",
+  "best_epoch": 50,
+  "best_val_loss": 0.07616387943012846,
+  "total_epochs": 50,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:53:43.655929",
+  "forward_window": 12
+}

@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "VET/USDC",
+  "exchange": "binance",
+  "best_epoch": 148,
+  "best_val_loss": 0.08839806881215838,
+  "total_epochs": 148,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:45:19.878596",
+  "forward_window": 12
+}

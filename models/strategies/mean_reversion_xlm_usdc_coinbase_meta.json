@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "XLM/USDC",
+  "exchange": "coinbase",
+  "best_epoch": 53,
+  "best_val_loss": 0.07196123376488686,
+  "total_epochs": 53,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:47:55.056597",
+  "forward_window": 12
+}

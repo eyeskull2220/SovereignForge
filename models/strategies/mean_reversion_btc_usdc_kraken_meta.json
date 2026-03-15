@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "BTC/USDC",
+  "exchange": "kraken",
+  "best_epoch": 1,
+  "best_val_loss": 0.0779203923017371,
+  "total_epochs": 1,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:48:00.514694",
+  "forward_window": 12
+}

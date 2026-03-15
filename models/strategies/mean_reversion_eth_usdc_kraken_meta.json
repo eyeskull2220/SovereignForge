@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "ETH/USDC",
+  "exchange": "kraken",
+  "best_epoch": 12,
+  "best_val_loss": 0.08623318207951693,
+  "total_epochs": 12,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:48:36.347449",
+  "forward_window": 12
+}

@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "XRP/USDC",
+  "exchange": "binance",
+  "best_epoch": 127,
+  "best_val_loss": 0.08405825048685074,
+  "total_epochs": 127,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:30:14.739219",
+  "forward_window": 12
+}

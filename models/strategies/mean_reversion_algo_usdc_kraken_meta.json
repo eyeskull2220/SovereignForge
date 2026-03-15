@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "ALGO/USDC",
+  "exchange": "kraken",
+  "best_epoch": 48,
+  "best_val_loss": 0.19191976077854633,
+  "total_epochs": 48,
+  "learning_rate": 8e-05,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:50:07.746932",
+  "forward_window": 12
+}

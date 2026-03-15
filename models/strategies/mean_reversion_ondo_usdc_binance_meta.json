@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "ONDO/USDC",
+  "exchange": "binance",
+  "best_epoch": 104,
+  "best_val_loss": 0.1016616971956359,
+  "total_epochs": 104,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:47:25.357300",
+  "forward_window": 12
+}

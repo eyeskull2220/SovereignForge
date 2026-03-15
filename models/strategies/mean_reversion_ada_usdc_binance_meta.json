@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "ADA/USDC",
+  "exchange": "binance",
+  "best_epoch": 99,
+  "best_val_loss": 0.09402400909198655,
+  "total_epochs": 99,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:38:37.687530",
+  "forward_window": 12
+}

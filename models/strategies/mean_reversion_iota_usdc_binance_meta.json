@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "IOTA/USDC",
+  "exchange": "binance",
+  "best_epoch": 103,
+  "best_val_loss": 0.0848589662876394,
+  "total_epochs": 103,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:42:26.973219",
+  "forward_window": 12
+}

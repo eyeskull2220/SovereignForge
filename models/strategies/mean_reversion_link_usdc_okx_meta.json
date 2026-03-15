@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "LINK/USDC",
+  "exchange": "okx",
+  "best_epoch": 73,
+  "best_val_loss": 0.09247306286253863,
+  "total_epochs": 73,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:55:55.890005",
+  "forward_window": 12
+}

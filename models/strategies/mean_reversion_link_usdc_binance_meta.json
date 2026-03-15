@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "LINK/USDC",
+  "exchange": "binance",
+  "best_epoch": 92,
+  "best_val_loss": 0.09251576513051987,
+  "total_epochs": 92,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:40:22.800740",
+  "forward_window": 12
+}

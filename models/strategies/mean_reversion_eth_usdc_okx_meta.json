@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "ETH/USDC",
+  "exchange": "okx",
+  "best_epoch": 53,
+  "best_val_loss": 0.09529467208517922,
+  "total_epochs": 53,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:51:23.318445",
+  "forward_window": 12
+}

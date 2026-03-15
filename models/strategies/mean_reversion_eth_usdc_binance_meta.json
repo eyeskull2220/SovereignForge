@@ -1,0 +1,12 @@
+{
+  "strategy": "mean_reversion",
+  "pair": "ETH/USDC",
+  "exchange": "binance",
+  "best_epoch": 122,
+  "best_val_loss": 0.09144980617695385,
+  "total_epochs": 122,
+  "learning_rate": 8.000000000000001e-06,
+  "seq_len": 128,
+  "timestamp": "2026-03-15T19:27:47.087932",
+  "forward_window": 12
+}

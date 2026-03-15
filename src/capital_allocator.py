@@ -36,7 +36,7 @@ class TierConfig:
 
 
 TIER_CONFIGS = {
-    CapitalTier.MICRO:    TierConfig(max_capital=500,  max_position_pct=0.10, max_positions=2, max_strategies=2),
+    CapitalTier.MICRO:    TierConfig(max_capital=500,  max_position_pct=0.04, max_positions=2, max_strategies=3),
     CapitalTier.SMALL:    TierConfig(max_capital=2000, max_position_pct=0.05, max_positions=3, max_strategies=3),
     CapitalTier.MEDIUM:   TierConfig(max_capital=5000, max_position_pct=0.03, max_positions=4, max_strategies=5),
     CapitalTier.STANDARD: TierConfig(max_capital=None, max_position_pct=0.02, max_positions=5, max_strategies=7),
@@ -93,7 +93,7 @@ class CapitalAllocator:
     - Drawdown circuit breaker (5% monthly max per strategy)
     """
 
-    MIN_CAPITAL_FLOOR = 50.0  # Halt all trading if capital drops below this
+    MIN_CAPITAL_FLOOR = 150.0  # Halt all trading if capital drops below this (50% of $300)
 
     # Default persistence path (reports/capital_allocator_state.json)
     _DEFAULT_STATE_DIR = Path(__file__).resolve().parent.parent / "reports"

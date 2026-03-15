@@ -75,7 +75,7 @@ const ModelHeatmap: React.FC<ModelHeatmapProps> = ({ models }) => {
     const lines = cell.entries.map(
       en => `${en.exchange}: ${en.val_loss.toFixed(6)} (${en.epochs} ep)`,
     );
-    setTooltip({ x: e.clientX, y: e.clientY, content: `${coin} / ${strat.toUpperCase()}\n${lines.join('\n')}` });
+    setTooltip({ x: e.clientX, y: e.clientY, content: `${coin} / ${(strat ?? '').toUpperCase()}\n${lines.join('\n')}` });
   };
 
   const cellSize = 72;

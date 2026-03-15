@@ -902,13 +902,27 @@ ws_manager = ConnectionManager()
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket, token: str = Query(default="")):
-    """WebSocket endpoint for real-time dashboard updates. Requires token auth."""
-    if not API_KEY:
-        await websocket.close(code=1008, reason="API key not configured on server")
+    """WebSocket endpoint for real-time dashboard updates.
+
+    Auth: requires token matching SOVEREIGNFORGE_API_KEY if set.
+    Local dev: if API_KEY is not configured, allows unauthenticated connections
+    from localhost only.
+    """
+    client_host = websocket.client.host if websocket.client else "unknown"
+    is_local = client_host in ("127.0.0.1", "::1", "localhost")
+
+    if API_KEY:
+        # Auth required when API key is configured
+        if token != API_KEY:
+            logger.warning(f"WebSocket auth failed from {client_host}")
+            await websocket.close(code=1008, reason="Invalid or missing token")
+            return
+    elif not is_local:
+        # No API key + non-local = reject
+        await websocket.close(code=1008, reason="Remote connections require API key")
         return
-    if token != API_KEY:
-        await websocket.close(code=1008, reason="Invalid or missing token")
-        return
+    # else: local + no API key = allow (dev mode)
+
     await ws_manager.connect(websocket)
     try:
         await websocket.send_json({
@@ -1369,6 +1383,115 @@ async def run_research_agents():
 
 
 # ---------------------------------------------------------------------------
+# Missing endpoints (identified by UX audit)
+# ---------------------------------------------------------------------------
+
+@app.get("/api/training/dashboard-data")
+async def get_training_dashboard_data():
+    """Serve training dashboard data (TrainingCards component)."""
+    data_path = PROJECT_ROOT / "reports" / "training_dashboard_data.json"
+    if data_path.exists():
+        try:
+            return json.loads(data_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {"status": "no_data", "note": "No training data available yet"}
+
+
+@app.get("/api/portfolio/drawdown")
+async def get_portfolio_drawdown():
+    """Compute drawdown metrics from paper trading state."""
+    state_path = PROJECT_ROOT / "reports" / "paper_trading_state.json"
+    if not state_path.exists():
+        return {"drawdown_pct": 0, "peak_equity": 0, "current_equity": 0, "note": "Paper trading not active"}
+    try:
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        balance = state.get("balance", 0)
+        starting = state.get("starting_balance", balance)
+        peak = state.get("peak_equity", starting)
+        drawdown = (peak - balance) / peak if peak > 0 else 0
+        trades = state.get("recent_trades", [])
+        daily_pnl = sum(t.get("pnl", 0) for t in trades[-20:])
+        return {
+            "drawdown_pct": round(drawdown * 100, 2),
+            "peak_equity": round(peak, 2),
+            "current_equity": round(balance, 2),
+            "starting_balance": round(starting, 2),
+            "daily_pnl": round(daily_pnl, 2),
+            "open_positions": len(state.get("positions", {})),
+        }
+    except Exception as e:
+        logger.error(f"Drawdown computation failed: {e}")
+        return {"drawdown_pct": 0, "error": str(e)}
+
+
+@app.post("/api/config/update")
+async def update_config(request: Request, _auth=Depends(verify_api_key)):
+    """Update specific config sections in trading_config.json."""
+    config_path = PROJECT_ROOT / "config" / "trading_config.json"
+    try:
+        body = await request.json()
+        if not isinstance(body, dict):
+            raise HTTPException(status_code=400, detail="Expected JSON object")
+
+        # Load current config
+        current = json.loads(config_path.read_text(encoding="utf-8"))
+
+        # Merge updates (shallow, only known sections)
+        allowed_sections = {"strategies", "risk_management", "trading", "cross_exchange"}
+        for key, value in body.items():
+            if key in allowed_sections:
+                if isinstance(current.get(key), dict) and isinstance(value, dict):
+                    current[key].update(value)
+                else:
+                    current[key] = value
+
+        # Validate no USDT contamination
+        config_text = json.dumps(current)
+        if "USDT" in config_text.upper():
+            raise HTTPException(status_code=400, detail="MiCA violation: USDT references not allowed")
+
+        # Atomic write
+        tmp = config_path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(current, indent=2), encoding="utf-8")
+        os.replace(str(tmp), str(config_path))
+
+        return {"status": "updated", "sections": list(body.keys())}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Config update failed: {e}")
+
+
+# ---------------------------------------------------------------------------
+# Trading Oracle
+# ---------------------------------------------------------------------------
+
+@app.get("/api/oracle/opportunities")
+async def get_oracle_opportunities():
+    """Get ranked trading opportunities from the Oracle."""
+    oracle_path = PROJECT_ROOT / "reports" / "oracle_recommendations.json"
+    if oracle_path.exists():
+        try:
+            return json.loads(oracle_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {"recommendations": [], "note": "Oracle not yet active. Start paper trading."}
+
+
+@app.get("/api/oracle/status")
+async def get_oracle_status():
+    """Get Oracle health and accuracy metrics."""
+    oracle_path = PROJECT_ROOT / "reports" / "oracle_status.json"
+    if oracle_path.exists():
+        try:
+            return json.loads(oracle_path.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+    return {"status": "inactive", "note": "Start paper trading to activate Oracle"}
+
+
+# ---------------------------------------------------------------------------
 # Telegram Alerts
 # ---------------------------------------------------------------------------
 
@@ -1404,6 +1527,11 @@ async def alerts_status():
 # ---------------------------------------------------------------------------
 if DASHBOARD_DIST.exists():
     from fastapi.staticfiles import StaticFiles
+
+    # Serve reports directory for training dashboard data
+    _reports_dir = PROJECT_ROOT / "reports"
+    if _reports_dir.exists():
+        app.mount("/reports", StaticFiles(directory=str(_reports_dir)), name="reports")
 
     app.mount("/", StaticFiles(directory=str(DASHBOARD_DIST), html=True), name="dashboard")
     logger.info(f"Serving dashboard from {DASHBOARD_DIST}")

@@ -13,6 +13,7 @@ Usage:
 
 import argparse
 import asyncio
+import collections
 import json
 import logging
 import math
@@ -39,6 +40,12 @@ try:
     _risk_mgr = get_risk_manager()
 except Exception:
     _risk_mgr = None
+
+try:
+    from trading_oracle import TradingOracle
+    _oracle_available = True
+except ImportError:
+    _oracle_available = False
 
 # Local imports (deferred where needed to avoid hard crashes)
 from multi_strategy_training import (
@@ -264,6 +271,22 @@ class PaperTradingEngine:
 
         # Shutdown flag
         self._running = False
+
+        # Trading Oracle (collective brain) — uses pre-computed signals, no separate ensemble
+        self._oracle = None
+        self._oracle_cache: Dict[Tuple[str, str], Any] = {}
+        if _oracle_available:
+            try:
+                from regime_detector import RegimeDetector
+                self._oracle = TradingOracle(
+                    strategy_ensemble=None,  # Oracle consumes paper trading's own signals
+                    regime_detector=RegimeDetector(),
+                    risk_manager=_risk_mgr,
+                    capital=starting_balance,
+                )
+                logger.info("Trading Oracle initialized successfully")
+            except Exception as e:
+                logger.warning("Oracle initialization failed (trading will use fallback): %s", e)
 
         # Load enabled pairs/strategies/exchanges from config
         self._enabled_pairs = list(MICA_PAIRS)
@@ -603,6 +626,9 @@ class PaperTradingEngine:
         try:
             with torch.no_grad():
                 output = model(tensor)  # [1, 3]
+            del tensor  # Free GPU memory immediately
+            if self._device == "cuda":
+                torch.cuda.empty_cache()
 
             if isinstance(output, tuple):
                 # Some models (ArbitrageTransformer) return tuple
@@ -618,6 +644,11 @@ class PaperTradingEngine:
             CONF_SCALE = 4.0
             MAG_SCALE = 4.0
 
+            # Validate model outputs before scaling
+            if np.any(np.isnan(raw)) or np.any(np.isinf(raw)):
+                logger.warning(f"NaN/Inf from {strategy}:{pair}:{exchange}, skipping")
+                return None
+
             signal_val = float(np.tanh(raw[0] * SIGNAL_SCALE))            # [-1, 1]
             confidence = float(1 / (1 + np.exp(-raw[1] * CONF_SCALE)))    # [0, 1]
             magnitude = float(1 / (1 + np.exp(-raw[2] * MAG_SCALE)))      # [0, 1]
@@ -632,6 +663,14 @@ class PaperTradingEngine:
                 timestamp=datetime.now(timezone.utc).isoformat(),
             )
 
+        except RuntimeError as exc:
+            if "CUDA out of memory" in str(exc):
+                logger.error(f"GPU OOM for {strategy}:{pair}:{exchange}, clearing cache")
+                if self._device == "cuda":
+                    torch.cuda.empty_cache()
+            else:
+                logger.error(f"Inference failed {strategy}:{pair}:{exchange}: {exc}")
+            return None
         except Exception as exc:
             logger.error(f"Inference failed {strategy}:{pair}:{exchange}: {exc}")
             return None
@@ -646,6 +685,14 @@ class PaperTradingEngine:
 
         # Reload config each cycle to pick up toggle changes
         self._reload_config()
+
+        # Oracle: refresh research data once per cycle
+        if self._oracle is not None:
+            try:
+                self._oracle.update_research()
+                self._oracle.update_capital(self.balance)
+            except Exception as e:
+                logger.debug("Oracle research update failed: %s", e)
 
         for pair in self._enabled_pairs:
             for exchange in self._enabled_exchanges:
@@ -710,6 +757,31 @@ class PaperTradingEngine:
                     **entry,
                 })
 
+        # Oracle evaluation: enrich each signal with oracle recommendation
+        if self._oracle is not None:
+            self._oracle_cache.clear()
+            for (pair, exchange), entry in aggregated.items():
+                try:
+                    ohlcv = self._ohlcv_buffers.get((pair, exchange))
+                    sig_data = aggregated.get((pair, exchange), {})
+                    # Pass pre-computed strategy signals to Oracle
+                    strat_sigs = {s["strategy"]: s["signal"] for s in sig_data.get("strategies", [])}
+                    strat_confs = {s["strategy"]: s["confidence"] for s in sig_data.get("strategies", [])}
+                    if ohlcv is not None and len(ohlcv) >= 30:
+                        rec = self._oracle.evaluate(
+                            pair, exchange, ohlcv,
+                            strategy_signals=strat_sigs,
+                            strategy_confidences=strat_confs,
+                        )
+                        self._oracle_cache[(pair, exchange)] = rec
+                except Exception as e:
+                    logger.debug("Oracle eval failed for %s@%s: %s", pair, exchange, e)
+            # Persist oracle state for dashboard
+            try:
+                self._oracle.save_state()
+            except Exception:
+                pass
+
         logger.info(f"Generated ensemble signals for {len(aggregated)} pair-exchange combos")
         return aggregated
 
@@ -764,18 +836,45 @@ class PaperTradingEngine:
             confidence = sig["confidence"]
             magnitude = sig["magnitude"]
 
-            # Risk thresholds
-            if abs(signal_val) < SIGNAL_THRESHOLD:
-                self._log_skipped(pair, exchange, sig, "weak_signal")
-                continue
-            if confidence < CONFIDENCE_THRESHOLD:
-                self._log_skipped(pair, exchange, sig, "low_confidence")
-                continue
+            # Oracle-gated execution (when available)
+            if self._oracle is not None:
+                rec = self._oracle_cache.get((pair, exchange))
+                if rec is None or rec.action == "hold":
+                    reason = rec.veto_reason if rec else "no_oracle_recommendation"
+                    self._log_skipped(pair, exchange, sig, f"oracle_hold:{reason}")
+                    continue
+                if rec.composite_confidence < 0.15:  # Use Oracle's own CONFIDENCE_FLOOR, not paper trading's 0.55
+                    self._log_skipped(pair, exchange, sig, f"oracle_low_conf:{rec.composite_confidence:.3f}")
+                    continue
+                # Override signal direction with oracle's action
+                signal_val = abs(signal_val) if rec.action == "buy" else -abs(signal_val)
+            else:
+                # Fallback: original threshold logic
+                if abs(signal_val) < SIGNAL_THRESHOLD:
+                    self._log_skipped(pair, exchange, sig, "weak_signal")
+                    continue
+                if confidence < CONFIDENCE_THRESHOLD:
+                    self._log_skipped(pair, exchange, sig, "low_confidence")
+                    continue
 
             # Max positions per pair
             if self._count_positions_for_pair(pair) >= MAX_POSITIONS_PER_PAIR:
                 self._log_skipped(pair, exchange, sig, "max_positions_reached")
                 continue
+
+            # Strategy diversification: max 60% of positions from same strategy
+            best_strategy = max(
+                sig.get("strategies", [{}]),
+                key=lambda s: abs(s.get("signal", 0)) * s.get("confidence", 0),
+                default={},
+            ).get("strategy", "ensemble")
+            if len(self.positions) >= 3:
+                strat_count = sum(
+                    1 for p in self.positions.values() if p.strategy == best_strategy
+                )
+                if strat_count / len(self.positions) >= 0.6:
+                    self._log_skipped(pair, exchange, sig, f"strategy_concentration:{best_strategy}")
+                    continue
 
             price = self._get_current_price(pair, exchange)
             if price is None or price <= 0:
@@ -833,7 +932,7 @@ class PaperTradingEngine:
             else:
                 effective_price = price * (1 - slippage_rate)
 
-            quantity = (size_usdc - fee) / effective_price
+            quantity = size_usdc / effective_price
 
             # Stop loss / take profit
             if side == "buy":
@@ -843,7 +942,7 @@ class PaperTradingEngine:
                 stop_loss = effective_price * (1 + STOP_LOSS_PCT)
                 take_profit = effective_price * (1 - TAKE_PROFIT_PCT)
 
-            # Deduct from balance
+            # Deduct from balance: position size + entry fee
             self.balance -= (size_usdc + fee)
 
             self._trade_counter += 1
@@ -967,10 +1066,18 @@ class PaperTradingEngine:
             duration_minutes=duration,
         )
 
-        # Credit balance
-        self.balance += pos.size_usdc + pnl
+        # Credit balance: return position value + net P&L (exit fee already in pnl)
+        exit_value = pos.quantity * effective_exit
+        self.balance += exit_value - exit_fee
         self.trade_history.append(trade)
         del self.positions[pos_id]
+
+        # Oracle: record outcome for accuracy tracking and circuit breakers
+        if self._oracle is not None:
+            try:
+                self._oracle.record_trade(pos.pair, pos.exchange, pos.side, pnl)
+            except Exception:
+                pass
 
         emoji_map = {"take_profit": "WIN", "stop_loss": "LOSS", "signal_exit": "EXIT"}
         tag = emoji_map.get(reason, reason.upper())
@@ -1048,7 +1155,7 @@ class PaperTradingEngine:
         # Profit factor
         gross_profit = sum(t.pnl for t in self.trade_history if t.pnl > 0)
         gross_loss = abs(sum(t.pnl for t in self.trade_history if t.pnl < 0))
-        profit_factor = gross_profit / gross_loss if gross_loss > 0 else float("inf")
+        profit_factor = gross_profit / gross_loss if gross_loss > 0 else 999.99
 
         return {
             "equity": round(equity, 2),
@@ -1289,6 +1396,16 @@ class PaperTradingEngine:
 
                 # 7. Save state
                 self.save_state()
+
+                # 8. Trim memory (prevent unbounded growth)
+                if len(self.signal_log) > 1000:
+                    self.signal_log = self.signal_log[-1000:]
+                if len(self.trade_history) > 500:
+                    self.trade_history = list(self.trade_history)[-500:]
+                if len(self.skipped_signals) > 500:
+                    self.skipped_signals = self.skipped_signals[-500:]
+                if len(self.equity_curve) > 2000:
+                    self.equity_curve = self.equity_curve[-2000:]
 
             except Exception as exc:
                 logger.error(f"Cycle {iteration} error: {exc}\n{traceback.format_exc()}")

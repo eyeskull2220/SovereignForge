@@ -303,7 +303,7 @@ def start_dashboard() -> Optional[int]:
     )
 
 
-def start_paper_trading(balance: float = 10000.0) -> Optional[int]:
+def start_paper_trading(balance: float = 300.0) -> Optional[int]:
     """Start the paper trading engine."""
     models_ok, _ = check_models()
     if not models_ok:
@@ -364,11 +364,25 @@ def stop_all():
         if is_pid_alive(pid):
             try:
                 if platform.system() == "Windows":
-                    subprocess.run(["taskkill", "/F", "/PID", str(pid)],
-                                   capture_output=True, timeout=10)
+                    # Graceful shutdown: try CTRL+C first, force-kill after 15s
+                    subprocess.run(["taskkill", "/PID", str(pid)],
+                                   capture_output=True, timeout=5)
+                    # Wait up to 15s for graceful exit
+                    import time as _time
+                    for _ in range(15):
+                        if not is_pid_alive(pid):
+                            break
+                        _time.sleep(1)
+                    # Force-kill if still alive
+                    if is_pid_alive(pid):
+                        subprocess.run(["taskkill", "/F", "/PID", str(pid)],
+                                       capture_output=True, timeout=10)
+                        cprint(f"  Force-stopped {name} (PID {pid})", C.YELLOW)
+                    else:
+                        cprint(f"  Stopped {name} (PID {pid})", C.GREEN)
                 else:
                     os.kill(pid, signal.SIGTERM)
-                cprint(f"  Stopped {name} (PID {pid})", C.GREEN)
+                    cprint(f"  Stopped {name} (PID {pid})", C.GREEN)
             except Exception as e:
                 cprint(f"  Failed to stop {name} (PID {pid}): {e}", C.RED)
         else:

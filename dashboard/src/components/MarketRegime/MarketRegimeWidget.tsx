@@ -82,7 +82,7 @@ const MarketRegimeWidget: React.FC<MarketRegimeWidgetProps> = ({ regime, multipl
         {entries.length > 0 && (
           <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, flex: 1, minWidth: 200 }}>
             {entries.map(([strategy, mult]) => {
-              const abbrev = STRATEGY_ABBREVS[strategy] || strategy.slice(0, 3).toUpperCase();
+              const abbrev = STRATEGY_ABBREVS[strategy] || (strategy ?? '').slice(0, 3).toUpperCase();
               const barWidth = Math.max((mult / maxMult) * 60, 4);
               const barColor = mult >= 1.0 ? '#3fb950' : mult >= 0.5 ? '#d29922' : '#f85149';
 

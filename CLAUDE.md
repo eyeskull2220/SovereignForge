@@ -2,9 +2,9 @@
 
 ## Project Overview
 
-SovereignForge is a GPU-accelerated cryptocurrency arbitrage detection system with real-time monitoring, AI-powered opportunity filtering, MiCA compliance enforcement, and multi-personality agent auditing. Hybrid Python/TypeScript monorepo.
+SovereignForge is a GPU-accelerated cryptocurrency trading system with a Trading Oracle (collective brain), real-time monitoring, AI-powered opportunity filtering, MiCA compliance enforcement, and multi-personality agent auditing. Hybrid Python/TypeScript monorepo.
 
-**Status**: 7 strategies, 7 exchanges, 15 dashboard pages, 9 agent personalities, 3 optimization tools. Health score: 92/100.
+**Status**: 7 strategies, 7 exchanges, 219+ models (v1.0.53), Trading Oracle integrated, paper trading live at $300. 10 agent personalities, 3 optimization tools. Dashboard at localhost:3000.
 
 ---
 
@@ -14,18 +14,20 @@ SovereignForge is a GPU-accelerated cryptocurrency arbitrage detection system wi
 SovereignForge/
 ├── src/                    # Python backend (51+ modules)
 │   ├── agents/             # 6 audit + 3 research agent personalities
-│   ├── multi_strategy_training.py  # 7-strategy ML training pipeline
-│   ├── live_arbitrage_pipeline.py  # Real-time execution with risk gates
-│   ├── strategy_ensemble.py        # Confidence-weighted ensemble with regime detection
-│   ├── order_executor.py           # Async ccxt exchange execution
-│   ├── capital_allocator.py        # Tier-based capital allocation ($300→$5000)
-│   ├── regime_detector.py          # Market regime classification
-│   ├── cointegration_detector.py   # Statistical pairs arbitrage detection
-│   ├── autotuner.py                # Karpathy-style overnight param optimization
-│   ├── swarm_optimizer.py          # Evolutionary optimizer with Research DAG
-│   ├── hyperparameter_tuner.py     # Optuna Bayesian optimization
-│   ├── model_backup.py             # Model backup/restore utility
-│   └── dashboard_api.py            # FastAPI backend (20+ endpoints)
+│   ├── trading_oracle.py          # Trading Oracle — collective brain (signal aggregation + 7 safety gates)
+│   ├── fee_constants.py           # Centralized exchange fee constants (single source of truth)
+│   ├── multi_strategy_training.py # 7-strategy ML training pipeline
+│   ├── live_arbitrage_pipeline.py # Real-time execution with risk gates
+│   ├── strategy_ensemble.py       # Confidence-weighted ensemble with regime detection
+│   ├── order_executor.py          # Async ccxt exchange execution
+│   ├── capital_allocator.py       # Tier-based capital allocation ($300→$5000)
+│   ├── regime_detector.py         # Market regime classification
+│   ├── cointegration_detector.py  # Statistical pairs arbitrage detection
+│   ├── autotuner.py               # Karpathy-style overnight param optimization
+│   ├── swarm_optimizer.py         # Evolutionary optimizer with Research DAG
+│   ├── hyperparameter_tuner.py    # Optuna Bayesian optimization
+│   ├── model_backup.py            # Model backup/restore utility
+│   └── dashboard_api.py           # FastAPI backend (30+ endpoints, Oracle + portfolio + config)
 ├── dashboard/              # React 19 frontend (15 pages)
 │   └── src/components/     # Audit, Exchanges, Capital, Research, Cointegration, etc.
 ├── tests/                  # pytest suite (24/24 passing)

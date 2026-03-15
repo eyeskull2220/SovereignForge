@@ -87,8 +87,8 @@ function signalsToAlerts(signals?: Signal[]) {
       : s.strength > 0.6 ? 'high'
       : s.strength > 0.3 ? 'medium'
       : 'low') as 'critical' | 'high' | 'medium' | 'low',
-    title: `${s.direction.toUpperCase()} ${s.pair}`,
-    message: `${s.strategy} on ${s.exchange} (strength ${(s.strength * 100).toFixed(0)}%)`,
+    title: `${(s.direction ?? 'unknown').toUpperCase()} ${s.pair ?? ''}`,
+    message: `${s.strategy ?? ''} on ${s.exchange ?? ''} (strength ${((s.strength ?? 0) * 100).toFixed(0)}%)`,
     timestamp: s.timestamp ? new Date(s.timestamp).toLocaleTimeString() : '--',
   }));
 }

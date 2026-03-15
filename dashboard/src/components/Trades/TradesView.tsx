@@ -234,7 +234,7 @@ const TradesView: React.FC = () => {
                     <td style={{ ...tdStyle, fontWeight: 600 }}>{t.pair}</td>
                     <td style={tdStyle}>{t.exchange}</td>
                     <td style={tdStyle}>{t.strategy}</td>
-                    <td style={{ ...tdStyle, color: t.side === 'buy' ? '#3fb950' : '#f85149' }}>{t.side.toUpperCase()}</td>
+                    <td style={{ ...tdStyle, color: t.side === 'buy' ? '#3fb950' : '#f85149' }}>{(t.side ?? '').toUpperCase()}</td>
                     <td style={tdStyle}>${fmt(t.entry_price, 4)}</td>
                     <td style={tdStyle}>${fmt(t.exit_price, 4)}</td>
                     <td style={{ ...tdStyle, color: t.pnl >= 0 ? '#3fb950' : '#f85149', fontWeight: 600 }}>{t.pnl >= 0 ? '+' : ''}${fmt(t.pnl)}</td>

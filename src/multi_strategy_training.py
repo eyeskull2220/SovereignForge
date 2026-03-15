@@ -577,7 +577,7 @@ def _generate_grid_labels(close: np.ndarray, seq_len: int) -> np.ndarray:
         current_deviation = (close[idx] - mean_price) / (mean_price + 1e-10)
 
         # Forward-looking: deviation at end of forward window
-        future_mean = np.mean(close[idx:idx + forward_window])
+        future_mean = np.mean(close[idx + 1:idx + forward_window + 1])
         future_price = close[idx + forward_window]
         future_deviation = (future_price - future_mean) / (future_mean + 1e-10)
 
@@ -1018,6 +1018,14 @@ def train_strategy_model(
                 # Embargo gap: prevent label leakage between train and val
                 embargo = forward_window  # gap equal to forward-looking window
                 train_end = split_idx - embargo
+
+                # Re-normalize using train-only statistics (prevent normalization leakage)
+                train_mean = features[:train_end, :11].mean(axis=0)
+                train_std = features[:train_end, :11].std(axis=0)
+                train_std[train_std < 1e-10] = 1.0
+                features[:, :11] = (features[:, :11] - train_mean) / train_std
+                features = np.nan_to_num(features, nan=0.0, posinf=0.0, neginf=0.0)
+
                 train_features = torch.FloatTensor(features[:train_end])
                 train_labels = torch.FloatTensor(labels[:train_end])
                 train_weights = torch.FloatTensor(sample_weights[:train_end])

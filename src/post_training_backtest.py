@@ -147,18 +147,45 @@ class PostTrainingBacktester:
         close_prices = val_ohlcv[seq_len:seq_len + len(predictions), 4].astype(float)
 
         # Simulate trades
-        trades = self._simulate_trades(predictions, close_prices)
+        trades = self._simulate_trades(predictions, close_prices, strategy=strategy)
 
         # Compute metrics
         return self.compute_metrics(trades)
 
+    # Strategy-specific signal thresholds based on label distribution analysis:
+    # - arbitrage/fibonacci: wide signal std (~0.25-0.30), can reach 0.5
+    # - grid/momentum: moderate std (~0.13-0.18)
+    # - dca/mean_reversion/pairs_arbitrage: narrow std (~0.15-0.16)
+    STRATEGY_ENTRY_THRESHOLDS = {
+        'arbitrage': 0.5,
+        'fibonacci': 0.5,
+        'grid': 0.3,
+        'dca': 0.15,
+        'mean_reversion': 0.2,
+        'pairs_arbitrage': 0.2,
+        'momentum': 0.3,
+    }
+    STRATEGY_EXIT_THRESHOLDS = {
+        'arbitrage': 0.3,
+        'fibonacci': 0.3,
+        'grid': 0.2,
+        'dca': 0.10,
+        'mean_reversion': 0.15,
+        'pairs_arbitrage': 0.15,
+        'momentum': 0.2,
+    }
+
     def _simulate_trades(self, predictions: np.ndarray,
-                         close_prices: np.ndarray) -> List[Dict]:
+                         close_prices: np.ndarray,
+                         strategy: str = "") -> List[Dict]:
         """Simulate trades from model predictions with realistic costs.
 
         Predictions format: [signal, confidence, magnitude]
-        signal > 0.5 = buy, signal < -0.5 = sell, else hold
+        Uses strategy-specific thresholds to match each strategy's signal distribution.
         """
+        entry_thresh = self.STRATEGY_ENTRY_THRESHOLDS.get(strategy, 0.5)
+        exit_thresh = self.STRATEGY_EXIT_THRESHOLDS.get(strategy, 0.3)
+
         trades = []
         position = 0  # 0 = flat, 1 = long, -1 = short
         entry_price = 0.0
@@ -170,15 +197,15 @@ class PostTrainingBacktester:
             price = close_prices[i]
 
             # Entry signal
-            if position == 0 and abs(signal) > 0.5 and confidence > 0.3:
+            if position == 0 and abs(signal) > entry_thresh and confidence > 0.3:
                 position = 1 if signal > 0 else -1
                 entry_price = price
                 continue
 
             # Exit: opposite signal or end of data
             if position != 0 and (
-                (position == 1 and signal < -0.3) or
-                (position == -1 and signal > 0.3) or
+                (position == 1 and signal < -exit_thresh) or
+                (position == -1 and signal > exit_thresh) or
                 i == min_len - 1
             ):
                 trade = self._compute_trade_pnl(

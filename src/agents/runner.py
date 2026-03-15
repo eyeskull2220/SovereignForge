@@ -307,6 +307,336 @@ def synthesize_reports(reports_dir: Path = None) -> Optional[AgentReport]:
 
 
 # ---------------------------------------------------------------------------
+# Readiness gate — pre-paper-trading validation
+# ---------------------------------------------------------------------------
+
+READINESS_AGENTS = ['risk', 'compliance', 'trading', 'performance_audit']
+
+MICA_PAIRS = [
+    "BTC/USDC", "ETH/USDC", "XRP/USDC", "XLM/USDC", "HBAR/USDC",
+    "ALGO/USDC", "ADA/USDC", "LINK/USDC", "IOTA/USDC", "VET/USDC",
+    "XDC/USDC", "ONDO/USDC",
+]
+EXCHANGES = ["binance", "coinbase", "kraken", "kucoin", "okx", "bybit", "gate"]
+STRATEGIES = ["arbitrage", "fibonacci", "grid", "dca", "mean_reversion", "pairs_arbitrage", "momentum"]
+
+MIN_STRATEGIES_READY = 3
+MIN_HEALTH_SCORE = 80
+
+
+def _check_models() -> List[Finding]:
+    """Check model availability across strategies, exchanges, and pairs."""
+    findings = []
+    models_dir = PROJECT_ROOT / "models" / "strategies"
+    strategy_status = {}
+
+    for strategy in STRATEGIES:
+        ready_count = 0
+        total_expected = 0
+        for exchange in EXCHANGES:
+            for pair in MICA_PAIRS:
+                total_expected += 1
+                coin = pair.split("/")[0].lower()
+                # Pattern: {strategy}_{coin}_usdc_{exchange}.pth
+                model_path = models_dir / f"{strategy}_{coin}_usdc_{exchange}.pth"
+                meta_path = models_dir / f"{strategy}_{coin}_usdc_{exchange}_meta.json"
+                if model_path.exists():
+                    ready_count += 1
+        strategy_status[strategy] = (ready_count, total_expected)
+
+    strategies_ready = sum(1 for s, (r, t) in strategy_status.items() if r > 0)
+
+    for strategy, (ready, total) in strategy_status.items():
+        pct = (ready / total * 100) if total else 0
+        if ready == 0:
+            findings.append(Finding(
+                severity="medium",
+                file="models/",
+                line=None,
+                category="model_coverage",
+                description=f"Strategy '{strategy}': 0/{total} models trained",
+                recommendation=f"Run: python gpu_train.py --strategy {strategy} --all-pairs",
+            ))
+        else:
+            findings.append(Finding(
+                severity="info",
+                file="models/",
+                line=None,
+                category="model_coverage",
+                description=f"Strategy '{strategy}': {ready}/{total} models ({pct:.0f}%)",
+                recommendation="OK" if pct > 50 else f"Continue training for better coverage",
+            ))
+
+    if strategies_ready < MIN_STRATEGIES_READY:
+        findings.append(Finding(
+            severity="critical",
+            file="models/",
+            line=None,
+            category="model_coverage",
+            description=f"Only {strategies_ready}/{len(STRATEGIES)} strategies have any models. Minimum {MIN_STRATEGIES_READY} required.",
+            recommendation="Complete training for at least 3 strategies before paper trading.",
+        ))
+
+    return findings, strategy_status, strategies_ready
+
+
+def _check_config() -> List[Finding]:
+    """Validate trading config for paper trading safety."""
+    findings = []
+    config_path = PROJECT_ROOT / "config" / "trading_config.json"
+
+    if not config_path.exists():
+        findings.append(Finding(
+            severity="critical",
+            file="config/trading_config.json",
+            line=None,
+            category="config",
+            description="Trading config file not found",
+            recommendation="Create config/trading_config.json with required parameters",
+        ))
+        return findings
+
+    try:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+    except Exception as e:
+        findings.append(Finding(
+            severity="critical",
+            file="config/trading_config.json",
+            line=None,
+            category="config",
+            description=f"Failed to parse config: {e}",
+            recommendation="Fix JSON syntax in trading_config.json",
+        ))
+        return findings
+
+    # Check capital floor
+    risk = config.get("risk_management", {})
+    capital_floor = risk.get("capital_floor", 50)
+    initial = config.get("initial_capital", 300)
+    if capital_floor < 50:
+        findings.append(Finding(
+            severity="high",
+            file="config/trading_config.json",
+            line=None,
+            category="risk_config",
+            description=f"Capital floor ${capital_floor} is dangerously low",
+            recommendation="Set capital_floor to at least $50 (recommend $150 for $300 capital)",
+        ))
+
+    # Check Kelly fraction
+    kelly = risk.get("kelly_fraction", 0.25)
+    if kelly > 0.5:
+        findings.append(Finding(
+            severity="high",
+            file="config/trading_config.json",
+            line=None,
+            category="risk_config",
+            description=f"Kelly fraction {kelly} exceeds safe threshold (0.5). Risk of ruin.",
+            recommendation="Use quarter-Kelly (0.25) for conservative sizing",
+        ))
+
+    # Check max daily loss
+    max_daily = risk.get("max_daily_loss_pct", 0.02)
+    if max_daily > 0.05:
+        findings.append(Finding(
+            severity="high",
+            file="config/trading_config.json",
+            line=None,
+            category="risk_config",
+            description=f"Max daily loss {max_daily*100:.0f}% is too high for ${initial} capital",
+            recommendation="Set max_daily_loss_pct to 2-5%",
+        ))
+
+    # Check for USDT contamination
+    config_text = config_path.read_text(encoding="utf-8")
+    if "USDT" in config_text.upper():
+        findings.append(Finding(
+            severity="critical",
+            file="config/trading_config.json",
+            line=None,
+            category="mica_compliance",
+            description="USDT reference found in trading config — MiCA violation",
+            recommendation="Remove all USDT references. Use USDC only.",
+        ))
+
+    # Check strategy weights sum
+    strategies = config.get("strategies", {})
+    total_weight = sum(
+        s.get("weight", 0) for s in strategies.values() if isinstance(s, dict)
+    )
+    if strategies and abs(total_weight - 1.0) > 0.05:
+        findings.append(Finding(
+            severity="medium",
+            file="config/trading_config.json",
+            line=None,
+            category="config",
+            description=f"Strategy weights sum to {total_weight:.2f} (expected ~1.0)",
+            recommendation="Normalize strategy weights to sum to 1.0",
+        ))
+
+    if not findings:
+        findings.append(Finding(
+            severity="info",
+            file="config/trading_config.json",
+            line=None,
+            category="config",
+            description=f"Config OK: ${initial} capital, {kelly} Kelly, ${capital_floor} floor, {max_daily*100:.0f}% max daily loss",
+            recommendation="OK",
+        ))
+
+    return findings
+
+
+def _check_data_pipeline() -> List[Finding]:
+    """Check that OHLCV data exists for paper trading."""
+    findings = []
+    data_dir = PROJECT_ROOT / "data"
+
+    csv_count = 0
+    exchanges_with_data = set()
+    pairs_with_data = set()
+
+    if data_dir.exists():
+        for csv_file in data_dir.rglob("*.csv"):
+            csv_count += 1
+            parts = csv_file.stem.split("_")
+            if len(parts) >= 2:
+                exchanges_with_data.add(parts[0] if parts[0] in EXCHANGES else None)
+                pairs_with_data.add(parts[-2].upper() if len(parts) >= 3 else None)
+
+    exchanges_with_data.discard(None)
+    pairs_with_data.discard(None)
+
+    if csv_count == 0:
+        findings.append(Finding(
+            severity="critical",
+            file="data/",
+            line=None,
+            category="data_pipeline",
+            description="No OHLCV CSV data found",
+            recommendation="Run: python fetch_exchange_data.py",
+        ))
+    else:
+        findings.append(Finding(
+            severity="info",
+            file="data/",
+            line=None,
+            category="data_pipeline",
+            description=f"{csv_count} CSV files, {len(exchanges_with_data)} exchanges, data available",
+            recommendation="OK",
+        ))
+
+    return findings
+
+
+def run_readiness(output_dir: Path) -> bool:
+    """Run paper trading readiness gate. Returns True if ready, False otherwise."""
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    print("\n" + "=" * 70)
+    print("  SOVEREIGNFORGE PAPER TRADING READINESS GATE")
+    print("=" * 70)
+
+    start = time.time()
+    all_findings = []
+    blockers = []
+
+    # --- Check 1: Model coverage ---
+    print("\n  [1/4] Checking model coverage...")
+    model_findings, strategy_status, strategies_ready = _check_models()
+    all_findings.extend(model_findings)
+    print(f"        {strategies_ready}/{len(STRATEGIES)} strategies have trained models")
+    for s, (r, t) in strategy_status.items():
+        status = "OK" if r > 0 else "MISSING"
+        print(f"          {s:<20} {r:>3}/{t} models  [{status}]")
+    if strategies_ready < MIN_STRATEGIES_READY:
+        blockers.append(f"Need >= {MIN_STRATEGIES_READY} strategies with models (have {strategies_ready})")
+
+    # --- Check 2: Config validation ---
+    print("\n  [2/4] Validating trading config...")
+    config_findings = _check_config()
+    all_findings.extend(config_findings)
+    config_criticals = [f for f in config_findings if f.severity == "critical"]
+    config_highs = [f for f in config_findings if f.severity == "high"]
+    if config_criticals:
+        for f in config_criticals:
+            blockers.append(f.description)
+            print(f"        CRITICAL: {f.description}")
+    if config_highs:
+        for f in config_highs:
+            print(f"        WARNING:  {f.description}")
+    if not config_criticals and not config_highs:
+        print("        Config OK")
+
+    # --- Check 3: Data pipeline ---
+    print("\n  [3/4] Checking data pipeline...")
+    data_findings = _check_data_pipeline()
+    all_findings.extend(data_findings)
+    data_criticals = [f for f in data_findings if f.severity == "critical"]
+    if data_criticals:
+        for f in data_criticals:
+            blockers.append(f.description)
+            print(f"        CRITICAL: {f.description}")
+    else:
+        for f in data_findings:
+            print(f"        {f.description}")
+
+    # --- Check 4: Dispatch audit agents ---
+    print("\n  [4/4] Dispatching readiness audit agents...")
+    readiness_subset = {k: AUDIT_AGENTS[k] for k in READINESS_AGENTS if k in AUDIT_AGENTS}
+    run_audit(readiness_subset, output_dir, parallel=True)
+
+    # --- Check existing reports for health score ---
+    reports = load_all_reports(output_dir)
+    scored_reports = [r for r in reports if r.health_score > 0]
+    if scored_reports:
+        avg_score = sum(r.health_score for r in scored_reports) / len(scored_reports)
+        print(f"\n  Existing report health score: {avg_score:.0f}/100")
+        if avg_score < MIN_HEALTH_SCORE:
+            blockers.append(f"Health score {avg_score:.0f} below minimum {MIN_HEALTH_SCORE}")
+    else:
+        print("\n  No scored audit reports found yet (run subagents to populate)")
+
+    # --- Verdict ---
+    elapsed = round(time.time() - start, 2)
+
+    critical_count = sum(1 for f in all_findings if f.severity == "critical")
+    high_count = sum(1 for f in all_findings if f.severity == "high")
+
+    print("\n" + "=" * 70)
+    if blockers:
+        verdict = "FAIL"
+        print(f"  VERDICT: FAIL — {len(blockers)} blocker(s)")
+        for b in blockers:
+            print(f"    - {b}")
+    else:
+        verdict = "PASS"
+        print("  VERDICT: PASS — Ready for paper trading")
+        if high_count:
+            print(f"    (with {high_count} warning(s) — review before live trading)")
+    print(f"  Time: {elapsed}s | Findings: {len(all_findings)} ({critical_count} critical, {high_count} high)")
+    print("=" * 70 + "\n")
+
+    # Save readiness report
+    report = AgentReport(
+        agent_name="Readiness_Gate",
+        agent_type="readiness",
+        timestamp=datetime.now().isoformat(),
+        health_score=100.0 if not blockers else max(0, 100 - len(blockers) * 25),
+        findings=all_findings,
+        summary=f"Paper Trading Readiness: {verdict}. "
+                f"{strategies_ready} strategies ready, {critical_count} critical, {high_count} high findings. "
+                + (f"Blockers: {'; '.join(blockers)}" if blockers else "No blockers."),
+        files_scanned=0,
+        execution_time_seconds=elapsed,
+        recommendations=[f"BLOCKER: {b}" for b in blockers] if blockers else ["Proceed with: python launcher.py start --paper"],
+    )
+    save_report(report, output_dir)
+
+    return verdict == "PASS"
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -322,6 +652,7 @@ examples:
   python src/agents/runner.py audit --agent security --agent risk
   python src/agents/runner.py research
   python src/agents/runner.py synthesize
+  python src/agents/runner.py readiness
   python src/agents/runner.py audit --all --output ./custom_reports
         """,
     )
@@ -353,6 +684,9 @@ examples:
     # synthesize
     sub.add_parser("synthesize", help="Synthesize existing reports into a consolidated view")
 
+    # readiness
+    sub.add_parser("readiness", help="Run paper trading readiness gate (models, config, data, audits)")
+
     args = parser.parse_args()
     output_dir = Path(args.output) if args.output else DEFAULT_REPORTS_DIR
 
@@ -381,6 +715,10 @@ examples:
 
     elif args.command == "synthesize":
         synthesize_reports(output_dir)
+
+    elif args.command == "readiness":
+        passed = run_readiness(output_dir)
+        sys.exit(0 if passed else 1)
 
     else:
         parser.print_help()

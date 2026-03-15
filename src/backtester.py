@@ -36,14 +36,23 @@ class BacktestDataProvider:
         self._generate_synthetic_data()
 
     def _generate_synthetic_data(self):
-        """Generate synthetic historical data for backtesting"""
+        """Generate synthetic historical data for backtesting.
+
+        WARNING: Synthetic data inflates performance metrics and is for
+        demo/smoke-test purposes ONLY. Results MUST NOT be used for
+        live trading decisions.
+        """
+        logger.warning(
+            "Generating SYNTHETIC backtest data — results are for demo/smoke-test "
+            "only and MUST NOT be used for live trading decisions."
+        )
 
         symbols = [
             'BTC/USDC', 'ETH/USDC', 'XRP/USDC', 'XLM/USDC', 'HBAR/USDC',
             'ALGO/USDC', 'ADA/USDC', 'LINK/USDC', 'IOTA/USDC', 'VET/USDC',
             'XDC/USDC', 'ONDO/USDC',
         ]
-        exchanges = ['binance', 'coinbase', 'kraken', 'okx']
+        exchanges = ['binance', 'coinbase', 'kraken', 'kucoin', 'okx', 'bybit', 'gate']
 
         # Generate 60 days of 5-minute data (45d train + 15d test)
         start_date = datetime.now() - timedelta(days=60)

@@ -745,7 +745,7 @@ class PaperTradingExecutor(OrderExecutor):
             'order_id': f"paper_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self.paper_orders)}",
             'executed_price': price,
             'executed_quantity': quantity,
-            'fee': price * quantity * 0.001,  # 0.1% fee
+            'fee': price * quantity * self.EXCHANGE_FEES.get(exchange_name, 0.001),  # Exchange-specific fee
             'timestamp': datetime.now(),
             'error': None
         }

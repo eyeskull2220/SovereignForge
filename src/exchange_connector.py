@@ -433,16 +433,23 @@ class MultiExchangeConnector:
                 continue
 
         # Fallback: return synthetic data
-        logger.warning("Using synthetic price history")
+        logger.warning(
+            f"Using SYNTHETIC price history for {symbol} — all exchanges failed. "
+            f"This data is fabricated and MUST NOT be used for live trading decisions."
+        )
         base_price = 45000
         return [base_price + i * 0.1 for i in range(limit)]
 
 def create_demo_connector() -> MultiExchangeConnector:
     """Create connector for demo purposes (no API keys required)"""
-    # Use public APIs that don't require authentication
     exchanges_config = {
-        'binance': {},  # Public API
-        'coinbase': {}  # Public API
+        'binance': {},
+        'coinbase': {},
+        'kraken': {},
+        'kucoin': {},
+        'okx': {},
+        'bybit': {},
+        'gate': {},
     }
 
     return MultiExchangeConnector(exchanges_config)

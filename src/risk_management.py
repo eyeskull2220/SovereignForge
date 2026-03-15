@@ -508,13 +508,19 @@ class RiskManager:
                     else:
                         position.unrealized_pnl = (position.entry_price - current_price) * position.size
 
-                    # Check stop loss
-                    if current_price <= position.stop_loss:
-                        positions_to_close.append((pair, current_price, "stop_loss"))
-
-                    # Check take profit
-                    elif current_price >= position.take_profit:
-                        positions_to_close.append((pair, current_price, "take_profit"))
+                    # Check stop loss and take profit (side-aware)
+                    if position.side == 'buy':
+                        # Long: stop when price drops, take profit when price rises
+                        if current_price <= position.stop_loss:
+                            positions_to_close.append((pair, current_price, "stop_loss"))
+                        elif current_price >= position.take_profit:
+                            positions_to_close.append((pair, current_price, "take_profit"))
+                    else:
+                        # Short (sell): stop when price rises, take profit when price drops
+                        if current_price >= position.stop_loss:
+                            positions_to_close.append((pair, current_price, "stop_loss"))
+                        elif current_price <= position.take_profit:
+                            positions_to_close.append((pair, current_price, "take_profit"))
 
             # Execute closures with alerts
             closed_pairs = []

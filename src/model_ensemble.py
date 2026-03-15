@@ -460,23 +460,22 @@ class ModelEnsemble:
             logger.error(f"Ensemble calibration failed: {e}")
 
     def _optimize_ensemble_method(self):
-        """Optimize ensemble method based on performance"""
-        # Simple optimization - could be more sophisticated
+        """Optimize ensemble method based on actual performance data."""
         methods = ["weighted_average", "confidence_weighted", "voting"]
-        current_performance = self.ensemble_stats.get("ensemble_accuracy", 0.5)
+        method_performance = self.ensemble_stats.get("method_performance", {})
 
-        # Try different methods and pick best (simplified)
-        # In practice, this would use cross-validation
+        if not method_performance:
+            # No historical data — keep current method
+            return
+
         best_method = self.ensemble_method
-        best_score = current_performance
+        best_score = method_performance.get(self.ensemble_method, 0.0)
 
         for method in methods:
-            if method != self.ensemble_method:
-                # Simulate performance for this method
-                simulated_score = current_performance + np.random.normal(0, 0.05)
-                if simulated_score > best_score:
-                    best_method = method
-                    best_score = simulated_score
+            score = method_performance.get(method)
+            if score is not None and score > best_score:
+                best_method = method
+                best_score = score
 
         if best_method != self.ensemble_method:
             logger.info(f"Switching ensemble method from {self.ensemble_method} to {best_method}")

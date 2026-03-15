@@ -104,12 +104,10 @@ class ExchangeConnector:
             'binance': 'wss://stream.binance.com:9443/ws',
             'coinbase': 'wss://ws-feed.pro.coinbase.com',
             'kraken': 'wss://ws.kraken.com',
-            'bitfinex': 'wss://api-pub.bitfinex.com/ws/2',
-            'huobi': 'wss://api.huobi.pro/ws',
-            'okex': 'wss://ws.okex.com:8443/ws/v5/public',
-            'ftx': 'wss://ftx.com/ws',
-            'bybit': 'wss://stream.bybit.com/realtime',
-            'kucoin': 'wss://api-sandbox.kucoin.com',
+            'kucoin': 'wss://ws-api-spot.kucoin.com',
+            'okx': 'wss://ws.okx.com:8443/ws/v5/public',
+            'bybit': 'wss://stream.bybit.com/v5/public/spot',
+            'gate': 'wss://api.gateio.ws/ws/v4/',
         }
         return websocket_urls.get(self.exchange_name.lower())
 

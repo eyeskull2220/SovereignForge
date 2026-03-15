@@ -56,8 +56,8 @@ logger = logging.getLogger("dashboard_api")
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-STRATEGIES = ["arbitrage", "fibonacci", "grid", "dca"]
-EXCHANGES = ["binance", "coinbase", "kraken", "okx"]
+STRATEGIES = ["arbitrage", "fibonacci", "grid", "dca", "mean_reversion", "pairs_arbitrage", "momentum"]
+EXCHANGES = ["binance", "coinbase", "kraken", "okx", "kucoin", "bybit", "gate"]
 COINS = [
     "btc", "eth", "xrp", "xlm", "hbar", "algo",
     "ada", "link", "iota", "vet", "xdc", "ondo",

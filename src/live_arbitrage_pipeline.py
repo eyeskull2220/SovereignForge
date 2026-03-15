@@ -647,8 +647,10 @@ class LiveArbitragePipeline:
                         if conditions:
                             self._last_market_conditions = conditions
                             logger.info(f"Market conditions updated: regime={conditions.regime.value}")
-                except Exception:
-                    pass  # Market assessment is advisory — never block the hot path
+                except (ValueError, IndexError) as e:
+                    logger.debug(f"Market assessment skipped: {e}")
+                except Exception as e:
+                    logger.warning(f"Unexpected error in market assessment: {e}")
 
             # ── Ensemble confirmation (collective brain) ──────────────
             ensemble_signal = None
@@ -796,15 +798,38 @@ class LiveArbitragePipeline:
             spread = sell_price - buy_price
             spread_pct = spread / buy_price
 
-            # Position sizing: use max_position_size_percent from config
-            trading_config = self.config.get('trading', {})
-            max_position_pct = trading_config.get('max_position_size_percent', 2.0) / 100.0
-            # Use real portfolio value from risk manager, fallback to cached initial_capital
-            if hasattr(self.opportunity_filter, 'portfolio_value') and self.opportunity_filter.portfolio_value > 0:
-                base_capital = self.opportunity_filter.portfolio_value
-            else:
-                base_capital = self._initial_capital
-            quantity = (base_capital * max_position_pct) / buy_price
+            # Position sizing: prefer RiskManager if available, fall back to config-based sizing
+            quantity = None
+            if hasattr(self.opportunity_filter, 'calculate_position_size'):
+                try:
+                    opp_data = {
+                        'pair': opportunity.pair,
+                        'buy_exchange': buy_exchange,
+                        'sell_exchange': sell_exchange,
+                        'buy_price': buy_price,
+                        'sell_price': sell_price,
+                        'spread_pct': spread_pct,
+                    }
+                    rm_result = self.opportunity_filter.calculate_position_size(opp_data)
+                    if isinstance(rm_result, dict) and 'quantity' in rm_result:
+                        quantity = rm_result['quantity']
+                    elif isinstance(rm_result, (int, float)) and rm_result > 0:
+                        quantity = float(rm_result)
+                    if quantity is not None:
+                        logger.debug(f"Position size from RiskManager: {quantity} for {opportunity.pair}")
+                except Exception as e:
+                    logger.warning(f"RiskManager position sizing failed, using fallback: {e}")
+                    quantity = None
+
+            if quantity is None:
+                # Fallback: ad-hoc percentage sizing
+                trading_config = self.config.get('trading', {})
+                max_position_pct = trading_config.get('max_position_size_percent', 2.0) / 100.0
+                if hasattr(self.opportunity_filter, 'portfolio_value') and self.opportunity_filter.portfolio_value > 0:
+                    base_capital = self.opportunity_filter.portfolio_value
+                else:
+                    base_capital = self._initial_capital
+                quantity = (base_capital * max_position_pct) / buy_price
 
             buy_fee_rate = self._exchange_fees.get(buy_exchange, 0.001)
             sell_fee_rate = self._exchange_fees.get(sell_exchange, 0.001)
@@ -920,7 +945,7 @@ class LiveArbitragePipeline:
             })
             state['recent_opportunities'] = recent[:50]
 
-            self._atomic_write_json(state, self._pipeline_state_path)
+            await asyncio.to_thread(self._atomic_write_json, state, self._pipeline_state_path)
 
         except Exception as e:
             logger.debug(f"Failed to persist pipeline state: {e}")
@@ -965,8 +990,8 @@ class LiveArbitragePipeline:
                     'profit_potential': opportunity.profit_potential,
                 }
             )
-        except Exception:
-            pass  # Cache failure is non-fatal
+        except Exception as e:
+            logger.debug(f"Cache write failed: {e}")
 
 
 # ── Mock classes (development mode only) ─────────────────────────────────

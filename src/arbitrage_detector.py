@@ -202,6 +202,9 @@ class ArbitrageDetector:
         self.model_type = 'none'
         self.model_config = None
 
+        # Cache compliance engine once (avoid re-creating on every detect call)
+        self._compliance_engine = get_compliance_engine()
+
         # Initialize Grok reasoning engine
         self.grok_reasoner = None
         if enable_grok_reasoning and GrokReasoningWrapper is not None:
@@ -294,8 +297,8 @@ class ArbitrageDetector:
     def detect_opportunity(self, market_data: Dict) -> Dict:
         """Detect arbitrage opportunity"""
         try:
-            # MiCA Compliance Check - Hard enforcement
-            compliance_engine = get_compliance_engine()
+            # MiCA Compliance Check - Hard enforcement (cached instance)
+            compliance_engine = self._compliance_engine
 
             # Check if market data contains compliant pairs
             pair = market_data.get('pair')

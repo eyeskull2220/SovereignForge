@@ -29,6 +29,15 @@ except ImportError as e:
     logger.warning(f"Phase 2 Risk Management not available: {e}. Using fallback.")
     RISK_MANAGER_AVAILABLE = False
 
+# MiCA Compliance Engine
+try:
+    from compliance import get_compliance_engine
+    COMPLIANCE_AVAILABLE = True
+    logger.info("MiCA Compliance Engine integrated successfully")
+except ImportError as e:
+    logger.warning(f"MiCA Compliance Engine not available: {e}. Orders on non-compliant pairs will be REJECTED.")
+    COMPLIANCE_AVAILABLE = False
+
 class OrderExecutor:
     """Order execution engine for arbitrage trading"""
 
@@ -248,6 +257,19 @@ class OrderExecutor:
                 logger.error(f"Missing required field: {field}")
                 return False
 
+        # MiCA Compliance Gate — reject non-compliant pairs immediately
+        symbol = opportunity.get('symbol', '')
+        if COMPLIANCE_AVAILABLE:
+            compliance_engine = get_compliance_engine()
+            if not compliance_engine.is_pair_compliant(symbol):
+                logger.error(f"MiCA COMPLIANCE VIOLATION: pair '{symbol}' is not compliant. Order REJECTED.")
+                return False
+        else:
+            # Fallback: hard-reject any USDT pair when compliance engine is unavailable
+            if 'USDT' in symbol.upper():
+                logger.error(f"MiCA COMPLIANCE VIOLATION: USDT pair '{symbol}' rejected (compliance engine unavailable).")
+                return False
+
         # Check spread is still profitable after exchange-specific fees
         spread_pct = opportunity.get('spread_percentage', 0)
         buy_exchange = opportunity.get('buy_exchange')
@@ -325,15 +347,10 @@ class OrderExecutor:
             raise RuntimeError("Paper trading mode is active - real orders are blocked. Both PAPER_TRADING_MODE env var and config dry_run_mode must be disabled to enable live trading.")
 
         # --- Max order size guard ---
-        # Load initial_capital from config, default $5000
-        try:
-            config_path = Path(__file__).parent.parent / "config" / "trading_config.json"
-            with open(config_path) as f:
-                cfg = json.load(f)
-            initial_capital = cfg.get('capital', {}).get('initial_capital',
-                              cfg.get('trading', {}).get('initial_capital', 5000))
-        except Exception:
-            initial_capital = 5000
+        # Use cached config (TTL-refreshed) instead of reading file per order
+        cfg = self._load_config_cached()
+        initial_capital = cfg.get('capital', {}).get('initial_capital',
+                          cfg.get('trading', {}).get('initial_capital', 5000))
 
         order_value = quantity * price
         max_order_value = initial_capital * self.MAX_ORDER_CAPITAL_FRACTION

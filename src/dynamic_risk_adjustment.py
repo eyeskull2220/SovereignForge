@@ -284,8 +284,8 @@ class DynamicRiskAdjustment:
             max_single_asset_var=min(self.base_thresholds.max_single_asset_var * total_adjustment, 0.08),
             max_correlation_exposure=min(self.base_thresholds.max_correlation_exposure / correlation_adjustment, 0.95),
             max_volatility_adjustment=self.base_thresholds.max_volatility_adjustment,
-            circuit_breaker_threshold=self.base_thresholds.circuit_breaker_threshold * total_adjustment,
-            emergency_stop_threshold=self.base_thresholds.emergency_stop_threshold * total_adjustment
+            circuit_breaker_threshold=self.base_thresholds.circuit_breaker_threshold / total_adjustment,
+            emergency_stop_threshold=self.base_thresholds.emergency_stop_threshold / total_adjustment
         )
 
         self.current_thresholds = adjusted_thresholds

@@ -133,25 +133,32 @@ STATE_FILE = REPORT_DIR / "paper_trading_state.json"
 # Logging setup
 # ---------------------------------------------------------------------------
 
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-REPORT_DIR.mkdir(parents=True, exist_ok=True)
-
 logger = logging.getLogger("paper_trading")
-logger.setLevel(logging.DEBUG)
 
-from logging.handlers import RotatingFileHandler as _RotatingFileHandler
 
-_fh = _RotatingFileHandler(
-    LOG_DIR / "paper_trading.log", maxBytes=100 * 1024 * 1024, backupCount=5, encoding="utf-8"
-)
-_fh.setLevel(logging.DEBUG)
-_fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-logger.addHandler(_fh)
+def _setup_logging():
+    """Configure file and console handlers for paper trading logger."""
+    if logger.handlers:
+        return  # Already configured — prevent duplicate handlers
 
-_ch = logging.StreamHandler()
-_ch.setLevel(logging.INFO)
-_ch.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-logger.addHandler(_ch)
+    from logging.handlers import RotatingFileHandler as _RotatingFileHandler
+
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+    logger.setLevel(logging.DEBUG)
+
+    _fh = _RotatingFileHandler(
+        LOG_DIR / "paper_trading.log", maxBytes=100 * 1024 * 1024, backupCount=5, encoding="utf-8"
+    )
+    _fh.setLevel(logging.DEBUG)
+    _fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    logger.addHandler(_fh)
+
+    _ch = logging.StreamHandler()
+    _ch.setLevel(logging.INFO)
+    _ch.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    logger.addHandler(_ch)
 
 
 
@@ -224,6 +231,7 @@ class PaperTradingEngine:
     """Simulated trading engine using trained strategy models and live OHLCV data."""
 
     def __init__(self, starting_balance: float = 10_000.0):
+        _setup_logging()
         self.starting_balance = starting_balance
         self.balance = starting_balance
         self.positions: Dict[str, PaperPosition] = {}   # id -> PaperPosition
@@ -1441,4 +1449,5 @@ Examples:
 
 
 if __name__ == "__main__":
+    _setup_logging()
     main()

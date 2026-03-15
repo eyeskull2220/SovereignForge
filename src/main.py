@@ -120,8 +120,8 @@ class _NoOpDB:
                 (payload, time.time()),
             )
             await self._conn.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to store opportunity: {e}")
 
     async def store_trade_execution(self, trade_result: dict):
         if self._conn is None:
@@ -133,8 +133,8 @@ class _NoOpDB:
                 (_json.dumps(trade_result, default=str), time.time()),
             )
             await self._conn.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to store trade execution: {e}")
 
     async def health_check(self) -> bool:
         return self._conn is not None
@@ -1051,7 +1051,7 @@ def main():
         elif args.command == 'analytics':
             cli.run_analytics(args.days, args.format)
 
-    if args.command == 'gpu-train':
+    elif args.command == 'gpu-train':
         # GPU training command
         from gpu_training_cli import GPUTrainingCLI
 

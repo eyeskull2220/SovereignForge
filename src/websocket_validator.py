@@ -81,7 +81,7 @@ class WebSocketValidator:
         self.exchange_configs = {
             'binance': {
                 'url': 'wss://stream.binance.com:9443/ws',
-                'pairs': ['btcusdt', 'ethusdt', 'xrpusdt', 'xlmusdt', 'hbarusdt', 'algousdt', 'adausdt'],
+                'pairs': ['btcusdc', 'ethusdc', 'xrpusdc', 'xlmusdc', 'hbarusdc', 'algousdc', 'adausdc'],
                 'subscription_template': {
                     "method": "SUBSCRIBE",
                     "params": ["{pair}@ticker"],

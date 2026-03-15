@@ -91,3 +91,6 @@ mlruns/
 
 # Docker volumes
 volumes/
+
+# Claude Code worktrees
+.claude/worktrees/

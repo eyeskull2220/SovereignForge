@@ -52,6 +52,8 @@ except ImportError:
     # Minimal fallback — should never happen in production
     MICA_COMPLIANT_PAIRS = [f"{asset}/USDC" for asset in ['XRP', 'XLM', 'HBAR', 'ALGO', 'ADA', 'LINK', 'IOTA', 'VET', 'XDC', 'ONDO', 'BTC', 'ETH']]
 
+MAX_DEDUP_CACHE_SIZE = 10_000  # Hard upper bound to prevent unbounded memory growth
+
 
 @dataclass
 class ArbitrageOpportunity:
@@ -246,6 +248,15 @@ class LiveArbitragePipeline:
         self._project_root = Path(__file__).resolve().parent.parent
         self._pipeline_state_path = self._project_root / "reports" / "pipeline_state.json"
         self._paper_trading_state_path = self._project_root / "reports" / "paper_trading_state.json"
+
+        # ── Cached initial capital (avoid re-reading config on every trade) ──
+        try:
+            _cfg_path = self._project_root / "config" / "trading_config.json"
+            with open(_cfg_path) as _f:
+                _cfg = json.load(_f)
+            self._initial_capital = _cfg.get('capital_allocation', {}).get('initial_capital', 300.0)
+        except Exception:
+            self._initial_capital = 300.0  # Safe fallback
 
         # Pipeline statistics
         self.stats = {
@@ -621,9 +632,27 @@ class LiveArbitragePipeline:
         ], dtype=np.float64)
         self._market_buffers[pair].append(row)
 
+    def _check_circuit_breaker_reset_signal(self):
+        """Check for dashboard-initiated circuit breaker reset signal file."""
+        signal_path = self._project_root / ".circuit_breaker_reset"
+        if signal_path.exists():
+            try:
+                signal_path.unlink()
+                if self._dynamic_risk is not None:
+                    self._dynamic_risk.circuit_breaker_active = False
+                    self._dynamic_risk.emergency_stop_active = False
+                    logger.info("Circuit breaker RESET via dashboard signal")
+                else:
+                    logger.info("Circuit breaker reset signal received but no DynamicRiskAdjustment instance")
+            except Exception as e:
+                logger.error(f"Failed to process circuit breaker reset signal: {e}")
+
     async def _handle_opportunity(self, opportunity: ArbitrageOpportunity):
         """Handle detected arbitrage opportunity"""
         self.stats['opportunities_detected'] += 1
+
+        # ── Check for external circuit breaker reset signal ──
+        self._check_circuit_breaker_reset_signal()
 
         try:
             # ── Periodic market condition assessment (every 50 opportunities) ──
@@ -638,8 +667,10 @@ class LiveArbitragePipeline:
                         if conditions:
                             self._last_market_conditions = conditions
                             logger.info(f"Market conditions updated: regime={conditions.regime.value}")
-                except Exception:
-                    pass  # Market assessment is advisory — never block the hot path
+                except (ValueError, IndexError) as e:
+                    logger.debug(f"Market assessment skipped: {e}")
+                except Exception as e:
+                    logger.warning(f"Unexpected error in market assessment: {e}")
 
             # ── Ensemble confirmation (collective brain) ──────────────
             ensemble_signal = None
@@ -751,7 +782,9 @@ class LiveArbitragePipeline:
                     self.stats['circuit_breaker_blocks'] = self.stats.get('circuit_breaker_blocks', 0) + 1
                     return
             except Exception as e:
-                logger.debug(f"Dynamic risk check skipped: {e}")
+                logger.error(f"Dynamic risk check FAILED — blocking trade for {opportunity.pair}: {e}")
+                self.stats['circuit_breaker_blocks'] = self.stats.get('circuit_breaker_blocks', 0) + 1
+                return
 
         try:
             # Dedup check: skip if same opportunity was recently executed
@@ -766,6 +799,17 @@ class LiveArbitragePipeline:
             stale_keys = [k for k, t in self._dedup_cache.items() if now - t > self._dedup_window * 2]
             for k in stale_keys:
                 del self._dedup_cache[k]
+
+            # Hard size bound: evict oldest entries if cache exceeds limit
+            if len(self._dedup_cache) > MAX_DEDUP_CACHE_SIZE:
+                sorted_keys = sorted(self._dedup_cache, key=self._dedup_cache.get)
+                excess = len(self._dedup_cache) - MAX_DEDUP_CACHE_SIZE
+                for k in sorted_keys[:excess]:
+                    del self._dedup_cache[k]
+                logger.warning(
+                    f"Dedup cache exceeded {MAX_DEDUP_CACHE_SIZE} entries; "
+                    f"evicted {excess} oldest entries"
+                )
 
             # Determine buy/sell exchanges from prices
             if len(opportunity.prices) < 2:
@@ -785,21 +829,38 @@ class LiveArbitragePipeline:
             spread = sell_price - buy_price
             spread_pct = spread / buy_price
 
-            # Position sizing: use max_position_size_percent from config
-            trading_config = self.config.get('trading', {})
-            max_position_pct = trading_config.get('max_position_size_percent', 2.0) / 100.0
-            # Use real portfolio value from risk manager, fallback to config
-            if hasattr(self.opportunity_filter, 'portfolio_value') and self.opportunity_filter.portfolio_value > 0:
-                base_capital = self.opportunity_filter.portfolio_value
-            else:
+            # Position sizing: prefer RiskManager if available, fall back to config-based sizing
+            quantity = None
+            if hasattr(self.opportunity_filter, 'calculate_position_size'):
                 try:
-                    cfg_path = Path(__file__).resolve().parent.parent / "config" / "trading_config.json"
-                    with open(cfg_path) as f:
-                        _cfg = json.load(f)
-                    base_capital = _cfg.get('capital_allocation', {}).get('initial_capital', 300.0)
-                except Exception:
-                    base_capital = 300.0  # Safe fallback — never assume $10k
-            quantity = (base_capital * max_position_pct) / buy_price
+                    opp_data = {
+                        'pair': opportunity.pair,
+                        'buy_exchange': buy_exchange,
+                        'sell_exchange': sell_exchange,
+                        'buy_price': buy_price,
+                        'sell_price': sell_price,
+                        'spread_pct': spread_pct,
+                    }
+                    rm_result = self.opportunity_filter.calculate_position_size(opp_data)
+                    if isinstance(rm_result, dict) and 'quantity' in rm_result:
+                        quantity = rm_result['quantity']
+                    elif isinstance(rm_result, (int, float)) and rm_result > 0:
+                        quantity = float(rm_result)
+                    if quantity is not None:
+                        logger.debug(f"Position size from RiskManager: {quantity} for {opportunity.pair}")
+                except Exception as e:
+                    logger.warning(f"RiskManager position sizing failed, using fallback: {e}")
+                    quantity = None
+
+            if quantity is None:
+                # Fallback: ad-hoc percentage sizing
+                trading_config = self.config.get('trading', {})
+                max_position_pct = trading_config.get('max_position_size_percent', 2.0) / 100.0
+                if hasattr(self.opportunity_filter, 'portfolio_value') and self.opportunity_filter.portfolio_value > 0:
+                    base_capital = self.opportunity_filter.portfolio_value
+                else:
+                    base_capital = self._initial_capital
+                quantity = (base_capital * max_position_pct) / buy_price
 
             buy_fee_rate = self._exchange_fees.get(buy_exchange, 0.001)
             sell_fee_rate = self._exchange_fees.get(sell_exchange, 0.001)
@@ -915,7 +976,7 @@ class LiveArbitragePipeline:
             })
             state['recent_opportunities'] = recent[:50]
 
-            self._atomic_write_json(state, self._pipeline_state_path)
+            await asyncio.to_thread(self._atomic_write_json, state, self._pipeline_state_path)
 
         except Exception as e:
             logger.debug(f"Failed to persist pipeline state: {e}")
@@ -960,8 +1021,8 @@ class LiveArbitragePipeline:
                     'profit_potential': opportunity.profit_potential,
                 }
             )
-        except Exception:
-            pass  # Cache failure is non-fatal
+        except Exception as e:
+            logger.debug(f"Cache write failed: {e}")
 
 
 # ── Mock classes (development mode only) ─────────────────────────────────

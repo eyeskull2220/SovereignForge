@@ -22,12 +22,9 @@ from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional
 
 # Optional imports with fallbacks
-try:
-    import psutil
-    has_psutil = True
-except ImportError:
-    psutil = None  # type: ignore
-    has_psutil = False
+from utils import get_psutil as _get_psutil
+psutil = _get_psutil()
+has_psutil = psutil is not None
 
 try:
     import GPUtil

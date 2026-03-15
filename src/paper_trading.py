@@ -63,7 +63,7 @@ MICA_PAIRS = [
     "XDC/USDC", "ONDO/USDC",
 ]
 
-EXCHANGES = ["binance", "coinbase", "kraken", "okx"]
+EXCHANGES = ["binance", "coinbase", "kraken", "kucoin", "okx", "bybit", "gate"]
 
 STRATEGIES = ["arbitrage", "fibonacci", "grid", "dca", "mean_reversion", "pairs_arbitrage", "momentum"]
 
@@ -98,9 +98,12 @@ SLIPPAGE_RANGE = (0.0005, 0.0015)   # 0.05% - 0.15%
 # Exchange-specific fee schedules (taker fees for market orders)
 EXCHANGE_FEES = {
     "binance":  {"maker": 0.001, "taker": 0.001},
-    "coinbase": {"maker": 0.004, "taker": 0.006},
+    "coinbase": {"maker": 0.004, "taker": 0.004},
     "kraken":   {"maker": 0.0016, "taker": 0.0026},
+    "kucoin":   {"maker": 0.001, "taker": 0.001},
     "okx":      {"maker": 0.0008, "taker": 0.001},
+    "bybit":    {"maker": 0.001, "taker": 0.001},
+    "gate":     {"maker": 0.002, "taker": 0.002},
 }
 
 # Network transfer fees (USDC) for cross-exchange arbitrage
@@ -108,7 +111,10 @@ TRANSFER_FEES = {
     "binance":  1.0,   # ~$1 USDC withdrawal
     "coinbase": 0.0,   # Free USDC transfers
     "kraken":   2.5,   # ~$2.50
+    "kucoin":   1.0,   # ~$1
     "okx":      1.0,   # ~$1
+    "bybit":    1.0,   # ~$1
+    "gate":     1.0,   # ~$1
 }
 
 MAX_POSITION_PCT = 0.03             # 3% of portfolio per trade
@@ -127,25 +133,32 @@ STATE_FILE = REPORT_DIR / "paper_trading_state.json"
 # Logging setup
 # ---------------------------------------------------------------------------
 
-LOG_DIR.mkdir(parents=True, exist_ok=True)
-REPORT_DIR.mkdir(parents=True, exist_ok=True)
-
 logger = logging.getLogger("paper_trading")
-logger.setLevel(logging.DEBUG)
 
-from logging.handlers import RotatingFileHandler as _RotatingFileHandler
 
-_fh = _RotatingFileHandler(
-    LOG_DIR / "paper_trading.log", maxBytes=100 * 1024 * 1024, backupCount=5, encoding="utf-8"
-)
-_fh.setLevel(logging.DEBUG)
-_fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-logger.addHandler(_fh)
+def _setup_logging():
+    """Configure file and console handlers for paper trading logger."""
+    if logger.handlers:
+        return  # Already configured — prevent duplicate handlers
 
-_ch = logging.StreamHandler()
-_ch.setLevel(logging.INFO)
-_ch.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
-logger.addHandler(_ch)
+    from logging.handlers import RotatingFileHandler as _RotatingFileHandler
+
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+
+    logger.setLevel(logging.DEBUG)
+
+    _fh = _RotatingFileHandler(
+        LOG_DIR / "paper_trading.log", maxBytes=100 * 1024 * 1024, backupCount=5, encoding="utf-8"
+    )
+    _fh.setLevel(logging.DEBUG)
+    _fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    logger.addHandler(_fh)
+
+    _ch = logging.StreamHandler()
+    _ch.setLevel(logging.INFO)
+    _ch.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(message)s"))
+    logger.addHandler(_ch)
 
 
 
@@ -218,6 +231,7 @@ class PaperTradingEngine:
     """Simulated trading engine using trained strategy models and live OHLCV data."""
 
     def __init__(self, starting_balance: float = 10_000.0):
+        _setup_logging()
         self.starting_balance = starting_balance
         self.balance = starting_balance
         self.positions: Dict[str, PaperPosition] = {}   # id -> PaperPosition
@@ -787,12 +801,30 @@ class PaperTradingEngine:
                 self._log_skipped(pair, exchange, sig, "position_too_small")
                 continue
 
-            # Use exchange-specific taker fee (market orders)
-            exchange_fees = EXCHANGE_FEES.get(exchange, {"maker": 0.001, "taker": 0.002})
-            fee_rate = exchange_fees["taker"]
+            # Determine dominant strategy early — needed for transfer fee logic
+            best_strategy = "ensemble"
+            if sig.get("strategies"):
+                best_strategy = max(
+                    sig["strategies"],
+                    key=lambda s: abs(s["signal"]) * s["confidence"]
+                )["strategy"]
+
+            # Use exchange-specific taker fee (market orders) — no silent fallback
+            if exchange not in EXCHANGE_FEES:
+                logger.error(f"Unknown exchange '{exchange}' has no fee schedule — skipping trade")
+                self._log_skipped(pair, exchange, sig, "unknown_exchange_fees")
+                continue
+            fee_rate = EXCHANGE_FEES[exchange]["taker"]
             slippage_rate = random.uniform(*SLIPPAGE_RANGE)
 
             fee = size_usdc * fee_rate
+
+            # Cross-exchange strategies incur network transfer fees
+            transfer_fee = 0.0
+            if best_strategy in ("arbitrage", "pairs_arbitrage"):
+                transfer_fee = TRANSFER_FEES.get(exchange, 1.0)
+                fee += transfer_fee
+
             slippage_cost = size_usdc * slippage_rate
 
             # Adjust effective entry price for slippage
@@ -816,14 +848,6 @@ class PaperTradingEngine:
 
             self._trade_counter += 1
             pos_id = f"PT-{self._trade_counter:06d}"
-
-            # Determine dominant strategy
-            best_strategy = "ensemble"
-            if sig.get("strategies"):
-                best_strategy = max(
-                    sig["strategies"],
-                    key=lambda s: abs(s["signal"]) * s["confidence"]
-                )["strategy"]
 
             position = PaperPosition(
                 id=pos_id,
@@ -891,9 +915,12 @@ class PaperTradingEngine:
         if pos is None:
             return None
 
-        # Use exchange-specific taker fee (market orders)
-        exchange_fees = EXCHANGE_FEES.get(pos.exchange, {"maker": 0.001, "taker": 0.002})
-        fee_rate = exchange_fees["taker"]
+        # Use exchange-specific taker fee (market orders) — no silent fallback
+        if pos.exchange not in EXCHANGE_FEES:
+            logger.error(f"Unknown exchange '{pos.exchange}' has no fee schedule — using max fee 0.4% as safety")
+            fee_rate = 0.004  # Worst-case (Coinbase-level) to avoid undercharging
+        else:
+            fee_rate = EXCHANGE_FEES[pos.exchange]["taker"]
         slippage_rate = random.uniform(*SLIPPAGE_RANGE)
 
         if pos.side == "buy":
@@ -903,10 +930,13 @@ class PaperTradingEngine:
             effective_exit = exit_price * (1 + slippage_rate)
             pnl = (pos.entry_price - effective_exit) * pos.quantity
 
-        exit_fee = abs(pnl + pos.size_usdc) * fee_rate if pnl > 0 else pos.size_usdc * fee_rate
-        exit_fee = min(exit_fee, abs(pnl) * 0.5) if pnl != 0 else pos.size_usdc * fee_rate
-        # Simpler: fee on notional
+        # Fee on exit notional value
         exit_fee = pos.quantity * effective_exit * fee_rate
+
+        # Cross-exchange strategies also pay transfer fees on exit
+        if pos.strategy in ("arbitrage", "pairs_arbitrage"):
+            exit_fee += TRANSFER_FEES.get(pos.exchange, 1.0)
+
         pnl -= exit_fee
 
         pnl_pct = pnl / pos.size_usdc if pos.size_usdc > 0 else 0.0
@@ -1435,4 +1465,5 @@ Examples:
 
 
 if __name__ == "__main__":
+    _setup_logging()
     main()

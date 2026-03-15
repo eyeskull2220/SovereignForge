@@ -104,12 +104,10 @@ class ExchangeConnector:
             'binance': 'wss://stream.binance.com:9443/ws',
             'coinbase': 'wss://ws-feed.pro.coinbase.com',
             'kraken': 'wss://ws.kraken.com',
-            'bitfinex': 'wss://api-pub.bitfinex.com/ws/2',
-            'huobi': 'wss://api.huobi.pro/ws',
-            'okex': 'wss://ws.okex.com:8443/ws/v5/public',
-            'ftx': 'wss://ftx.com/ws',
-            'bybit': 'wss://stream.bybit.com/realtime',
-            'kucoin': 'wss://api-sandbox.kucoin.com',
+            'kucoin': 'wss://ws-api-spot.kucoin.com',
+            'okx': 'wss://ws.okx.com:8443/ws/v5/public',
+            'bybit': 'wss://stream.bybit.com/v5/public/spot',
+            'gate': 'wss://api.gateio.ws/ws/v4/',
         }
         return websocket_urls.get(self.exchange_name.lower())
 
@@ -435,16 +433,23 @@ class MultiExchangeConnector:
                 continue
 
         # Fallback: return synthetic data
-        logger.warning("Using synthetic price history")
+        logger.warning(
+            f"Using SYNTHETIC price history for {symbol} — all exchanges failed. "
+            f"This data is fabricated and MUST NOT be used for live trading decisions."
+        )
         base_price = 45000
         return [base_price + i * 0.1 for i in range(limit)]
 
 def create_demo_connector() -> MultiExchangeConnector:
     """Create connector for demo purposes (no API keys required)"""
-    # Use public APIs that don't require authentication
     exchanges_config = {
-        'binance': {},  # Public API
-        'coinbase': {}  # Public API
+        'binance': {},
+        'coinbase': {},
+        'kraken': {},
+        'kucoin': {},
+        'okx': {},
+        'bybit': {},
+        'gate': {},
     }
 
     return MultiExchangeConnector(exchanges_config)

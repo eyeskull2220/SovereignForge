@@ -27,6 +27,10 @@ models/strategies/grid_*.pth
 # Warm start state (large runtime artifact)
 warm_start_state.json
 
+# Secrets and API keys
+config/api_keys.json
+config/secrets*
+
 # Environment files
 .env
 .env.local
@@ -87,3 +91,6 @@ mlruns/
 
 # Docker volumes
 volumes/
+
+# Claude Code worktrees
+.claude/worktrees/

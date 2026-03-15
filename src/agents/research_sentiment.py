@@ -66,14 +66,88 @@ class MarketSentimentAgent:
         return {'source': 'default', 'activity_level': 'unknown', 'pnl_direction': 'neutral'}
 
     def _analyze_asset(self, asset: str) -> Dict[str, Any]:
-        """Per-asset sentiment stub. Override with real data sources."""
-        return {
-            'asset': asset,
-            'sentiment_score': 0.0,  # -1 to 1
-            'confidence': 0.0,
-            'sources': [],
-            'note': 'Requires API integration (CoinGecko, LunarCrush, etc.)',
-        }
+        """Per-asset sentiment derived from local OHLCV price action.
+
+        Computes momentum, volume trend, and volatility from historical data
+        as a sentiment proxy.  External API integration (CoinGecko, LunarCrush)
+        can be added later for richer signals.
+        """
+        try:
+            import csv
+            import math
+            data_dir = Path(__file__).parent.parent.parent / "data" / "historical"
+            # Try multiple exchange sources
+            ohlcv = None
+            for exchange in ('binance', 'okx', 'kucoin', 'coinbase', 'kraken', 'bybit', 'gate'):
+                csv_path = data_dir / exchange / f"{asset}_USDC_5m.csv"
+                if csv_path.exists():
+                    with open(csv_path) as f:
+                        reader = csv.reader(f)
+                        rows = list(reader)
+                    # Need at least header + 288 rows (1 day of 5m candles)
+                    if len(rows) > 288:
+                        ohlcv = rows
+                        break
+
+            if ohlcv is None:
+                return {
+                    'asset': asset, 'sentiment_score': 0.0, 'confidence': 0.0,
+                    'sources': [], 'note': 'No OHLCV data available',
+                }
+
+            # Parse last 288 rows (~ 1 day) and last 2016 rows (~ 1 week)
+            header = ohlcv[0] if not ohlcv[0][0].replace('.', '').isdigit() else None
+            data_rows = ohlcv[1:] if header else ohlcv
+
+            def parse_row(row):
+                return {'close': float(row[4]), 'volume': float(row[5])}
+
+            recent = [parse_row(r) for r in data_rows[-288:]]
+            week = [parse_row(r) for r in data_rows[-2016:]] if len(data_rows) >= 2016 else recent
+
+            # 24h momentum: (last close - close 24h ago) / close 24h ago
+            momentum_24h = (recent[-1]['close'] - recent[0]['close']) / max(recent[0]['close'], 1e-10)
+
+            # 7d momentum
+            momentum_7d = (week[-1]['close'] - week[0]['close']) / max(week[0]['close'], 1e-10)
+
+            # Volume trend: avg volume last 6h vs avg volume prior 18h
+            vol_recent = sum(r['volume'] for r in recent[-72:]) / 72 if len(recent) >= 72 else 0
+            vol_prior = sum(r['volume'] for r in recent[:-72]) / max(len(recent) - 72, 1) if len(recent) > 72 else vol_recent
+            vol_ratio = (vol_recent / max(vol_prior, 1e-10)) - 1.0  # >0 = increasing volume
+
+            # Volatility (std of 24h returns)
+            returns = []
+            for i in range(1, len(recent)):
+                prev = recent[i-1]['close']
+                if prev > 0:
+                    returns.append((recent[i]['close'] - prev) / prev)
+            volatility = (sum(r**2 for r in returns) / max(len(returns), 1)) ** 0.5 if returns else 0.0
+
+            # Composite sentiment: momentum-weighted, vol-adjusted
+            # Positive momentum + rising volume = bullish
+            raw_score = (momentum_24h * 0.5 + momentum_7d * 0.3 + vol_ratio * 0.2)
+            sentiment_score = max(-1.0, min(1.0, raw_score * 10))  # Scale to [-1, 1]
+
+            # Confidence based on data availability and volatility
+            confidence = min(0.8, 0.4 + (len(recent) / 288) * 0.2 + (1.0 - min(volatility * 100, 1.0)) * 0.2)
+
+            return {
+                'asset': asset,
+                'sentiment_score': round(sentiment_score, 3),
+                'confidence': round(confidence, 3),
+                'momentum_24h': round(momentum_24h, 4),
+                'momentum_7d': round(momentum_7d, 4),
+                'volume_trend': round(vol_ratio, 4),
+                'volatility_24h': round(volatility, 6),
+                'sources': ['local_ohlcv'],
+            }
+        except Exception as e:
+            logger.warning(f"Sentiment analysis failed for {asset}: {e}")
+            return {
+                'asset': asset, 'sentiment_score': 0.0, 'confidence': 0.0,
+                'sources': [], 'note': f'Analysis error: {e}',
+            }
 
     def _estimate_fear_greed(self) -> Dict[str, Any]:
         """Estimate fear/greed from available pipeline data."""

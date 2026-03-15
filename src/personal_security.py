@@ -13,6 +13,7 @@ This module provides:
 """
 
 import hashlib
+import ipaddress
 import logging
 import os
 import socket
@@ -157,11 +158,13 @@ class PersonalSecurityManager:
                 for conn in connections:
                     if conn.status == 'ESTABLISHED' and conn.raddr:
                         remote_ip = conn.raddr.ip
-                        # Check if it's external (not local/private)
-                        if not (remote_ip.startswith('127.') or
-                               remote_ip.startswith('10.') or
-                               remote_ip.startswith('192.168.') or
-                               remote_ip.startswith('172.')):
+                        # Check if it's external (not local/private per RFC 1918)
+                        try:
+                            addr = ipaddress.ip_address(remote_ip)
+                            is_private = addr.is_private or addr.is_loopback
+                        except ValueError:
+                            is_private = False
+                        if not is_private:
                             external_connections.append(f"{remote_ip}:{conn.raddr.port}")
                             violations.append(SecurityViolation(
                                 violation_type="external_connection",

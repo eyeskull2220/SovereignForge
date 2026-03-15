@@ -29,6 +29,15 @@ except ImportError as e:
     logger.warning(f"Phase 2 Risk Management not available: {e}. Using fallback.")
     RISK_MANAGER_AVAILABLE = False
 
+# MiCA Compliance Engine
+try:
+    from compliance import get_compliance_engine
+    COMPLIANCE_AVAILABLE = True
+    logger.info("MiCA Compliance Engine integrated successfully")
+except ImportError as e:
+    logger.warning(f"MiCA Compliance Engine not available: {e}. Orders on non-compliant pairs will be REJECTED.")
+    COMPLIANCE_AVAILABLE = False
+
 class OrderExecutor:
     """Order execution engine for arbitrage trading"""
 
@@ -36,6 +45,11 @@ class OrderExecutor:
         self.exchange_configs = exchange_configs
         self.exchanges = {}
         self.risk_manager = risk_manager
+
+        # Config cache with TTL to avoid reading config file on every order
+        self._config_cache: Dict[str, Any] = {}
+        self._config_cache_ts: float = 0.0
+        self._config_cache_ttl: float = 30.0  # seconds
 
         # Initialize exchanges
         self._init_exchanges()
@@ -47,18 +61,27 @@ class OrderExecutor:
 
         logger.info(f"Order Executor initialized with {len(self._exchange_classes)} exchanges (async init deferred)")
 
+    def _load_config_cached(self) -> Dict:
+        """Load trading config with TTL cache (reloads every 30s)."""
+        now = time.time()
+        if now - self._config_cache_ts > self._config_cache_ttl or not self._config_cache:
+            try:
+                config_path = Path(__file__).parent.parent / "config" / "trading_config.json"
+                with open(config_path) as f:
+                    self._config_cache = json.load(f)
+                self._config_cache_ts = now
+            except Exception:
+                if not self._config_cache:
+                    self._config_cache = {}  # Safe empty fallback
+        return self._config_cache
+
     def _is_paper_trading_mode(self) -> bool:
         """Multi-layer safety check for paper trading mode."""
         # Layer 1: Environment variable (default: paper mode ON)
         env_paper = os.getenv('PAPER_TRADING_MODE', 'true').lower() in ('true', '1', 'yes')
-        # Layer 2: Config file flag
-        try:
-            config_path = Path(__file__).parent.parent / "config" / "trading_config.json"
-            with open(config_path) as f:
-                cfg = json.load(f)
-            config_paper = cfg.get('trading', {}).get('dry_run_mode', True)
-        except Exception:
-            config_paper = True  # Default to paper on error
+        # Layer 2: Config file flag (cached, reloads every 30s)
+        cfg = self._load_config_cached()
+        config_paper = cfg.get('trading', {}).get('dry_run_mode', True)
         # Both must agree to go live
         return env_paper or config_paper
 
@@ -122,6 +145,17 @@ class OrderExecutor:
             if not self._validate_arbitrage_opportunity(arbitrage_opportunity):
                 execution_result['errors'].append("Invalid arbitrage opportunity")
                 return execution_result
+
+            # Risk manager gate — reject if risk limits are breached
+            if self.risk_manager is not None:
+                try:
+                    if not self.risk_manager.validate_opportunity(arbitrage_opportunity):
+                        execution_result['errors'].append("Rejected by risk manager")
+                        return execution_result
+                except Exception as e:
+                    logger.error(f"Risk manager validation error: {e}")
+                    execution_result['errors'].append(f"Risk check failed: {e}")
+                    return execution_result
 
             # Calculate trade parameters
             trade_params = await self._calculate_trade_parameters(arbitrage_opportunity)
@@ -223,6 +257,19 @@ class OrderExecutor:
                 logger.error(f"Missing required field: {field}")
                 return False
 
+        # MiCA Compliance Gate — reject non-compliant pairs immediately
+        symbol = opportunity.get('symbol', '')
+        if COMPLIANCE_AVAILABLE:
+            compliance_engine = get_compliance_engine()
+            if not compliance_engine.is_pair_compliant(symbol):
+                logger.error(f"MiCA COMPLIANCE VIOLATION: pair '{symbol}' is not compliant. Order REJECTED.")
+                return False
+        else:
+            # Fallback: hard-reject any USDT pair when compliance engine is unavailable
+            if 'USDT' in symbol.upper():
+                logger.error(f"MiCA COMPLIANCE VIOLATION: USDT pair '{symbol}' rejected (compliance engine unavailable).")
+                return False
+
         # Check spread is still profitable after exchange-specific fees
         spread_pct = opportunity.get('spread_percentage', 0)
         buy_exchange = opportunity.get('buy_exchange')
@@ -285,6 +332,11 @@ class OrderExecutor:
         except Exception as e:
             return {'valid': False, 'reason': f'Parameter calculation error: {str(e)}'}
 
+    # Hard maximum: 10% of capital per single order leg
+    MAX_ORDER_CAPITAL_FRACTION = 0.10
+    # Minimum notional value most exchanges require (in quote currency)
+    MIN_NOTIONAL_VALUE = 5.0
+
     async def _execute_single_order(self, exchange_name: str, symbol: str, side: str,
                                    quantity: float, price: float) -> Dict:
         """Execute single order on exchange"""
@@ -293,6 +345,30 @@ class OrderExecutor:
         if self._is_paper_trading_mode():
             logger.warning("BLOCKED: Real trade attempt while paper trading mode is active. Both PAPER_TRADING_MODE env var and config dry_run_mode must be disabled to enable live trading.")
             raise RuntimeError("Paper trading mode is active - real orders are blocked. Both PAPER_TRADING_MODE env var and config dry_run_mode must be disabled to enable live trading.")
+
+        # --- Max order size guard ---
+        # Use cached config (TTL-refreshed) instead of reading file per order
+        cfg = self._load_config_cached()
+        initial_capital = cfg.get('capital', {}).get('initial_capital',
+                          cfg.get('trading', {}).get('initial_capital', 5000))
+
+        order_value = quantity * price
+        max_order_value = initial_capital * self.MAX_ORDER_CAPITAL_FRACTION
+        if order_value > max_order_value:
+            logger.critical(
+                f"ORDER REJECTED: order value ${order_value:.2f} exceeds max "
+                f"${max_order_value:.2f} (10% of ${initial_capital:.2f} capital). "
+                f"Exchange={exchange_name} {side} {quantity} {symbol} @ ${price:.4f}"
+            )
+            return {
+                'success': False,
+                'order_id': None,
+                'executed_price': 0.0,
+                'executed_quantity': 0.0,
+                'fee': 0.0,
+                'timestamp': datetime.now(),
+                'error': f'Order value ${order_value:.2f} exceeds max ${max_order_value:.2f} (10% of capital)'
+            }
 
         order_result = {
             'success': False,
@@ -306,6 +382,21 @@ class OrderExecutor:
 
         try:
             exchange = await self._ensure_exchange(exchange_name)
+
+            # --- Precision rounding & minimum notional check ---
+            try:
+                quantity = float(exchange.amount_to_precision(symbol, quantity))
+                price = float(exchange.price_to_precision(symbol, price))
+            except Exception as prec_err:
+                logger.warning(f"Precision rounding failed for {symbol} on {exchange_name}: {prec_err}")
+
+            notional = quantity * price
+            if notional < self.MIN_NOTIONAL_VALUE:
+                order_result['error'] = (
+                    f"Order notional ${notional:.2f} below minimum ${self.MIN_NOTIONAL_VALUE:.2f}"
+                )
+                logger.warning(f"ORDER REJECTED: {order_result['error']}")
+                return order_result
 
             # Create order
             order_type = 'limit'  # Use limit orders for arbitrage precision
@@ -654,7 +745,7 @@ class PaperTradingExecutor(OrderExecutor):
             'order_id': f"paper_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{len(self.paper_orders)}",
             'executed_price': price,
             'executed_quantity': quantity,
-            'fee': price * quantity * 0.001,  # 0.1% fee
+            'fee': price * quantity * self.EXCHANGE_FEES.get(exchange_name, 0.001),  # Exchange-specific fee
             'timestamp': datetime.now(),
             'error': None
         }

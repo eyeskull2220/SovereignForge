@@ -58,14 +58,27 @@ class ModelEnsemble:
     Combines multiple ML architectures with intelligent weighting
     """
 
+    # Default prediction history limits.  The high-water mark triggers a
+    # trim to the low-water mark so that calibration (which looks at the
+    # last 50 entries) always has enough context without unbounded growth.
+    # At ~0.3 KB per entry, 1000 entries ≈ 300 KB — safe for long-running
+    # sessions.  Override via constructor for backtesting or constrained
+    # environments.
+    DEFAULT_HISTORY_HIGH_WATER = 1000
+    DEFAULT_HISTORY_LOW_WATER = 500
+
     def __init__(self,
                  model_configs: Optional[List[Dict[str, Any]]] = None,
                  ensemble_method: str = "weighted_average",
                  confidence_threshold: float = 0.7,
-                 max_models: int = 5):
+                 max_models: int = 5,
+                 history_high_water: Optional[int] = None,
+                 history_low_water: Optional[int] = None):
         self.ensemble_method = ensemble_method
         self.confidence_threshold = confidence_threshold
         self.max_models = max_models
+        self._history_high_water = history_high_water or self.DEFAULT_HISTORY_HIGH_WATER
+        self._history_low_water = history_low_water or self.DEFAULT_HISTORY_LOW_WATER
 
         # Model management
         self.models: Dict[str, GPUArbitrageModel] = {}
@@ -389,9 +402,9 @@ class ModelEnsemble:
             'contributions': prediction.model_contributions
         })
 
-        # Keep history manageable
-        if len(self.prediction_history) > 1000:
-            self.prediction_history = self.prediction_history[-500:]
+        # Keep history manageable (see DEFAULT_HISTORY_HIGH_WATER docstring)
+        if len(self.prediction_history) > self._history_high_water:
+            self.prediction_history = self.prediction_history[-self._history_low_water:]
 
         self.ensemble_stats["total_predictions"] += 1
 
@@ -460,23 +473,22 @@ class ModelEnsemble:
             logger.error(f"Ensemble calibration failed: {e}")
 
     def _optimize_ensemble_method(self):
-        """Optimize ensemble method based on performance"""
-        # Simple optimization - could be more sophisticated
+        """Optimize ensemble method based on actual performance data."""
         methods = ["weighted_average", "confidence_weighted", "voting"]
-        current_performance = self.ensemble_stats.get("ensemble_accuracy", 0.5)
+        method_performance = self.ensemble_stats.get("method_performance", {})
 
-        # Try different methods and pick best (simplified)
-        # In practice, this would use cross-validation
+        if not method_performance:
+            # No historical data — keep current method
+            return
+
         best_method = self.ensemble_method
-        best_score = current_performance
+        best_score = method_performance.get(self.ensemble_method, 0.0)
 
         for method in methods:
-            if method != self.ensemble_method:
-                # Simulate performance for this method
-                simulated_score = current_performance + np.random.normal(0, 0.05)
-                if simulated_score > best_score:
-                    best_method = method
-                    best_score = simulated_score
+            score = method_performance.get(method)
+            if score is not None and score > best_score:
+                best_method = method
+                best_score = score
 
         if best_method != self.ensemble_method:
             logger.info(f"Switching ensemble method from {self.ensemble_method} to {best_method}")

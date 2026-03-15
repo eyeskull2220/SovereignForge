@@ -1,195 +1,216 @@
 {
   "agent_name": "Risk Management Auditor",
   "agent_type": "audit",
-  "timestamp": "2026-03-14T04:40:00",
-  "health_score": 28.0,
+  "timestamp": "2026-03-15T00:00:00Z",
+  "health_score": 62,
   "findings": [
     {
       "severity": "critical",
       "file": "src/live_arbitrage_pipeline.py",
-      "line": 882,
-      "category": "mock",
-      "description": "MockRiskManager approves ALL opportunities. No production guard prevents pipeline running with mock.",
-      "recommendation": "Add startup assertion refusing trade execution with MockRiskManager"
+      "line": 753,
+      "category": "risk_bypass_fail_open",
+      "description": "Dynamic risk check exception is swallowed with logger.debug and execution continues. If the circuit breaker or emergency stop check itself throws (stale data, NaN values during a flash crash), the trade proceeds unchecked. This is fail-open behavior in the most critical safety gate.",
+      "recommendation": "Treat any exception in dynamic risk check as a BLOCK, not a pass. Change except clause to return early and refuse the trade. Fail-closed, never fail-open."
+    },
+    {
+      "severity": "critical",
+      "file": "src/order_executor.py",
+      "line": 127,
+      "category": "risk_bypass_optional_risk_manager",
+      "description": "In execute_arbitrage_trade, risk_manager is only checked if not None (line 127). OrderExecutor can be constructed without a risk manager. A misconfigured pipeline could send real orders with zero risk validation. Previous audit noted this was never called; now it IS called (line 129) but remains optional.",
+      "recommendation": "Make risk_manager a required parameter for live trading. Raise RuntimeError in execute_arbitrage_trade when risk_manager is None and paper trading mode is off."
     },
     {
       "severity": "critical",
       "file": "src/live_arbitrage_pipeline.py",
-      "line": 696,
-      "category": "bypass",
-      "description": "_execute_trade uses hardcoded $10k base_capital. Bypasses all RiskManager sizing. $300 account sizes 33x too large.",
-      "recommendation": "Wire calculate_position_size from RiskManager/CapitalAllocator"
+      "line": 789,
+      "category": "position_sizing_bypass",
+      "description": "Position sizing in _execute_trade (lines 789-802) uses a simple percentage of capital from config, bypassing the RiskManager Kelly Criterion position sizing, per-trade loss limits, and portfolio risk limit checks. The RiskManager.calculate_position_size method is never called in the live execution path. Previous audit flagged hardcoded $10k; now it reads config but still bypasses RiskManager.",
+      "recommendation": "Route ALL position sizing through RiskManager.calculate_position_size. Remove the ad-hoc sizing. The risk manager must be the single source of truth."
     },
     {
       "severity": "critical",
-      "file": "src/live_arbitrage_pipeline.py",
-      "line": 664,
-      "category": "bypass",
-      "description": "_execute_trade has no second risk gate. If MockRiskManager was used, zero risk checks on actual execution.",
-      "recommendation": "Add mandatory non-mockable risk validation inside _execute_trade"
+      "file": "src/capital_allocator.py",
+      "line": 202,
+      "category": "capital_floor_post_hoc",
+      "description": "Capital floor ($50) enforcement at line 202-209 triggers only AFTER a losing trade. It sets halved=True but does not prevent the next trade. Between floor breach and next allocation check, additional trades can drain capital below $50 and to zero. Previous audit flagged no floor; now $50 floor exists but is reactive, not preventive.",
+      "recommendation": "Implement a hard synchronous pre-trade check in the execution path that refuses all trades when capital < $50. The floor must be enforced at the gate, not after the loss."
     },
     {
       "severity": "critical",
-      "file": "src/risk_management.py",
-      "line": 547,
-      "category": "emergency",
-      "description": "Emergency stop uses position.current_price which may be stale. In a crisis, closes at wrong price.",
-      "recommendation": "Fetch live prices before emergency close"
+      "file": "src/order_executor.py",
+      "line": 299,
+      "category": "no_max_order_size",
+      "description": "No maximum order size validation anywhere in _execute_single_order or execute_arbitrage_trade. The quantity passed to the exchange is whatever the caller provides. A bug in position sizing (division error, NaN, integer overflow) could send an order 100x the intended size. Stress scenario: 'A bug sends 100x intended order size' has ZERO protection.",
+      "recommendation": "Add a hard maximum order size check: reject any order where quantity * price exceeds a configurable absolute dollar cap tied to capital tier (e.g., $50 for micro). Independent of all other sizing logic."
     },
     {
       "severity": "critical",
-      "file": "src/risk_management.py",
-      "line": 85,
-      "category": "drawdown",
-      "description": "RiskManager never updates max_drawdown. Always returns 0.0. Drawdown never checked as trading gate.",
-      "recommendation": "Implement real-time drawdown tracking like TradingRiskManager"
-    },
-    {
-      "severity": "high",
-      "file": "src/risk_management.py",
-      "line": 245,
-      "category": "kelly",
-      "description": "Kelly cap 25% in RiskManager vs 10% in TradingRiskManager. Wrong class = 2.5x larger positions.",
-      "recommendation": "Unify Kelly cap. Recommend 5% for MICRO tier"
-    },
-    {
-      "severity": "high",
-      "file": "src/risk_management.py",
-      "line": 0,
-      "category": "limits",
-      "description": "No per-trade maximum loss limit. Only portfolio-level. No guard saying never lose more than $X.",
-      "recommendation": "Add max_loss_per_trade parameter"
-    },
-    {
-      "severity": "high",
       "file": "src/order_executor.py",
-      "line": 311,
-      "category": "limits",
-      "description": "Partial fills treated as success (95% assumed). Remainder never cancelled, never tracked.",
-      "recommendation": "Implement fill-or-kill timeout"
-    },
-    {
-      "severity": "high",
-      "file": "src/order_executor.py",
-      "line": 134,
-      "category": "correlation",
-      "description": "If buy fills but sell fails, cancel may be impossible. Leaves unhedged directional exposure.",
-      "recommendation": "Attempt market sell to unwind. Log as critical risk event"
-    },
-    {
-      "severity": "high",
-      "file": "src/order_executor.py",
-      "line": 37,
-      "category": "bypass",
-      "description": "OrderExecutor accepts risk_manager but NEVER calls it. Field stored, never referenced.",
-      "recommendation": "Wire risk_manager into execute_arbitrage_trade"
+      "line": 165,
+      "category": "naked_leg_risk",
+      "description": "Buy and sell orders execute concurrently via asyncio.gather. If buy succeeds but sell fails, the code attempts to cancel the buy (line 174). But if buy was already filled, cancellation fails silently, leaving a naked long position. In a flash crash, this naked position could lose the full position value. Previous audit flagged this; status unchanged.",
+      "recommendation": "Implement position reconciliation after any failed leg. If a filled leg cannot be cancelled, immediately place a market order to unwind. Add highest-priority stranded position alert."
     },
     {
       "severity": "high",
       "file": "src/dynamic_risk_adjustment.py",
-      "line": 0,
-      "category": "bypass",
-      "description": "DynamicRiskAdjustment not wired into pipeline. VaR thresholds and circuit breakers are dead code.",
-      "recommendation": "Import and integrate into LiveArbitragePipeline"
+      "line": 287,
+      "category": "circuit_breaker_loosens_under_stress",
+      "description": "Circuit breaker and emergency stop thresholds are MULTIPLIED by total_adjustment (lines 287-288), making them LOOSER during crashes. In CRASH regime, total_adjustment ~2.0, so emergency stop rises from 15% to 30%. The system becomes MORE tolerant of losses when it should be LESS tolerant. Position size correctly tightens (line 282 divides), but thresholds do the opposite.",
+      "recommendation": "Circuit breaker thresholds must TIGHTEN under stress. Divide by total_adjustment, or keep as fixed absolute values. This asymmetry is dangerous."
     },
     {
       "severity": "high",
-      "file": "src/advanced_risk_metrics.py",
-      "line": 0,
-      "category": "bypass",
-      "description": "VaR and Expected Shortfall never consulted during trade decisions. Dead code in execution path.",
-      "recommendation": "Wire VaR limits into trade execution gate"
-    },
-    {
-      "severity": "high",
-      "file": "src/capital_allocator.py",
-      "line": 200,
-      "category": "limits",
-      "description": "record_trade can drive current_capital below zero. No floor check. Negative allocations possible.",
-      "recommendation": "Add minimum capital floor ($50). Halt trading below floor"
-    },
-    {
-      "severity": "medium",
-      "file": "src/capital_allocator.py",
-      "line": 210,
-      "category": "drawdown",
-      "description": "No portfolio-level circuit breaker. Multiple strategies at 4.9% each = 15%+ portfolio drawdown with no trigger.",
-      "recommendation": "Add aggregate portfolio drawdown circuit breaker at 8%"
-    },
-    {
-      "severity": "medium",
-      "file": "src/capital_allocator.py",
-      "line": 219,
-      "category": "limits",
-      "description": "Quarterly rebalance resets ALL circuit breakers unconditionally. No recovery evidence required.",
-      "recommendation": "Only reset if strategy shows positive P&L in last 7 days"
-    },
-    {
-      "severity": "medium",
-      "file": "src/risk_management.py",
-      "line": 486,
-      "category": "limits",
-      "description": "Daily loss check uses abs() - triggers on large GAINS too. Logic bug.",
-      "recommendation": "Use < -max_daily_loss_pct, not abs()"
-    },
-    {
-      "severity": "medium",
-      "file": "src/risk_management.py",
-      "line": 896,
-      "category": "emergency",
-      "description": "TradingRiskManager emergency_stop uses 0.1% slippage. In crash, slippage is 2-10%.",
-      "recommendation": "Use 3% crash slippage estimate"
-    },
-    {
-      "severity": "medium",
       "file": "src/portfolio_optimization.py",
-      "line": 83,
-      "category": "limits",
-      "description": "Defaults to $10k capital ignoring config $300. min_diversification=5 impractical for $300.",
-      "recommendation": "Read from config, reduce to 2-3 for MICRO tier"
+      "line": 424,
+      "category": "hardcoded_correlations",
+      "description": "Covariance matrix uses hardcoded correlations: 0.3 same-class, 0.1 cross-class. During crypto crises, correlations spike to 0.8-0.95 (everything sells together). The optimizer will overestimate diversification and recommend oversized positions that all move against you simultaneously.",
+      "recommendation": "Use rolling historical correlations with a stress overlay: max(observed_correlation, 0.7) during VOLATILE/CRASH regimes. Never assume stable correlations in crypto."
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_management.py",
+      "line": 629,
+      "category": "emergency_stop_stale_prices",
+      "description": "Emergency stop closes positions using position.current_price which is only updated when check_stop_losses is called. During exchange outage or network partition, current_price could be minutes old. P&L calculation and actual fill price will diverge dramatically. Flagged in previous audit; still unresolved.",
+      "recommendation": "Emergency stop should use market orders with no price assumption. Log expected vs actual fill price. Flag that emergency close used potentially stale pricing."
+    },
+    {
+      "severity": "high",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 641,
+      "category": "risk_assessment_failure_swallowed",
+      "description": "Market condition assessment (lines 630-642) uses bare except: pass. If regime detection fails, system continues with stale regime data. Comment: 'Market assessment is advisory -- never block hot path.' This philosophy is wrong: inability to assess conditions IS elevated risk.",
+      "recommendation": "If assessment fails 3 consecutive times, auto-activate conservative mode (halve position sizes). Track failures as a metric. Absence of risk data is risk data."
+    },
+    {
+      "severity": "high",
+      "file": "src/dynamic_risk_adjustment.py",
+      "line": 162,
+      "category": "volatility_percentile_calculation_bug",
+      "description": "Line 162: np.percentile(self.volatility_history, current_volatility * 100). This passes current_vol*100 as the percentile rank to compute, not computing what percentile the current vol is at. If current_vol=0.03, it computes the 3rd percentile of history -- meaningless. Entire regime detection receives garbage volatility input.",
+      "recommendation": "Replace with: scipy.stats.percentileofscore(self.volatility_history, current_volatility). This computes what percentile the current observation falls at."
+    },
+    {
+      "severity": "high",
+      "file": "src/risk_intelligence_engine.py",
+      "line": 279,
+      "category": "mitigation_reset_race",
+      "description": "All mitigation actions reset to False before recalculating (line 279). If update_market_data is called rapidly, there is a window where emergency_stop=False before new assessment completes. A concurrent trade check sees emergency_stop=False and proceeds.",
+      "recommendation": "Calculate new actions into local variable, then atomically swap. Or use threading.Lock around mitigation state. Never clear emergency stop before confirming new state."
     },
     {
       "severity": "medium",
-      "file": "src/paper_trading.py",
-      "line": 107,
-      "category": "bypass",
-      "description": "Paper trading uses own hardcoded risk constants. Not testing same risk path as live.",
-      "recommendation": "Use same risk management classes"
+      "file": "src/capital_allocator.py",
+      "line": 228,
+      "category": "rebalance_resets_breakers",
+      "description": "Quarterly rebalance resets ALL circuit breakers unconditionally (halved=False). A strategy that lost 20% gets fully re-enabled after 90 days with no human review.",
+      "recommendation": "Require manual acknowledgment to re-enable halved strategies. At minimum, re-enable at 50% allocation."
     },
     {
       "severity": "medium",
-      "file": "src/paper_trading.py",
-      "line": 860,
-      "category": "kelly",
-      "description": "Paper sizing = MAX_POSITION_PCT * magnitude * confidence. Ignores Kelly entirely.",
-      "recommendation": "Use unified position sizing through risk layer"
+      "file": "src/advanced_risk_metrics.py",
+      "line": 126,
+      "category": "zero_risk_on_insufficient_data",
+      "description": "Insufficient data (<100 obs HS VaR, <30 MC VaR) returns (0.0, 0.0). Zero VaR = 'no risk'. At startup or after data gaps, this could lead to maximum position sizes.",
+      "recommendation": "Return conservative high values (VaR=0.10, ES=0.15) when data insufficient, or None requiring callers to handle explicitly."
+    },
+    {
+      "severity": "medium",
+      "file": "src/order_executor.py",
+      "line": 337,
+      "category": "order_polling_timeout",
+      "description": "Order polling retries 10 times, max ~16 seconds. During exchange congestion in a crash, confirmations take 30-60s. Code may conclude order failed when it filled, causing duplicate orders.",
+      "recommendation": "Extend max polling to 60 seconds. Add pending-confirmation state preventing duplicates. Reconcile all recent fills after timeout."
+    },
+    {
+      "severity": "medium",
+      "file": "src/live_arbitrage_pipeline.py",
+      "line": 393,
+      "category": "no_exchange_health_check",
+      "description": "No pre-trade exchange health check. If buy exchange fills but sell exchange is offline, naked position risk. Stress scenario #2 (exchange offline mid-trade) has no explicit handling.",
+      "recommendation": "Add pre-flight health check: ping both exchanges and verify orderbook freshness (timestamp < 5s) before committing to execution."
+    },
+    {
+      "severity": "medium",
+      "file": "src/risk_management.py",
+      "line": 314,
+      "category": "cumulative_kelly_exposure",
+      "description": "Kelly capped at 25% per trade. With max_open_positions=5, cumulative Kelly exposure can reach 31.25% -- aggressive for $300-$500 micro accounts.",
+      "recommendation": "Add cumulative exposure check capping total Kelly exposure across all open positions. 15% max for micro tier."
+    },
+    {
+      "severity": "medium",
+      "file": "src/dynamic_risk_adjustment.py",
+      "line": 429,
+      "category": "callback_exception_handling",
+      "description": "Circuit breaker callbacks use asyncio.create_task without ensuring event loop exists. If no loop running, RuntimeError thrown. Kill switch depends on event loop health.",
+      "recommendation": "Wrap callbacks to execute synchronously if async dispatch fails. Kill switch must not depend on event loop."
+    },
+    {
+      "severity": "medium",
+      "file": "src/regime_detector.py",
+      "line": 132,
+      "category": "insufficient_data_defaults_ranging",
+      "description": "With <30 candles, defaults to RANGING regime which boosts grid/mean_reversion (1.6x). During startup or after data gaps, system favors strategies worst for trending/crashing markets.",
+      "recommendation": "Default to HIGH_VOLATILITY (conservative) or None requiring minimum position sizes when data insufficient."
+    },
+    {
+      "severity": "medium",
+      "file": "src/risk_management.py",
+      "line": 200,
+      "category": "silent_validation_failure",
+      "description": "validate_opportunity catches all exceptions and returns False. If risk system itself is broken (e.g., division by zero), every opportunity fails silently with no alert. System appears running but never trades.",
+      "recommendation": "Count consecutive validation exceptions. After N failures, send critical alert differentiating 'rejected by rules' from 'risk system broken'."
     },
     {
       "severity": "low",
-      "file": "src/risk_management.py",
-      "line": 580,
-      "category": "limits",
-      "description": "Singleton get_risk_manager() has no locking. Race conditions possible.",
-      "recommendation": "Add threading.Lock around state mutations"
+      "file": "src/risk_intelligence_engine.py",
+      "line": 376,
+      "category": "monitoring_loop_not_implemented",
+      "description": "Monitoring loop sleeps and catches exceptions but performs no risk assessment. Continuous monitoring is documented as active but is actually a no-op.",
+      "recommendation": "Implement periodic VaR computation, circuit breaker checks, and mitigation updates. Until then, document that monitoring is manual-trigger only."
+    },
+    {
+      "severity": "low",
+      "file": "src/advanced_risk_metrics.py",
+      "line": 166,
+      "category": "garch_uncalibrated",
+      "description": "Monte Carlo VaR uses fixed GARCH alpha=0.1, beta=0.85 never calibrated to data. Crypto-appropriate parameters differ significantly. VaR may underestimate tail risk.",
+      "recommendation": "Calibrate GARCH parameters on actual return series or use filtered historical simulation."
+    },
+    {
+      "severity": "low",
+      "file": "src/strategy_ensemble.py",
+      "line": 236,
+      "category": "assert_in_production",
+      "description": "assert not model.training can be disabled with python -O. If model enters training mode in production, predictions unreliable and memory spikes.",
+      "recommendation": "Replace assert with explicit if-check and raise RuntimeError."
     },
     {
       "severity": "info",
       "file": "src/risk_management.py",
-      "line": 616,
-      "category": "limits",
-      "description": "Two risk manager classes with different defaults, Kelly caps, drawdown logic, APIs.",
-      "recommendation": "Consolidate into single class"
+      "line": 310,
+      "category": "quarter_kelly_positive",
+      "description": "System uses Quarter-Kelly (0.25 fraction) for position sizing -- appropriately conservative. Half-Kelly used in calculate_kelly_metrics creates inconsistency between analysis display and execution.",
+      "recommendation": "Standardize on Quarter-Kelly for both analysis and execution."
+    },
+    {
+      "severity": "info",
+      "file": "src/order_executor.py",
+      "line": 50,
+      "category": "paper_trading_safety_positive",
+      "description": "Multi-layer paper trading safety (env var AND config must agree for live) is a strong control preventing accidental live trading. Well-implemented at lines 50-63.",
+      "recommendation": "No change needed. Consider adding manual confirmation prompt before first live trade per session."
     }
   ],
-  "summary": "5 critical: MockRiskManager approves everything with no guard, $10k hardcoded bypassing all sizing, no second risk gate on execution, emergency stop uses stale prices, drawdown never tracked (always 0). VaR/ES/DynamicRisk are dead code in execution path. Risk management is largely theater for a $300 account.",
-  "files_scanned": 8,
-  "execution_time_seconds": 217,
+  "summary": "HEALTH SCORE: 62/100 (up from 28 in previous audit due to capital floor addition, risk_manager wiring in OrderExecutor, dynamic risk integration in pipeline). The system has a solid architectural foundation with multiple risk layers. However, 6 CRITICAL findings remain that could cause catastrophic losses under stress. The most dangerous pattern is FAIL-OPEN behavior: when risk checks throw exceptions, the system continues trading. The circuit breaker thresholds LOOSEN during crashes (opposite of intended). Position sizing in the live pipeline bypasses RiskManager. No maximum order size sanity check exists. Capital floor is reactive not preventive. Concurrent order execution creates naked position risk. STRESS SCENARIO ANALYSIS: (1) BTC -30% in 5 min: circuit breaker thresholds relax due to multiplication bug + volatility percentile calculation feeds garbage to regime detection; (2) Exchange offline mid-trade: no pre-flight health check, naked leg risk from concurrent execution; (3) All positions against us: cumulative Kelly up to 31% on micro accounts; (4) Bug sends 100x order: zero protection anywhere in stack; (5) Network partition 30s: 16s polling timeout insufficient, stale prices in emergency stop. PROGRESS SINCE LAST AUDIT: $50 capital floor added, risk_manager now called in OrderExecutor, DynamicRiskAdjustment integrated into pipeline, per-trade loss limit added, base_capital reads from config. STILL UNRESOLVED from previous audit: position sizing bypass, naked leg risk, emergency stop stale prices.",
+  "files_scanned": 10,
+  "execution_time_seconds": 0,
   "recommendations": [
-    "URGENT: Block MockRiskManager from trade execution path",
-    "URGENT: Replace hardcoded $10k with actual portfolio value",
-    "Wire VaR and DynamicRiskAdjustment into pipeline",
-    "Implement per-trade loss limit",
-    "Add portfolio-level circuit breaker",
-    "Unify risk managers into single class"
+    "BEFORE GOING LIVE #1: Make all risk checks FAIL-CLOSED. Any exception in risk validation, dynamic risk check, or circuit breaker must BLOCK the trade. Change _execute_trade dynamic risk except clause (live_arbitrage_pipeline.py:753) from logger.debug to return. This single change prevents the deadliest failure mode.",
+    "BEFORE GOING LIVE #2: Add a hard maximum order size sanity check in OrderExecutor._execute_single_order rejecting any order where quantity * price exceeds a configurable absolute dollar cap tied to capital tier. This is the last line of defense against fat-finger bugs and must be independent of all other sizing logic.",
+    "BEFORE GOING LIVE #3: Fix circuit breaker threshold direction in dynamic_risk_adjustment.py -- thresholds must TIGHTEN under stress (divide by total_adjustment), not loosen (multiply). Currently emergency stop threshold doubles during a crash."
   ]
 }

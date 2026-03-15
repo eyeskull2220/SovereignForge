@@ -25,11 +25,9 @@ try:
 except ImportError:
     pass  # python-dotenv not installed; rely on environment variables
 
-try:
-    import psutil
-    _PSUTIL_AVAILABLE = True
-except ImportError:
-    _PSUTIL_AVAILABLE = False
+from utils import get_psutil as _get_psutil
+psutil = _get_psutil()
+_PSUTIL_AVAILABLE = psutil is not None
 
 try:
     import structlog
@@ -120,8 +118,8 @@ class _NoOpDB:
                 (payload, time.time()),
             )
             await self._conn.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to store opportunity: {e}")
 
     async def store_trade_execution(self, trade_result: dict):
         if self._conn is None:
@@ -133,8 +131,8 @@ class _NoOpDB:
                 (_json.dumps(trade_result, default=str), time.time()),
             )
             await self._conn.commit()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.warning(f"Failed to store trade execution: {e}")
 
     async def health_check(self) -> bool:
         return self._conn is not None
@@ -1030,28 +1028,7 @@ def main():
 
         print("\nHealth check completed!")
 
-    else:
-        # Use legacy CLI for backward compatibility
-        cli = ArbitrageCLI()
-
-        if args.command == 'detect':
-            cli.run_detection(args.symbol, args.continuous, args.interval)
-        elif args.command == 'history':
-            cli.show_history(args.limit)
-        elif args.command == 'stats':
-            cli.show_stats()
-        elif args.command == 'test':
-            cli.test_system()
-        elif args.command == 'risk':
-            cli.show_risk_status()
-        elif args.command == 'backtest':
-            cli.run_backtest(args.symbols, args.days)
-        elif args.command == 'paper':
-            cli.run_paper_trading(args.symbol, args.continuous, args.interval)
-        elif args.command == 'analytics':
-            cli.run_analytics(args.days, args.format)
-
-    if args.command == 'gpu-train':
+    elif args.command == 'gpu-train':
         # GPU training command
         from gpu_training_cli import GPUTrainingCLI
 
@@ -1077,6 +1054,27 @@ def main():
 
         gpu_cli = GPUTrainingCLI()
         gpu_cli.show_gpu_status()
+
+    else:
+        # Use legacy CLI for backward compatibility
+        cli = ArbitrageCLI()
+
+        if args.command == 'detect':
+            cli.run_detection(args.symbol, args.continuous, args.interval)
+        elif args.command == 'history':
+            cli.show_history(args.limit)
+        elif args.command == 'stats':
+            cli.show_stats()
+        elif args.command == 'test':
+            cli.test_system()
+        elif args.command == 'risk':
+            cli.show_risk_status()
+        elif args.command == 'backtest':
+            cli.run_backtest(args.symbols, args.days)
+        elif args.command == 'paper':
+            cli.run_paper_trading(args.symbol, args.continuous, args.interval)
+        elif args.command == 'analytics':
+            cli.run_analytics(args.days, args.format)
 
 if __name__ == "__main__":
     main()

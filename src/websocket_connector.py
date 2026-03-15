@@ -88,6 +88,14 @@ class MarketData:
     ask_volume: float
     order_book: Dict[str, List[List[float]]] = None
 
+    def __post_init__(self):
+        """Validate numeric fields — reject NaN/Inf from remote data."""
+        import math
+        for field_name in ('price', 'volume', 'bid_price', 'ask_price', 'bid_volume', 'ask_volume', 'timestamp'):
+            val = getattr(self, field_name)
+            if val is None or (isinstance(val, float) and (math.isnan(val) or math.isinf(val))):
+                raise ValueError(f"MarketData.{field_name} is NaN/Inf/None for {self.exchange}:{self.pair}")
+
 class WebSocketConnector:
     """Base WebSocket connector with reconnection logic"""
 

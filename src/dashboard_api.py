@@ -19,17 +19,24 @@ import platform
 import re
 import subprocess
 import sys
+import time
+from collections import defaultdict
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
+import traceback
+
+from fastapi import Depends, FastAPI, Header, HTTPException, Query, WebSocket, WebSocketDisconnect
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
+
+from error_codes import ErrorCode
 
 # ---------------------------------------------------------------------------
 # Paths
@@ -56,8 +63,8 @@ logger = logging.getLogger("dashboard_api")
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-STRATEGIES = ["arbitrage", "fibonacci", "grid", "dca"]
-EXCHANGES = ["binance", "coinbase", "kraken", "okx"]
+STRATEGIES = ["arbitrage", "fibonacci", "grid", "dca", "mean_reversion", "pairs_arbitrage", "momentum"]
+EXCHANGES = ["binance", "coinbase", "kraken", "okx", "kucoin", "bybit", "gate"]
 COINS = [
     "btc", "eth", "xrp", "xlm", "hbar", "algo",
     "ada", "link", "iota", "vet", "xdc", "ondo",
@@ -67,16 +74,102 @@ CONFIG_SECRET_KEYS = {"telegram_bot_token", "api_key", "api_secret", "passphrase
 
 API_KEY = os.environ.get("SOVEREIGNFORGE_API_KEY", "")
 
-async def verify_api_key(x_api_key: str = Header(default="")):
-    """Require API key for mutation endpoints. Skip if no key configured."""
-    if API_KEY and x_api_key != API_KEY:
-        raise HTTPException(status_code=401, detail="Invalid API key")
+# ---------------------------------------------------------------------------
+# Auth failure tracking — detect brute-force attempts
+# ---------------------------------------------------------------------------
+AUTH_FAILURE_WINDOW_SECONDS = 300  # 5-minute sliding window
+AUTH_FAILURE_THRESHOLD = 10       # alert after this many failures per IP
+
+_auth_failures: Dict[str, List[float]] = defaultdict(list)
+
+# WebSocket invalid message counter (for monitoring)
+_ws_invalid_message_count: int = 0
+
+
+def _record_auth_failure(client_ip: str) -> None:
+    """Record a failed auth attempt and warn if threshold exceeded."""
+    now = time.monotonic()
+    failures = _auth_failures[client_ip]
+    _auth_failures[client_ip] = [
+        t for t in failures if now - t < AUTH_FAILURE_WINDOW_SECONDS
+    ]
+    _auth_failures[client_ip].append(now)
+
+    count = len(_auth_failures[client_ip])
+    if count >= AUTH_FAILURE_THRESHOLD:
+        logger.warning(
+            f"AUTH ALERT: {count} failed API key attempts from {client_ip} "
+            f"in the last {AUTH_FAILURE_WINDOW_SECONDS}s — possible brute-force"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Rate Limiter — sliding window, per-IP, in-memory (no external deps)
+# ---------------------------------------------------------------------------
+RATE_LIMIT_MAX_REQUESTS = 30   # max POST requests …
+RATE_LIMIT_WINDOW_SECS = 60    # … per this many seconds
+
+
+class _SlidingWindowRateLimiter:
+    """Dict-based sliding window rate limiter.
+
+    Stores a list of timestamps per IP. On each call, expired entries are
+    pruned and the request is allowed only if the window is not full.
+    A periodic sweep removes stale IPs so memory stays bounded.
+    """
+
+    def __init__(self, max_requests: int = RATE_LIMIT_MAX_REQUESTS,
+                 window_secs: int = RATE_LIMIT_WINDOW_SECS):
+        self.max_requests = max_requests
+        self.window_secs = window_secs
+        self._hits: Dict[str, List[float]] = defaultdict(list)
+        self._last_sweep: float = time.monotonic()
+        self._sweep_interval: float = 300.0  # purge stale IPs every 5 min
+
+    def is_allowed(self, ip: str) -> bool:
+        now = time.monotonic()
+        self._maybe_sweep(now)
+        window_start = now - self.window_secs
+        timestamps = self._hits[ip]
+        self._hits[ip] = timestamps = [t for t in timestamps if t > window_start]
+        if len(timestamps) >= self.max_requests:
+            return False
+        timestamps.append(now)
+        return True
+
+    def _maybe_sweep(self, now: float) -> None:
+        """Remove IPs that have no recent activity to prevent unbounded growth."""
+        if now - self._last_sweep < self._sweep_interval:
+            return
+        self._last_sweep = now
+        cutoff = now - self.window_secs
+        stale = [ip for ip, ts in self._hits.items() if not ts or ts[-1] <= cutoff]
+        for ip in stale:
+            del self._hits[ip]
+
+
+_rate_limiter = _SlidingWindowRateLimiter()
+
+
+async def verify_api_key(request: Request, x_api_key: str = Header(default="")):
+    """Require API key + enforce rate limit for mutation (POST) endpoints. Fail closed if no key configured."""
+    if not API_KEY:
+        raise HTTPException(
+            status_code=503,
+            detail={"code": ErrorCode.AUTH_FAILED, "message": "API key not configured. Set SOVEREIGNFORGE_API_KEY environment variable."},
+        )
+    if x_api_key != API_KEY:
+        client_ip = request.client.host if request.client else "unknown"
+        _record_auth_failure(client_ip)
+        raise HTTPException(status_code=401, detail={"code": ErrorCode.AUTH_FAILED, "message": "Invalid API key"})
+    client_ip = request.client.host if request.client else "unknown"
+    if not _rate_limiter.is_allowed(client_ip):
+        logger.warning(f"Rate limit exceeded for {client_ip}")
+        raise HTTPException(status_code=429, detail={"code": ErrorCode.RATE_LIMITED, "message": "Too Many Requests"})
 
 # ---------------------------------------------------------------------------
 # App
 # ---------------------------------------------------------------------------
-# Rate limiting: deferred. API key auth added as primary protection.
-# For production, add slowapi: pip install slowapi
 app = FastAPI(
     title="SovereignForge Dashboard API",
     version="1.0.0",
@@ -103,6 +196,74 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         return response
 
 app.add_middleware(SecurityHeadersMiddleware)
+
+
+# ---------------------------------------------------------------------------
+# Request body size limit middleware — prevent abuse on POST endpoints
+# ---------------------------------------------------------------------------
+MAX_REQUEST_BODY_BYTES = 1 * 1024 * 1024  # 1 MB
+
+
+class RequestBodySizeLimitMiddleware(BaseHTTPMiddleware):
+    """Reject requests with bodies exceeding MAX_REQUEST_BODY_BYTES."""
+
+    async def dispatch(self, request: Request, call_next):
+        if request.method in ("POST", "PUT", "PATCH"):
+            content_length = request.headers.get("content-length")
+            if content_length is not None:
+                if int(content_length) > MAX_REQUEST_BODY_BYTES:
+                    logger.warning(
+                        f"Rejected oversized request: {int(content_length)} bytes "
+                        f"from {request.client.host if request.client else 'unknown'} "
+                        f"to {request.url.path}"
+                    )
+                    return Response(
+                        content=json.dumps({
+                            "detail": f"Request body too large. "
+                                      f"Maximum size is {MAX_REQUEST_BODY_BYTES} bytes."
+                        }),
+                        status_code=413,
+                        media_type="application/json",
+                    )
+        return await call_next(request)
+
+app.add_middleware(RequestBodySizeLimitMiddleware)
+
+
+# ---------------------------------------------------------------------------
+# Global exception handlers — prevent stack trace leakage to clients
+# ---------------------------------------------------------------------------
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Catch all unhandled exceptions. Log full traceback server-side,
+    return a generic message to the client so internals are never exposed."""
+    logger.error(
+        "Unhandled exception on %s %s:\n%s",
+        request.method,
+        request.url.path,
+        traceback.format_exc(),
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"code": ErrorCode.INTERNAL_ERROR, "detail": "Internal server error. Check server logs."},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    """Return a generic 422 instead of echoing back the raw validation
+    errors, which may reveal internal schema details."""
+    logger.error(
+        "Request validation error on %s %s: %s",
+        request.method,
+        request.url.path,
+        exc.errors(),
+    )
+    return JSONResponse(
+        status_code=422,
+        content={"code": ErrorCode.VALIDATION_ERROR, "detail": "Validation error. Check your request parameters."},
+    )
+
 
 # ---------------------------------------------------------------------------
 # In-memory model cache (populated on startup)
@@ -740,8 +901,14 @@ ws_manager = ConnectionManager()
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    """WebSocket endpoint for real-time dashboard updates."""
+async def websocket_endpoint(websocket: WebSocket, token: str = Query(default="")):
+    """WebSocket endpoint for real-time dashboard updates. Requires token auth."""
+    if not API_KEY:
+        await websocket.close(code=1008, reason="API key not configured on server")
+        return
+    if token != API_KEY:
+        await websocket.close(code=1008, reason="Invalid or missing token")
+        return
     await ws_manager.connect(websocket)
     try:
         await websocket.send_json({
@@ -762,7 +929,12 @@ async def websocket_endpoint(websocket: WebSocket):
                         "payload": {"timestamp": datetime.utcnow().isoformat()}
                     })
             except json.JSONDecodeError:
-                pass
+                global _ws_invalid_message_count
+                _ws_invalid_message_count += 1
+                logger.debug(
+                    f"Invalid WebSocket JSON message (total invalid: "
+                    f"{_ws_invalid_message_count}): {data[:200]!r}"
+                )
     except WebSocketDisconnect:
         ws_manager.disconnect(websocket)
 
@@ -806,6 +978,42 @@ async def _broadcast_pipeline_status():
 async def start_ws_broadcast():
     global _pipeline_broadcast_task
     _pipeline_broadcast_task = asyncio.create_task(_broadcast_pipeline_status())
+
+
+SHUTDOWN_GRACE_PERIOD_SECONDS = 5
+
+
+@app.on_event("shutdown")
+async def graceful_shutdown():
+    """Clean up resources and give in-flight requests time to complete."""
+    logger.info("Shutdown initiated — draining connections …")
+
+    # 1. Cancel the background broadcast task
+    global _pipeline_broadcast_task
+    if _pipeline_broadcast_task is not None:
+        _pipeline_broadcast_task.cancel()
+        try:
+            await _pipeline_broadcast_task
+        except asyncio.CancelledError:
+            pass
+        _pipeline_broadcast_task = None
+        logger.info("Pipeline broadcast task cancelled")
+
+    # 2. Close all active WebSocket connections gracefully
+    for ws in list(ws_manager.active_connections):
+        try:
+            await asyncio.wait_for(
+                ws.close(code=1001, reason="Server shutting down"),
+                timeout=2.0,
+            )
+        except Exception:
+            pass
+    ws_manager.active_connections.clear()
+    logger.info("All WebSocket connections closed")
+
+    # 3. Brief grace period so Uvicorn can finish in-flight HTTP responses
+    await asyncio.sleep(SHUTDOWN_GRACE_PERIOD_SECONDS)
+    logger.info("Shutdown complete")
 
 
 # ---------------------------------------------------------------------------
@@ -887,6 +1095,60 @@ async def pipeline_stop(_auth=Depends(verify_api_key)):
         return {"status": "error", "detail": "Operation failed. Check server logs."}
 
 
+CIRCUIT_BREAKER_RESET_SIGNAL = PROJECT_ROOT / ".circuit_breaker_reset"
+
+
+@app.post("/api/circuit-breaker/reset")
+async def reset_circuit_breaker(_auth=Depends(verify_api_key)):
+    """
+    Reset circuit breaker state.
+
+    Writes a signal file that the pipeline picks up on its next cycle to
+    clear both circuit_breaker_active and emergency_stop_active flags in the
+    DynamicRiskAdjustment instance.  Also patches pipeline_state.json
+    immediately so the dashboard reflects the change without waiting for
+    the next pipeline persist cycle.
+    """
+    try:
+        # 1. Write signal file for the running pipeline process
+        CIRCUIT_BREAKER_RESET_SIGNAL.write_text(datetime.now().isoformat())
+        logger.info("Circuit breaker reset signal written")
+
+        # 2. Patch pipeline_state.json for immediate dashboard feedback
+        state_path = PROJECT_ROOT / "reports" / "pipeline_state.json"
+        state = await _load_json_async(state_path)
+        if state is None:
+            state = {}
+
+        if 'dynamic_risk' not in state:
+            state['dynamic_risk'] = {}
+
+        state['dynamic_risk']['circuit_breaker_active'] = False
+        state['dynamic_risk']['emergency_stop_active'] = False
+        state['dynamic_risk']['last_reset'] = datetime.now().isoformat()
+        state['dynamic_risk']['reset_by'] = 'dashboard_api'
+
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = state_path.with_suffix('.tmp')
+        await asyncio.to_thread(tmp.write_text, json.dumps(state, indent=2, default=str))
+        await asyncio.to_thread(tmp.replace, state_path)
+
+        # 3. Broadcast reset event via WebSocket
+        await ws_manager.broadcast({
+            "type": "circuit_breaker_reset",
+            "payload": {"timestamp": datetime.now().isoformat()},
+        })
+
+        return {
+            "status": "reset",
+            "message": "Circuit breaker reset signal sent. Pipeline will clear state on next cycle.",
+            "timestamp": datetime.now().isoformat(),
+        }
+    except Exception as e:
+        logger.error(f"Circuit breaker reset failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reset circuit breaker. Check server logs.")
+
+
 @app.get("/api/pipeline/opportunities")
 async def pipeline_opportunities():
     """Get recent detected opportunities."""
@@ -940,7 +1202,8 @@ async def get_exchange_status():
 
         return {'exchanges': statuses, 'total': len(exchanges)}
     except Exception as e:
-        return {'exchanges': [], 'error': str(e)}
+        logger.error(f"Failed to get exchange status: {e}")
+        return {'exchanges': [], 'error': 'Failed to retrieve exchange status'}
 
 
 @app.get("/api/capital/status")
@@ -984,7 +1247,8 @@ async def get_capital_status():
             'allocations': allocations,
         }
     except Exception as e:
-        return {'error': str(e)}
+        logger.error(f"Failed to get capital status: {e}")
+        return {'error': 'Failed to retrieve capital status'}
 
 
 # ---------------------------------------------------------------------------
@@ -1031,7 +1295,8 @@ async def get_agent_report(agent_name: str):
                 return json.loads(json_file.read_text(encoding="utf-8"))
         return {"error": "Report not found", "available": [f.stem for f in reports_dir.glob("*.json")]}
     except Exception as e:
-        return {"error": str(e)}
+        logger.error(f"Failed to get agent report '{agent_name}': {e}")
+        return {"error": "Failed to retrieve agent report"}
 
 
 @app.get("/api/agents/synthesis")
@@ -1043,7 +1308,8 @@ async def get_synthesis_report():
             return json.loads(synthesis_path.read_text(encoding="utf-8"))
         return {"error": "No synthesis report found. Run: python src/agents/runner.py synthesize"}
     except Exception as e:
-        return {"error": str(e)}
+        logger.error(f"Failed to get synthesis report: {e}")
+        return {"error": "Failed to retrieve synthesis report"}
 
 
 @app.get("/api/agents/health")
@@ -1064,7 +1330,8 @@ async def get_system_health():
             }
         return {"health_score": None, "error": "No audit data available"}
     except Exception as e:
-        return {"health_score": None, "error": str(e)}
+        logger.error(f"Failed to get system health: {e}")
+        return {"health_score": None, "error": "Failed to retrieve system health"}
 
 
 @app.get("/api/agents/research")
@@ -1075,13 +1342,15 @@ async def run_research_agents():
         from agents.research_sentiment import MarketSentimentAgent
         results['sentiment'] = MarketSentimentAgent().analyze()
     except Exception as e:
-        results['sentiment'] = {"error": str(e)}
+        logger.error(f"Sentiment agent failed: {e}")
+        results['sentiment'] = {"error": "Sentiment analysis unavailable"}
 
     try:
         from agents.research_performance import StrategyPerformanceAgent
         results['performance'] = StrategyPerformanceAgent().analyze()
     except Exception as e:
-        results['performance'] = {"error": str(e)}
+        logger.error(f"Performance agent failed: {e}")
+        results['performance'] = {"error": "Performance analysis unavailable"}
 
     # Technical analysis is slower (fetches from exchange) — include summary only
     try:
@@ -1093,7 +1362,8 @@ async def run_research_agents():
             'execution_time': ta.get('execution_time', 0),
         }
     except Exception as e:
-        results['technical'] = {"error": str(e)}
+        logger.error(f"Technical analysis agent failed: {e}")
+        results['technical'] = {"error": "Technical analysis unavailable"}
 
     return results
 
@@ -1114,7 +1384,7 @@ async def send_test_alert_endpoint(_auth=Depends(verify_api_key)):
         return {"success": False, "error": f"telegram_alerts module not available: {e}"}
     except Exception as e:
         logger.error(f"Test alert failed: {e}")
-        return {"success": False, "error": str(e)}
+        return {"success": False, "error": "Failed to send test alert. Check server logs."}
 
 
 @app.get("/api/alerts/status")
@@ -1153,4 +1423,5 @@ if __name__ == "__main__":
         port=port,
         reload=False,
         log_level="info",
+        ws_max_size=1 * 1024 * 1024,  # 1 MB — prevent WebSocket memory exhaustion
     )

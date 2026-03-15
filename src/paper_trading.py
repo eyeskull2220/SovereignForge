@@ -98,7 +98,7 @@ SLIPPAGE_RANGE = (0.0005, 0.0015)   # 0.05% - 0.15%
 # Exchange-specific fee schedules (taker fees for market orders)
 EXCHANGE_FEES = {
     "binance":  {"maker": 0.001, "taker": 0.001},
-    "coinbase": {"maker": 0.004, "taker": 0.006},
+    "coinbase": {"maker": 0.004, "taker": 0.004},
     "kraken":   {"maker": 0.0016, "taker": 0.0026},
     "kucoin":   {"maker": 0.001, "taker": 0.001},
     "okx":      {"maker": 0.0008, "taker": 0.001},
@@ -801,12 +801,30 @@ class PaperTradingEngine:
                 self._log_skipped(pair, exchange, sig, "position_too_small")
                 continue
 
-            # Use exchange-specific taker fee (market orders)
-            exchange_fees = EXCHANGE_FEES.get(exchange, {"maker": 0.001, "taker": 0.002})
-            fee_rate = exchange_fees["taker"]
+            # Determine dominant strategy early — needed for transfer fee logic
+            best_strategy = "ensemble"
+            if sig.get("strategies"):
+                best_strategy = max(
+                    sig["strategies"],
+                    key=lambda s: abs(s["signal"]) * s["confidence"]
+                )["strategy"]
+
+            # Use exchange-specific taker fee (market orders) — no silent fallback
+            if exchange not in EXCHANGE_FEES:
+                logger.error(f"Unknown exchange '{exchange}' has no fee schedule — skipping trade")
+                self._log_skipped(pair, exchange, sig, "unknown_exchange_fees")
+                continue
+            fee_rate = EXCHANGE_FEES[exchange]["taker"]
             slippage_rate = random.uniform(*SLIPPAGE_RANGE)
 
             fee = size_usdc * fee_rate
+
+            # Cross-exchange strategies incur network transfer fees
+            transfer_fee = 0.0
+            if best_strategy in ("arbitrage", "pairs_arbitrage"):
+                transfer_fee = TRANSFER_FEES.get(exchange, 1.0)
+                fee += transfer_fee
+
             slippage_cost = size_usdc * slippage_rate
 
             # Adjust effective entry price for slippage
@@ -830,14 +848,6 @@ class PaperTradingEngine:
 
             self._trade_counter += 1
             pos_id = f"PT-{self._trade_counter:06d}"
-
-            # Determine dominant strategy
-            best_strategy = "ensemble"
-            if sig.get("strategies"):
-                best_strategy = max(
-                    sig["strategies"],
-                    key=lambda s: abs(s["signal"]) * s["confidence"]
-                )["strategy"]
 
             position = PaperPosition(
                 id=pos_id,
@@ -905,9 +915,12 @@ class PaperTradingEngine:
         if pos is None:
             return None
 
-        # Use exchange-specific taker fee (market orders)
-        exchange_fees = EXCHANGE_FEES.get(pos.exchange, {"maker": 0.001, "taker": 0.002})
-        fee_rate = exchange_fees["taker"]
+        # Use exchange-specific taker fee (market orders) — no silent fallback
+        if pos.exchange not in EXCHANGE_FEES:
+            logger.error(f"Unknown exchange '{pos.exchange}' has no fee schedule — using max fee 0.4% as safety")
+            fee_rate = 0.004  # Worst-case (Coinbase-level) to avoid undercharging
+        else:
+            fee_rate = EXCHANGE_FEES[pos.exchange]["taker"]
         slippage_rate = random.uniform(*SLIPPAGE_RANGE)
 
         if pos.side == "buy":
@@ -917,10 +930,13 @@ class PaperTradingEngine:
             effective_exit = exit_price * (1 + slippage_rate)
             pnl = (pos.entry_price - effective_exit) * pos.quantity
 
-        exit_fee = abs(pnl + pos.size_usdc) * fee_rate if pnl > 0 else pos.size_usdc * fee_rate
-        exit_fee = min(exit_fee, abs(pnl) * 0.5) if pnl != 0 else pos.size_usdc * fee_rate
-        # Simpler: fee on notional
+        # Fee on exit notional value
         exit_fee = pos.quantity * effective_exit * fee_rate
+
+        # Cross-exchange strategies also pay transfer fees on exit
+        if pos.strategy in ("arbitrage", "pairs_arbitrage"):
+            exit_fee += TRANSFER_FEES.get(pos.exchange, 1.0)
+
         pnl -= exit_fee
 
         pnl_pct = pnl / pos.size_usdc if pos.size_usdc > 0 else 0.0
